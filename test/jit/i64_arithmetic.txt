@@ -1,8 +1,7 @@
 ;;; TOOL: run-interp-jit
 (module
   ;; Tests from third_party/testsuite/i64.wast, converted for jit compilation
-  ;; When params work, this can be simplified!
-
+  ;; When params work, this can be simplified!  
 
   ;; Add
   (func (export "test_add_1_i64") (result i64) call $add_1_i64)
@@ -146,7 +145,12 @@
   (func $rem_s_18_i64 (result i64) i64.const -7 i64.const -3 i64.rem_s return)
   (func $rem_s_19_i64 (result i64) i64.const 11 i64.const 5 i64.rem_s return)
   (func $rem_s_20_i64 (result i64) i64.const 17 i64.const 7 i64.rem_s return)
-  
+
+  ;; MARK: create an entry-able function.
+  (func $run_add_8_i64 call $add_8_i64 return)
+
+  ;; MARK: define an entry point.
+  (start $run_add_8_i64)
 )
 (;; STDOUT ;;;
 test_add_1_i64() => i64:2

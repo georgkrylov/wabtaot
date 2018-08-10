@@ -53,6 +53,7 @@ static bool s_trap_on_failed_comp;
 static bool s_no_stack_trace;
 static uint32_t s_jit_threshold = 1;
 static Features s_features;
+static bool s_compile_aot = false;
 
 static std::unique_ptr<FileStream> s_log_stream;
 static std::unique_ptr<FileStream> s_stdout_stream;
@@ -127,6 +128,9 @@ static void ParseOptions(int argc, char** argv) {
   parser.AddOption("no-stack-trace",
                    "Don't print a stack trace if a trap occurs",
                    []() { s_no_stack_trace = true; });
+  parser.AddOption("full-aot",
+		   "Compile the program ahead-of-time.",
+		   [](const char*) { s_compile_aot = true; });
 
   parser.AddArgument("filename", OptionParser::ArgumentCount::One,
                      [](const char* argument) { s_infile = argument; });
@@ -267,6 +271,13 @@ static wabt::Result ReadAndRunModule(const char* module_filename) {
   DefinedModule* module = nullptr;
   result = ReadModule(module_filename, &env, &error_handler, &module);
   if (Succeeded(result)) {
+    if(s_compile_aot) {
+      Thread::Options thread_options();
+      Thread thread(&env, thread_options);
+
+      return compileAOT(&thread, env);
+    }
+
     Executor executor(&env, s_trace_stream, s_thread_options);
     ExecResult exec_result = executor.RunStartFunction(module);
     if (exec_result.result == interp::Result::Ok) {

@@ -14,14 +14,37 @@
  * limitations under the License.
  */
 
+#include "../interp.h"
 #include "wabtjit.h"
 #include "type-dictionary.h"
 #include "function-builder.h"
 
 #include "Jit.hpp"
+#include "control/Options.hpp"
+#include "control/Options_inlines.hpp"
 
 namespace wabt {
 namespace jit {
+
+interp::Result compileAOT(interp::Thread* thread, interp::Environment& env) {
+  initializeJit();
+  
+  TypeDictionary types;
+  TR::OptionSet elfOptionSet = OptionSet("enableRelocatableELFGeneration,"
+                                         "objectFile=aot_compile.o");
+
+  TR::Options::getCmdLineOptions()->addOptionSet(&elfOptionSet);
+
+  for(Index i = 0; i < env.GetFuncCount(); ++i) {
+    auto fn = env.GetFunc(i);
+    FunctionBuilder builder(thread, fn, &types);
+    compileMethodBuilder(&builder, fn);
+  }
+
+  shutdownJIT();
+  
+  return interp::Result::Ok;
+}
 
 JITedFunction compile(interp::Thread* thread, interp::DefinedFunc* fn) {
   TypeDictionary types;
