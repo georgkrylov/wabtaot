@@ -25,7 +25,8 @@ namespace jit {
 
 using JITedFunction = interp::Result (*)();
 
-JITedFunction compile(interp::Thread* thread, interp::DefinedFunc* fn);
+wabt::Result compileAOT(interp::Thread*, interp::Environment&);
+JITedFunction compile(interp::Thread* thread, interp::DefinedFunc*);
 
 }
 }

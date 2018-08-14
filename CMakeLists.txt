@@ -31,10 +31,6 @@ list(APPEND CMAKE_MODULE_PATH
 	${CMAKE_CURRENT_LIST_DIR}/third_party/omr/cmake/modules/
 )
 
-include(OmrPlatform)
-
-omr_platform_global_setup()
-
 set(OMR_DDR OFF CACHE BOOL "Enable DDR")
 set(OMR_EXAMPLE OFF CACHE BOOL "")
 set(OMR_JIT  ON CACHE BOOL "")

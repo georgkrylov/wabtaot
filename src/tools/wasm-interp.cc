@@ -36,6 +36,7 @@
 #include "src/validator.h"
 #include "src/wast-lexer.h"
 #include "src/wast-parser.h"
+#include "src/jit/wabtjit.h"
 
 #include "Jit.hpp"
 
@@ -130,7 +131,7 @@ static void ParseOptions(int argc, char** argv) {
                    []() { s_no_stack_trace = true; });
   parser.AddOption("full-aot",
 		   "Compile the program ahead-of-time.",
-		   [](const char*) { s_compile_aot = true; });
+		   []() { s_compile_aot = true; });
 
   parser.AddArgument("filename", OptionParser::ArgumentCount::One,
                      [](const char* argument) { s_infile = argument; });
@@ -272,10 +273,8 @@ static wabt::Result ReadAndRunModule(const char* module_filename) {
   result = ReadModule(module_filename, &env, &error_handler, &module);
   if (Succeeded(result)) {
     if(s_compile_aot) {
-      Thread::Options thread_options();
-      Thread thread(&env, thread_options);
-
-      return compileAOT(&thread, env);
+      Thread thread(&env);
+      return wabt::jit::compileAOT(&thread, env);
     }
 
     Executor executor(&env, s_trace_stream, s_thread_options);
