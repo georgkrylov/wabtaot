@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 wasmjit-omr project participants
+ * Copyright 2017 wasmjit-omr project participants
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,25 +14,23 @@
  * limitations under the License.
  */
 
-#include "environment.h"
-#include "Jit.hpp"
+#ifndef AOTTYPEDICTIONARY_HPP
+#define AOTTYPEDICTIONARY_HPP
+
+#include "TypeDictionary.h"
 
 namespace wabt {
 namespace jit {
 
-unsigned short JitEnvironment::instance_count_ = 0;
+template <std::size_t STACK_SIZE>
+class AOTTypeDictionary<STACK_SIZE> : public TypeDictionary {
+ public:
+  AOTTypeDictionary();
 
-JitEnvironment::JitEnvironment() {
-  if (instance_count_ == 0)
-     initializeJit();
-  ++instance_count_;
-}
-
-JitEnvironment::~JitEnvironment() {
-  --instance_count_;
-  if (instance_count_ == 0)
-      shutdownJit();
-}
+  TR::IlType *valueStackType_;
+};
 
 }
 }
+
+#endif // AOTTYPEDICTIONARY_HPP
