@@ -108,7 +108,7 @@ void* AOTFunctionBuilder::MemoryTranslationHelper(interp::Thread* th, uint32_t m
   }
 }
 */
-  
+
 AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFunc* fn,
 				       AOTTypeDictionary* types)
     : TR::MethodBuilder(types),
@@ -122,7 +122,10 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFu
   DefineName(fn->dbg_name_.c_str());
 
   DefineParameter("value_stack", types->pValueType_);
-  
+
+  // remember: we don't define other parameters here because
+  // WASM is a stack-based language, ie. they go on to the stack!!
+
   DefineReturnType(types->toIlType<Result_t>());
 
   DefineFunction("f32_sqrt", __FILE__, "0",
@@ -195,16 +198,15 @@ bool AOTFunctionBuilder::buildIL() {
  * stack_base_addr[stack_top] = value;
  * *stack_top_addr = stack_top + 1;
  */
-// MODIFIED .. for AOT.  
 void AOTFunctionBuilder::Push(TR::IlBuilder* b, const char* type,
-			      TR::IlValue* value, const uint8_t* pc)
+			      TR::IlValue* value) //, const uint8_t* pc)
 {
   auto pInt32 = typeDictionary()->PointerTo(Int32);
   // auto* stack_top_addr = b->ConstAddress(&thread_->value_stack_top_);
   // auto* stack_base_addr = b->ConstAddress(thread_->value_stack_.data());
   IlValue* stack_top_addr = nullptr;
   IlValue* stack_base_addr = nullptr;
-  
+
   b->StructFieldInstanceAddress("value_stack", "stack_top_", stack_top_addr);
   b->StructFieldInstanceAddress("value_stack", "stack_base_", stack_base_addr);
 
@@ -214,8 +216,8 @@ void AOTFunctionBuilder::Push(TR::IlBuilder* b, const char* type,
   b->        UnsignedGreaterOrEqualTo(
                  stack_top,
   b->            Const(STACK_SIZE)),
-  b->        Const(static_cast<Result_t>(interp::Result::TrapValueStackExhausted)),
-             pc);
+  b->        Const(static_cast<Result_t>(interp::Result::TrapValueStackExhausted)));/*,
+										    pc);*/
 
   b->StoreIndirect("Value", type,
   b->              IndexAt(pValueType_,
@@ -245,7 +247,7 @@ TR::IlValue* AOTFunctionBuilder::Pop(TR::IlBuilder* b, const char* type) {
 
   b->StructFieldInstanceAddress("value_stack", "stack_top_", stack_top_addr);
   b->StructFieldInstanceAddress("value_stack", "stack_base_", stack_base_addr);
-  
+
   auto* new_stack_top = b->Sub(
                         b->    LoadAt(pInt32, stack_top_addr),
                         b->    Const(1));
@@ -282,7 +284,7 @@ void AOTFunctionBuilder::DropKeep(TR::IlBuilder* b, uint32_t drop_count, uint8_t
 
   b->StructFieldInstanceAddress("value_stack", "stack_top_", stack_top_addr);
   b->StructFieldInstanceAddress("value_stack", "stack_base_", stack_base_addr);
-  
+
   auto* stack_top = b->LoadAt(pInt32, stack_top_addr);
   auto* new_stack_top = b->Sub(stack_top, b->Const(static_cast<int32_t>(drop_count)));
 
@@ -313,13 +315,13 @@ TR::IlValue* AOTFunctionBuilder::Pick(TR::IlBuilder* b, Index depth) {
   auto pInt32 = typeDictionary()->PointerTo(Int32);
   //  auto* stack_top_addr = b->ConstAddress(&thread_->value_stack_top_);
   //  auto* stack_base_addr = b->ConstAddress(thread_->value_stack_.data());
-  
+
   IlValue* stack_top_addr = nullptr;
   IlValue* stack_base_addr = nullptr;
 
   b->StructFieldInstanceAddress("value_stack", "stack_top_", stack_top_addr);
   b->StructFieldInstanceAddress("value_stack", "stack_base_", stack_base_addr);
-  
+
   auto* offset = b->Sub(
                  b->    LoadAt(pInt32, stack_top_addr),
                  b->    ConstInt32(depth));
@@ -391,50 +393,50 @@ TR::IlValue* AOTFunctionBuilder::Const(TR::IlBuilder* b, const interp::TypedValu
 }
 
 template <typename T, typename TResult, typename TOpHandler>
-void AOTFunctionBuilder::EmitBinaryOp(TR::IlBuilder* b, const uint8_t* pc, TOpHandler h) {
+void AOTFunctionBuilder::EmitBinaryOp(TR::IlBuilder* b, TOpHandler h) {
   auto* rhs = Pop(b, TypeFieldName<T>());
   auto* lhs = Pop(b, TypeFieldName<T>());
 
-  Push(b, TypeFieldName<TResult>(), h(lhs, rhs), pc);
+  Push(b, TypeFieldName<TResult>(), h(lhs, rhs)); //, pc);
 }
 
 template <typename T, typename TResult, typename TOpHandler>
-void AOTFunctionBuilder::EmitUnaryOp(TR::IlBuilder* b, const uint8_t* pc, TOpHandler h) {
-  Push(b, TypeFieldName<TResult>(), h(Pop(b, TypeFieldName<T>())), pc);
+void AOTFunctionBuilder::EmitUnaryOp(TR::IlBuilder* b, TOpHandler h) {
+  Push(b, TypeFieldName<TResult>(), h(Pop(b, TypeFieldName<T>())));//, pc);
 }
 
 template <typename T>
-void AOTFunctionBuilder::EmitIntDivide(TR::IlBuilder* b, const uint8_t* pc) {
+void AOTFunctionBuilder::EmitIntDivide(TR::IlBuilder* b) {
   static_assert(std::is_integral<T>::value,
                 "EmitIntDivide only works on integral types");
 
-  EmitBinaryOp<T>(b, pc, [&](TR::IlValue* dividend, TR::IlValue* divisor) {
+  EmitBinaryOp<T>(b, [&](TR::IlValue* dividend, TR::IlValue* divisor) {
     EmitTrapIf(b,
     b->        EqualTo(divisor, b->Const(static_cast<T>(0))),
-    b->        Const(static_cast<Result_t>(interp::Result::TrapIntegerDivideByZero)),
-               pc);
+    b->        Const(static_cast<Result_t>(interp::Result::TrapIntegerDivideByZero)));/*,
+										      pc);*/
 
     EmitTrapIf(b,
     b->        And(
     b->            EqualTo(dividend, b->Const(std::numeric_limits<T>::min())),
     b->            EqualTo(divisor, b->Const(static_cast<T>(-1)))),
-    b->        Const(static_cast<Result_t>(interp::Result::TrapIntegerOverflow)),
-               pc);
+    b->        Const(static_cast<Result_t>(interp::Result::TrapIntegerOverflow)));/*,
+										  pc);*/
 
     return b->Div(dividend, divisor);
   });
 }
 
 template <typename T>
-void AOTFunctionBuilder::EmitIntRemainder(TR::IlBuilder* b, const uint8_t* pc) {
+void AOTFunctionBuilder::EmitIntRemainder(TR::IlBuilder* b) {//, const uint8_t* pc) {
   static_assert(std::is_integral<T>::value,
                 "EmitIntRemainder only works on integral types");
 
-  EmitBinaryOp<T>(b, pc, [&](TR::IlValue* dividend, TR::IlValue* divisor) {
+  EmitBinaryOp<T>(b, [&](TR::IlValue* dividend, TR::IlValue* divisor) {
     EmitTrapIf(b,
     b->        EqualTo(divisor, b->Const(static_cast<T>(0))),
-    b->        Const(static_cast<Result_t>(interp::Result::TrapIntegerDivideByZero)),
-               pc);
+    b->        Const(static_cast<Result_t>(interp::Result::TrapIntegerDivideByZero)));/*,
+										      pc);*/
 
     TR::IlValue* return_value = b->Const(static_cast<T>(0));
 
@@ -451,49 +453,60 @@ void AOTFunctionBuilder::EmitIntRemainder(TR::IlBuilder* b, const uint8_t* pc) {
 }
 
 template <typename T>
-TR::IlValue* AOTFunctionBuilder::EmitMemoryPreAccess(TR::IlBuilder* b, const uint8_t** pc) {
+TR::IlValue* AOTFunctionBuilder::EmitMemoryPreAccess(TR::IlBuilder* b) { //, const uint8_t** pc) {
+  throw std::runtime_error("AOTFunctionBuilder: EmitMemoryPreAccess not supported!");
+
   auto th_addr = b->ConstAddress(thread_);
   auto mem_id = b->ConstInt32(ReadU32(pc));
   auto offset = b->ConstInt64(static_cast<uint64_t>(ReadU32(pc)));
 
+  // TODO: I don't know how to handle memories. Maybe throw an exception?
+  // Or figure out how to heap allocate in JitBuilder and do it later. But
+  // for now.. probably throw an exception. More complexity than I'd like to
+  // deal with right now.
+
+  /*
   auto address = b->Call("MemoryTranslationHelper",
                          4,
                          th_addr,
                          mem_id,
                          b->Add(b->UnsignedConvertTo(Int64, Pop(b, "i32")), offset),
                          b->ConstInt32(sizeof(T)));
+  */
 
   EmitTrapIf(b,
   b->        EqualTo(address, b->ConstAddress(nullptr)),
-  b->        Const(static_cast<Result_t>(interp::Result::TrapMemoryAccessOutOfBounds)),
-             *pc);
+  b->        Const(static_cast<Result_t>(interp::Result::TrapMemoryAccessOutOfBounds)));/*,
+										       *pc);*/
 
   return address;
 }
 
-void AOTFunctionBuilder::EmitTrap(TR::IlBuilder* b, TR::IlValue* result, const uint8_t* pc) {
-  if (pc != nullptr) {
-    b->StoreAt(b->ConstAddress(&thread_->pc_),
-               b->ConstInt32(pc - thread_->GetIstream()));
-  }
+void AOTFunctionBuilder::EmitTrap(TR::IlBuilder* b, TR::IlValue* result) { //, const uint8_t* pc) {
+// this seems to return the PC to the line after the last call, the one that trapped.
+//  if (pc != nullptr) {
+//    b->StoreAt(b->ConstAddress(&thread_->pc_),
+//               b->ConstInt32(pc - thread_->GetIstream()));
+//  }
 
+//TODO: maybe print out the result somehow? Except it's wrapped in an IlValue..
   b->Return(result);
 }
 
-void AOTFunctionBuilder::EmitCheckTrap(TR::IlBuilder* b, TR::IlValue* result, const uint8_t* pc) {
+void AOTFunctionBuilder::EmitCheckTrap(TR::IlBuilder* b, TR::IlValue* result) { //, const uint8_t* pc) {
   TR::IlBuilder* trap_handler = nullptr;
 
   b->IfThen(&trap_handler,
   b->       NotEqualTo(result, b->Const(static_cast<Result_t>(interp::Result::Ok))));
 
-  EmitTrap(trap_handler, result, pc);
+  EmitTrap(trap_handler, result); //, pc);
 }
 
-void AOTFunctionBuilder::EmitTrapIf(TR::IlBuilder* b, TR::IlValue* condition, TR::IlValue* result, const uint8_t* pc) {
+void AOTFunctionBuilder::EmitTrapIf(TR::IlBuilder* b, TR::IlValue* condition, TR::IlValue* result) { //, const uint8_t* pc) {
   TR::IlBuilder* trap_handler = nullptr;
 
   b->IfThen(&trap_handler, condition);
-  EmitTrap(trap_handler, result, pc);
+  EmitTrap(trap_handler, result); //, pc);
 }
 
 template <>
@@ -515,7 +528,7 @@ TR::IlValue* AOTFunctionBuilder::EmitIsNan<double>(TR::IlBuilder* b, TR::IlValue
 }
 
 template <typename ToType, typename FromType>
-void AOTFunctionBuilder::EmitTruncation(TR::IlBuilder* b, const uint8_t* pc) {
+void AOTFunctionBuilder::EmitTruncation(TR::IlBuilder* b) { // , const uint8_t* pc) {
   static_assert(std::is_floating_point<FromType>::value, "FromType in EmitTruncation call must be a floating point type");
 
   auto* value = Pop(b, TypeFieldName<FromType>());
@@ -523,8 +536,8 @@ void AOTFunctionBuilder::EmitTruncation(TR::IlBuilder* b, const uint8_t* pc) {
   // TRAP_IF is NaN
   EmitTrapIf(b,
              EmitIsNan<FromType>(b, value),
-  b->        Const(static_cast<Result_t>(interp::Result::TrapInvalidConversionToInteger)),
-             pc);
+	     b->        Const(static_cast<Result_t>(interp::Result::TrapInvalidConversionToInteger)));//,
+  //             pc);
 
   // TRAP_UNLESS conversion is in range
   EmitTrapIf(b,
@@ -533,8 +546,8 @@ void AOTFunctionBuilder::EmitTruncation(TR::IlBuilder* b, const uint8_t* pc) {
   b->                    Const(static_cast<FromType>(std::numeric_limits<ToType>::lowest()))),
   b->           GreaterThan(value,
   b->                       Const(static_cast<FromType>(std::numeric_limits<ToType>::max())))),
-  b->        Const(static_cast<Result_t>(interp::Result::TrapIntegerOverflow)),
-             pc);
+  b->        Const(static_cast<Result_t>(interp::Result::TrapIntegerOverflow)));/*,
+										pc); */
 
   auto* target_type = b->typeDictionary()->toIlType<ToType>();
 
@@ -555,7 +568,7 @@ void AOTFunctionBuilder::EmitTruncation(TR::IlBuilder* b, const uint8_t* pc) {
  * the target type.
  */
 template <typename ToType, typename FromType>
-void AOTFunctionBuilder::EmitUnsignedTruncation(TR::IlBuilder* b, const uint8_t* pc) {
+void AOTFunctionBuilder::EmitUnsignedTruncation(TR::IlBuilder* b) { // , const uint8_t* pc) {
   static_assert(std::is_floating_point<FromType>::value, "FromType in EmitTruncation call must be a floating point type");
   static_assert(std::is_integral<ToType>::value, "ToType in EmitUnsignedTruncation call must be an integer type");
   static_assert(std::is_unsigned<ToType>::value, "ToType in EmitUnsignedTruncation call must be unsigned");
@@ -565,8 +578,8 @@ void AOTFunctionBuilder::EmitUnsignedTruncation(TR::IlBuilder* b, const uint8_t*
   // TRAP_IF is NaN
   EmitTrapIf(b,
              EmitIsNan<FromType>(b, value),
-  b->        Const(static_cast<Result_t>(interp::Result::TrapInvalidConversionToInteger)),
-             pc);
+  b->        Const(static_cast<Result_t>(interp::Result::TrapInvalidConversionToInteger)));/*,
+											     pc);*/
 
   // TRAP_UNLESS conversion is in range
   EmitTrapIf(b,
@@ -575,13 +588,13 @@ void AOTFunctionBuilder::EmitUnsignedTruncation(TR::IlBuilder* b, const uint8_t*
   b->                    Const(static_cast<FromType>(std::numeric_limits<ToType>::lowest()))),
   b->           GreaterThan(value,
   b->                       Const(static_cast<FromType>(std::numeric_limits<ToType>::max())))),
-  b->        Const(static_cast<Result_t>(interp::Result::TrapIntegerOverflow)),
-             pc);
+  b->        Const(static_cast<Result_t>(interp::Result::TrapIntegerOverflow)));/*,
+										  pc);*/
 
   auto* target_type = b->typeDictionary()->toIlType<ToType>();
   auto* new_value = b->UnsignedConvertTo(target_type, b->ConvertTo(Int64, value));
 
-  Push(b, TypeFieldName<ToType>(), new_value, pc);
+  Push(b, TypeFieldName<ToType>(), new_value);//, pc);
 }
 
 template <typename T>
@@ -609,9 +622,10 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
 
     case Opcode::Br: {
       auto target = &istream[ReadU32(&pc)];
-      auto it = std::find_if(workItems_.cbegin(), workItems_.cend(), [&](const BytecodeWorkItem& b) {
-        return target == b.pc;
-      });
+      auto it = std::find_if(workItems_.cbegin(), workItems_.cend(),
+			     [&](const BytecodeWorkItem& b) {
+			       return target == b.pc;
+			     });
       if (it != workItems_.cend()) {
         b->AddFallThroughBuilder(it->builder);
       } else {
@@ -632,30 +646,30 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
       return true;
 
     case Opcode::Unreachable:
-      EmitTrap(b, b->Const(static_cast<Result_t>(interp::Result::TrapUnreachable)), pc);
+      EmitTrap(b, b->Const(static_cast<Result_t>(interp::Result::TrapUnreachable))); //, pc);
       return true;
 
     case Opcode::I32Const: {
       auto* val = b->ConstInt32(ReadU32(&pc));
-      Push(b, "i32", val, pc);
+      Push(b, "i32", val); //, pc);
       break;
     }
 
     case Opcode::I64Const: {
       auto* val = b->ConstInt64(ReadU64(&pc));
-      Push(b, "i64", val, pc);
+      Push(b, "i64", val); //, pc);
       break;
     }
 
     case Opcode::F32Const: {
       auto* val = b->ConstFloat(ReadUx<float>(&pc));
-      Push(b, "f32", val, pc);
+      Push(b, "f32", val); //, pc);
       break;
     }
 
     case Opcode::F64Const: {
       auto* val = b->ConstDouble(ReadUx<double>(&pc));
-      Push(b, "f64", val, pc);
+      Push(b, "f64", val); //, pc);
       break;
     }
 
@@ -669,17 +683,20 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
       if (g->mutable_) {
         // TODO(thomasbc): Can the address of a Global change at runtime?
         auto* addr = b->Const(&g->typed_value.value);
-        Push(b, type_field, b->LoadIndirect("Value", type_field, addr), pc);
+        Push(b, type_field, b->LoadIndirect("Value", type_field, addr));//, pc);
       } else {
         // With immutable globals, we can just substitute their actual value as
         // a constant at compile-time.
-        Push(b, type_field, Const(b, &g->typed_value), pc);
+        Push(b, type_field, Const(b, &g->typed_value));//, pc);
       }
 
       break;
     }
 
     case Opcode::SetGlobal: {
+      //TODO: add support for this
+      throw std::runtime_error("AOTFunctionBuilder: set_global not supported");
+
       interp::Global* g = thread_->env()->GetGlobal(ReadU32(&pc));
       assert(g->mutable_);
 
@@ -697,7 +714,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
       // note: to work around JitBuilder's lack of support unions as value types,
       // just copy a field that's the size of the entire union
       auto* local_addr = Pick(b, ReadU32(&pc));
-      Push(b, "i64", b->LoadIndirect("Value", "i64", local_addr), pc);
+      Push(b, "i64", b->LoadIndirect("Value", "i64", local_addr));//, pc);
       break;
     }
 
@@ -715,29 +732,44 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
       break;
 
     case Opcode::Call: {
-      auto th_addr = b->ConstAddress(thread_);
-      auto offset = b->ConstInt32(ReadU32(&pc));
-      auto current_pc = b->Const(pc);
+      auto func_index = ReadU32(&pc);
+      // auto th_addr = b->ConstAddress(thread_);
+      // auto offset = b->ConstInt32(ReadU32(&pc));
+      // auto current_pc = b->Const(pc);
+
+      // the AOT manager keeps a vector of all the FunctionBuilder objects,
+      // indexed by their internal offsets.
+      auto targetBuilder = aotManager_.getFB(func_index);
 
       b->Store("result",
+	       Call(targetBuilder, 1, "value_stack"));
+
+      /*
+      b->Store("result",
       b->      Call("CallHelper", 3, th_addr, offset, current_pc));
+      */
 
       // Don't pass the pc since a trap in a called function should not update the thread's pc
-      EmitCheckTrap(b, b->Load("result"), nullptr);
+      //MARK: also, omit the argument for a pc, since, y'know, this is an AOT builder..
+      EmitCheckTrap(b, b->Load("result"));//, nullptr);
 
       break;
     }
 
     case Opcode::CallIndirect: {
+      throw std::runtime_error("indirect calls not supported");
+
       auto th_addr = b->ConstAddress(thread_);
       auto table_index = b->ConstInt32(ReadU32(&pc));
       auto sig_index = b->ConstInt32(ReadU32(&pc));
       auto entry_index = Pop(b, "i32");
       auto current_pc = b->Const(pc);
 
+      // TODO: again, more of the same.
+      /*
       b->Store("result",
       b->      Call("CallIndirectHelper", 5, th_addr, table_index, sig_index, entry_index, current_pc));
-
+      */
       // Don't pass the pc since a trap in a called function should not update the thread's pc
       EmitCheckTrap(b, b->Load("result"), nullptr);
 
@@ -745,146 +777,171 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
     }
 
     case Opcode::InterpCallHost: {
+      throw std::runtime_error("interpreted host calls not supported");
       Index func_index = ReadU32(&pc);
 
+      // TODO: again, more of the same.
+
+      /*
       b->Store("result",
       b->      Call("CallHostHelper", 2,
       b->           ConstAddress(thread_),
       b->           ConstInt32(func_index)));
-
-      EmitCheckTrap(b, b->Load("result"), pc);
+      */
+      EmitCheckTrap(b, b->Load("result"));
 
       break;
     }
 
     case Opcode::I32Load8S: {
+      throw std::runtime_error("linear memory access not supported");
+      // TODO: again, more of the same.
       auto* addr = EmitMemoryPreAccess<int8_t>(b, &pc);
       Push(b,
            "i32",
       b->  ConvertTo(Int32,
-      b->            LoadAt(typeDictionary()->PointerTo(Int8), addr)),
-           pc);
+      b->            LoadAt(typeDictionary()->PointerTo(Int8), addr)));
+           //pc);
       break;
     }
 
     case Opcode::I32Load8U: {
+      throw std::runtime_error("linear memory access not supported");
+      // TODO: again, more of the same.
       auto* addr = EmitMemoryPreAccess<int8_t>(b, &pc);
       Push(b,
            "i32",
       b->  UnsignedConvertTo(Int32,
-      b->                    LoadAt(typeDictionary()->PointerTo(Int8), addr)),
-           pc);
+      b->                    LoadAt(typeDictionary()->PointerTo(Int8), addr)));
       break;
     }
 
     case Opcode::I32Load16S: {
+      throw std::runtime_error("linear memory access not supported");
+      // TODO: again, more of the same.
       auto* addr = EmitMemoryPreAccess<int16_t>(b, &pc);
       Push(b,
            "i32",
       b->  ConvertTo(Int32,
-      b->            LoadAt(typeDictionary()->PointerTo(Int16), addr)),
-           pc);
+      b->            LoadAt(typeDictionary()->PointerTo(Int16), addr)));
+           //pc);
       break;
     }
 
     case Opcode::I32Load16U: {
+      throw std::runtime_error("linear memory access not supported");
+      // TODO: again, more of the same.
       auto* addr = EmitMemoryPreAccess<int16_t>(b, &pc);
       Push(b,
            "i32",
       b->  UnsignedConvertTo(Int32,
-      b->                    LoadAt(typeDictionary()->PointerTo(Int16), addr)),
-           pc);
+      b->                    LoadAt(typeDictionary()->PointerTo(Int16), addr)));
+      // pc);
       break;
     }
 
     case Opcode::I64Load8S: {
+      throw std::runtime_error("linear memory access not supported");
+      // TODO: again, more of the same.
       auto* addr = EmitMemoryPreAccess<int8_t>(b, &pc);
       Push(b,
            "i64",
       b->  ConvertTo(Int64,
-      b->            LoadAt(typeDictionary()->PointerTo(Int8), addr)),
-           pc);
+      b->            LoadAt(typeDictionary()->PointerTo(Int8), addr)));
+	   //           pc);
       break;
     }
 
     case Opcode::I64Load8U: {
+      throw std::runtime_error("linear memory access not supported");
+      // TODO: again, more of the same.
       auto* addr = EmitMemoryPreAccess<int8_t>(b, &pc);
       Push(b,
            "i64",
       b->  UnsignedConvertTo(Int64,
-      b->                    LoadAt(typeDictionary()->PointerTo(Int8), addr)),
-           pc);
+      b->                    LoadAt(typeDictionary()->PointerTo(Int8), addr)));
+	   //      pc);
       break;
     }
 
     case Opcode::I64Load16S: {
+      throw std::runtime_error("linear memory access not supported");
+      // TODO: again, more of the same.
       auto* addr = EmitMemoryPreAccess<int16_t>(b, &pc);
       Push(b,
            "i64",
       b->  ConvertTo(Int64,
-      b->            LoadAt(typeDictionary()->PointerTo(Int16), addr)),
-           pc);
+      b->            LoadAt(typeDictionary()->PointerTo(Int16), addr)));
+
       break;
     }
 
     case Opcode::I64Load16U: {
+      throw std::runtime_error("linear memory access not supported");
+      // TODO: again, more of the same.
       auto* addr = EmitMemoryPreAccess<int16_t>(b, &pc);
       Push(b,
            "i64",
       b->  UnsignedConvertTo(Int64,
-      b->                    LoadAt(typeDictionary()->PointerTo(Int16), addr)),
-           pc);
+      b->                    LoadAt(typeDictionary()->PointerTo(Int16), addr)));
+
       break;
     }
 
     case Opcode::I64Load32S: {
+      throw std::runtime_error("linear memory access not supported");
       auto* addr = EmitMemoryPreAccess<int32_t>(b, &pc);
       Push(b,
            "i64",
       b->  ConvertTo(Int64,
-      b->            LoadAt(typeDictionary()->PointerTo(Int32), addr)),
-           pc);
+      b->            LoadAt(typeDictionary()->PointerTo(Int32), addr)));
+
       break;
     }
 
     case Opcode::I64Load32U: {
+      throw std::runtime_error("linear memory access not supported");
       auto* addr = EmitMemoryPreAccess<int32_t>(b, &pc);
       Push(b,
            "i64",
       b->  UnsignedConvertTo(Int64,
-      b->                    LoadAt(typeDictionary()->PointerTo(Int32), addr)),
-           pc);
+      b->                    LoadAt(typeDictionary()->PointerTo(Int32), addr)));
+	   //     pc);
       break;
     }
 
     case Opcode::I32Load: {
+      throw std::runtime_error("linear memory access not supported");
       auto* addr = EmitMemoryPreAccess<int32_t>(b, &pc);
       Push(b,
            "i32",
-      b->  LoadAt(typeDictionary()->PointerTo(Int32), addr),
-           pc);
+      b->  LoadAt(typeDictionary()->PointerTo(Int32), addr));
+
       break;
     }
 
     case Opcode::I64Load: {
+      throw std::runtime_error("linear memory access not supported");
       auto* addr = EmitMemoryPreAccess<int64_t>(b, &pc);
       Push(b,
            "i64",
-      b->  LoadAt(typeDictionary()->PointerTo(Int64), addr),
-           pc);
+      b->  LoadAt(typeDictionary()->PointerTo(Int64), addr));
+	   //           pc);
       break;
     }
 
     case Opcode::F32Load: {
+      throw std::runtime_error("linear memory access not supported");
       auto* addr = EmitMemoryPreAccess<float>(b, &pc);
       Push(b,
            "f32",
-      b->  LoadAt(typeDictionary()->PointerTo(Float), addr),
-           pc);
+      b->  LoadAt(typeDictionary()->PointerTo(Float), addr));
+      
       break;
     }
 
     case Opcode::F64Load: {
+      throw std::runtime_error("linear memory access not supported");
       auto* addr = EmitMemoryPreAccess<double>(b, &pc);
       Push(b,
            "f64",
@@ -894,123 +951,132 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
     }
 
     case Opcode::I32Store8: {
+      throw std::runtime_error("linear memory access not supported");
       auto value = b->ConvertTo(Int8, Pop(b, "i32"));
       b->StoreAt(EmitMemoryPreAccess<int8_t>(b, &pc), value);
       break;
     }
 
     case Opcode::I32Store16: {
+      throw std::runtime_error("linear memory access not supported");
       auto value = b->ConvertTo(Int16, Pop(b, "i32"));
       b->StoreAt(EmitMemoryPreAccess<int16_t>(b, &pc), value);
       break;
     }
 
     case Opcode::I64Store8: {
+      throw std::runtime_error("linear memory access not supported");
       auto value = b->ConvertTo(Int8, Pop(b, "i64"));
       b->StoreAt(EmitMemoryPreAccess<int8_t>(b, &pc), value);
       break;
     }
 
     case Opcode::I64Store16: {
+      throw std::runtime_error("linear memory access not supported");
       auto value = b->ConvertTo(Int16, Pop(b, "i64"));
       b->StoreAt(EmitMemoryPreAccess<int16_t>(b, &pc), value);
       break;
     }
 
     case Opcode::I64Store32: {
+      throw std::runtime_error("linear memory access not supported");
       auto value = b->ConvertTo(Int32, Pop(b, "i64"));
       b->StoreAt(EmitMemoryPreAccess<int32_t>(b, &pc), value);
       break;
     }
 
     case Opcode::I32Store: {
+      throw std::runtime_error("linear memory access not supported");
       auto value = Pop(b, "i32");
       b->StoreAt(EmitMemoryPreAccess<int32_t>(b, &pc), value);
       break;
     }
 
     case Opcode::I64Store: {
+      throw std::runtime_error("linear memory access not supported");
       auto value = Pop(b, "i64");
       b->StoreAt(EmitMemoryPreAccess<int64_t>(b, &pc), value);
       break;
     }
 
     case Opcode::F32Store: {
+      throw std::runtime_error("linear memory access not supported");
       auto value = Pop(b, "f32");
       b->StoreAt(EmitMemoryPreAccess<float>(b, &pc), value);
       break;
     }
 
     case Opcode::F64Store: {
+      throw std::runtime_error("linear memory access not supported");
       auto value = Pop(b, "f64");
       b->StoreAt(EmitMemoryPreAccess<double>(b, &pc), value);
       break;
     }
 
     case Opcode::I32Add:
-      EmitBinaryOp<int32_t>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int32_t>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->Add(lhs, rhs);
       });
       break;
 
     case Opcode::I32Sub:
-      EmitBinaryOp<int32_t>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int32_t>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->Sub(lhs, rhs);
       });
       break;
 
     case Opcode::I32Mul:
-      EmitBinaryOp<int32_t>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int32_t>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->Mul(lhs, rhs);
       });
       break;
 
     case Opcode::I32DivS:
-      EmitIntDivide<int32_t>(b, pc);
+      EmitIntDivide<int32_t>(b);
       break;
 
     case Opcode::I32RemS:
-      EmitIntRemainder<int32_t>(b, pc);
+      EmitIntRemainder<int32_t>(b);
       break;
 
     case Opcode::I32And:
-      EmitBinaryOp<int32_t>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int32_t>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->And(lhs, rhs);
       });
       break;
 
     case Opcode::I32Or:
-      EmitBinaryOp<int32_t>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int32_t>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->Or(lhs, rhs);
       });
       break;
 
     case Opcode::I32Xor:
-      EmitBinaryOp<int32_t>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int32_t>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->Xor(lhs, rhs);
       });
       break;
 
     case Opcode::I32Shl:
-      EmitBinaryOp<int32_t>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int32_t>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->ShiftL(lhs, CalculateShiftAmount<int32_t>(b, rhs));
       });
       break;
 
     case Opcode::I32ShrS:
-      EmitBinaryOp<int32_t>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int32_t>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->ShiftR(lhs, CalculateShiftAmount<int32_t>(b, rhs));
       });
       break;
 
     case Opcode::I32ShrU:
-      EmitBinaryOp<int32_t>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int32_t>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->UnsignedShiftR(lhs, CalculateShiftAmount<int32_t>(b, rhs));
       });
       break;
 
     case Opcode::I32Rotl:
-      EmitBinaryOp<int32_t>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int32_t>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         auto* amount = CalculateShiftAmount<int32_t>(b, rhs);
 
         return b->Or(
@@ -1020,7 +1086,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
       break;
 
     case Opcode::I32Rotr:
-      EmitBinaryOp<int32_t>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int32_t>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         auto* amount = CalculateShiftAmount<int32_t>(b, rhs);
 
         return b->Or(
@@ -1030,135 +1096,135 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
       break;
 
     case Opcode::I32Eqz:
-      EmitUnaryOp<int32_t, int>(b, pc, [&](TR::IlValue* val) {
+      EmitUnaryOp<int32_t, int>(b, [&](TR::IlValue* val) {
         return b->EqualTo(val, b->ConstInt32(0));
       });
       break;
 
     case Opcode::I32Eq:
-      EmitBinaryOp<int32_t, int>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int32_t, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->EqualTo(lhs, rhs);
       });
       break;
 
     case Opcode::I32Ne:
-      EmitBinaryOp<int32_t, int>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int32_t, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->NotEqualTo(lhs, rhs);
       });
       break;
 
     case Opcode::I32LtS:
-      EmitBinaryOp<int32_t, int>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int32_t, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->LessThan(lhs, rhs);
       });
       break;
 
     case Opcode::I32LtU:
-      EmitBinaryOp<int32_t, int>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int32_t, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->UnsignedLessThan(lhs, rhs);
       });
       break;
 
     case Opcode::I32GtS:
-      EmitBinaryOp<int32_t, int>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int32_t, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->GreaterThan(lhs, rhs);
       });
       break;
 
     case Opcode::I32GtU:
-      EmitBinaryOp<int32_t, int>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int32_t, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->UnsignedGreaterThan(lhs, rhs);
       });
       break;
 
     case Opcode::I32LeS:
-      EmitBinaryOp<int32_t, int>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int32_t, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->LessOrEqualTo(lhs, rhs);
       });
       break;
 
     case Opcode::I32LeU:
-      EmitBinaryOp<int32_t, int>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int32_t, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->UnsignedLessOrEqualTo(lhs, rhs);
       });
       break;
 
     case Opcode::I32GeS:
-      EmitBinaryOp<int32_t, int>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int32_t, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->GreaterOrEqualTo(lhs, rhs);
       });
       break;
 
     case Opcode::I32GeU:
-      EmitBinaryOp<int32_t, int>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int32_t, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->UnsignedGreaterOrEqualTo(lhs, rhs);
       });
       break;
 
     case Opcode::I64Add:
-        EmitBinaryOp<int64_t>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+        EmitBinaryOp<int64_t>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
           return b->Add(lhs, rhs);
         });
         break;
 
     case Opcode::I64Sub:
-      EmitBinaryOp<int64_t>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int64_t>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->Sub(lhs, rhs);
       });
       break;
 
     case Opcode::I64Mul:
-      EmitBinaryOp<int64_t>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int64_t>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->Mul(lhs, rhs);
       });
       break;
 
-    case Opcode::I64DivS:
-      EmitIntDivide<int64_t>(b, pc);
+    case Opcode::I64DivS: // RETURN
+      EmitIntDivide<int64_t>(b); //, pc);
       break;
 
     case Opcode::I64RemS:
-      EmitIntRemainder<int64_t>(b, pc);
+      EmitIntRemainder<int64_t>(b);//, pc);
       break;
 
     case Opcode::I64And:
-      EmitBinaryOp<int64_t>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int64_t>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->And(lhs, rhs);
       });
       break;
 
     case Opcode::I64Or:
-      EmitBinaryOp<int64_t>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int64_t>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->Or(lhs, rhs);
       });
       break;
 
     case Opcode::I64Xor:
-      EmitBinaryOp<int64_t>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int64_t>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->Xor(lhs, rhs);
       });
       break;
 
     case Opcode::I64Shl:
-      EmitBinaryOp<int64_t>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int64_t>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->ShiftL(lhs, CalculateShiftAmount<int64_t>(b, rhs));
       });
       break;
 
     case Opcode::I64ShrS:
-      EmitBinaryOp<int64_t>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int64_t>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->ShiftR(lhs, CalculateShiftAmount<int64_t>(b, rhs));
       });
       break;
 
     case Opcode::I64ShrU:
-      EmitBinaryOp<int64_t>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int64_t>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->UnsignedShiftR(lhs, CalculateShiftAmount<int64_t>(b, rhs));
       });
       break;
 
     case Opcode::I64Rotl:
-      EmitBinaryOp<int64_t>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int64_t>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         auto* amount = CalculateShiftAmount<int64_t>(b, rhs);
 
         return b->Or(
@@ -1168,7 +1234,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
       break;
 
     case Opcode::I64Rotr:
-      EmitBinaryOp<int64_t>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int64_t>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         auto* amount = CalculateShiftAmount<int64_t>(b, rhs);
 
         return b->Or(
@@ -1178,73 +1244,73 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
       break;
 
     case Opcode::I64Eqz:
-      EmitUnaryOp<int64_t, int>(b, pc, [&](TR::IlValue* val) {
+      EmitUnaryOp<int64_t, int>(b, [&](TR::IlValue* val) {
         return b->EqualTo(val, b->ConstInt64(0));
       });
       break;
 
     case Opcode::I64Eq:
-      EmitBinaryOp<int64_t, int>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int64_t, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->EqualTo(lhs, rhs);
       });
       break;
 
     case Opcode::I64Ne:
-      EmitBinaryOp<int64_t, int>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int64_t, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->NotEqualTo(lhs, rhs);
       });
       break;
 
     case Opcode::I64LtS:
-      EmitBinaryOp<int64_t, int>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int64_t, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->LessThan(lhs, rhs);
       });
       break;
 
     case Opcode::I64LtU:
-      EmitBinaryOp<int64_t, int>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int64_t, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->UnsignedLessThan(lhs, rhs);
       });
       break;
 
     case Opcode::I64GtS:
-      EmitBinaryOp<int64_t, int>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int64_t, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->GreaterThan(lhs, rhs);
       });
       break;
 
     case Opcode::I64GtU:
-      EmitBinaryOp<int64_t, int>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int64_t, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->UnsignedGreaterThan(lhs, rhs);
       });
       break;
 
     case Opcode::I64LeS:
-      EmitBinaryOp<int64_t, int>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int64_t, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->LessOrEqualTo(lhs, rhs);
       });
       break;
 
     case Opcode::I64LeU:
-      EmitBinaryOp<int64_t, int>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int64_t, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->UnsignedLessOrEqualTo(lhs, rhs);
       });
       break;
 
     case Opcode::I64GeS:
-      EmitBinaryOp<int64_t, int>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int64_t, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->GreaterOrEqualTo(lhs, rhs);
       });
       break;
 
     case Opcode::I64GeU:
-      EmitBinaryOp<int64_t, int>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int64_t, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->UnsignedGreaterOrEqualTo(lhs, rhs);
       });
       break;
 
     case Opcode::F32Abs:
-      EmitUnaryOp<float>(b, pc, [&](TR::IlValue* value) {
+      EmitUnaryOp<float>(b, [&](TR::IlValue* value) {
         auto* return_value = b->Copy(value);
 
         TR::IlBuilder* zero_path = nullptr;
@@ -1255,93 +1321,96 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
         b->IfThenElse(&zero_path, &nonzero_path, b->EqualTo(value, b->ConstFloat(0)));
         zero_path->StoreOver(return_value, zero_path->ConstFloat(0));
 
-        nonzero_path->IfThen(&neg_path, nonzero_path->LessThan(value, nonzero_path->ConstFloat(0)));
-        neg_path->StoreOver(return_value, neg_path->Mul(value, neg_path->ConstFloat(-1)));
+        nonzero_path->IfThen(&neg_path,
+	nonzero_path->       LessThan(value, nonzero_path->ConstFloat(0)));
+        neg_path->           StoreOver(return_value,
+	neg_path->                     Mul(value,
+        neg_path->                         ConstFloat(-1)));
 
         return return_value;
       });
       break;
 
     case Opcode::F32Neg:
-      EmitUnaryOp<float>(b, pc, [&](TR::IlValue* value) {
+      EmitUnaryOp<float>(b, [&](TR::IlValue* value) {
         return b->Mul(value, b->ConstFloat(-1));
       });
       break;
 
     case Opcode::F32Sqrt:
-      EmitUnaryOp<float>(b, pc, [&](TR::IlValue* value) {
+      EmitUnaryOp<float>(b, [&](TR::IlValue* value) {
         return b->Call("f32_sqrt", 1, value);
       });
       break;
 
     case Opcode::F32Add:
-      EmitBinaryOp<float>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<float>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->Add(lhs, rhs);
       });
       break;
 
     case Opcode::F32Sub:
-      EmitBinaryOp<float>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<float>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->Sub(lhs, rhs);
       });
       break;
 
     case Opcode::F32Mul:
-      EmitBinaryOp<float>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<float>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->Mul(lhs, rhs);
       });
       break;
 
     case Opcode::F32Div:
-      EmitBinaryOp<float>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<float>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->Div(lhs, rhs);
       });
       break;
 
     case Opcode::F32Copysign:
-      EmitBinaryOp<float>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<float>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->Call("f32_copysign", 2, lhs, rhs);
       });
       break;
 
     case Opcode::F32Eq:
-      EmitBinaryOp<float, int>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<float, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->EqualTo(lhs, rhs);
       });
       break;
 
     case Opcode::F32Ne:
-      EmitBinaryOp<float, int>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<float, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->NotEqualTo(lhs, rhs);
       });
       break;
 
     case Opcode::F32Lt:
-      EmitBinaryOp<float, int>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<float, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->LessThan(lhs, rhs);
       });
       break;
 
     case Opcode::F32Le:
-      EmitBinaryOp<float, int>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<float, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->LessOrEqualTo(lhs, rhs);
       });
       break;
 
     case Opcode::F32Gt:
-      EmitBinaryOp<float, int>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<float, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->GreaterThan(lhs, rhs);
       });
       break;
 
     case Opcode::F32Ge:
-      EmitBinaryOp<float, int>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<float, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->GreaterOrEqualTo(lhs, rhs);
       });
       break;
 
     case Opcode::F64Abs:
-      EmitUnaryOp<double>(b, pc, [&](TR::IlValue* value) {
+      EmitUnaryOp<double>(b, [&](TR::IlValue* value) {
         auto* return_value = b->Copy(value);
 
         TR::IlBuilder* zero_path = nullptr;
@@ -1349,90 +1418,96 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
         TR::IlBuilder* neg_path = nullptr;
 
         // We have to check explicitly for 0.0, since abs(-0.0) is 0.0.
-        b->IfThenElse(&zero_path, &nonzero_path, b->EqualTo(value, b->ConstDouble(0)));
-        zero_path->StoreOver(return_value, zero_path->ConstDouble(0));
+        b->IfThenElse(&zero_path, &nonzero_path,
+	b->           EqualTo(value, b->ConstDouble(0)));
+        zero_path->   StoreOver(return_value, zero_path->ConstDouble(0));
 
-        nonzero_path->IfThen(&neg_path, nonzero_path->LessThan(value, nonzero_path->ConstDouble(0)));
-        neg_path->StoreOver(return_value, neg_path->Mul(value, neg_path->ConstDouble(-1)));
+        nonzero_path->IfThen(&neg_path,
+        nonzero_path->       LessThan(value,
+        nonzero_path->       ConstDouble(0)));
+
+        neg_path->StoreOver(return_value,
+        neg_path->          Mul(value,
+	neg_path->          ConstDouble(-1)));
 
         return return_value;
       });
       break;
 
     case Opcode::F64Neg:
-      EmitUnaryOp<double>(b, pc, [&](TR::IlValue* value) {
+      EmitUnaryOp<double>(b, [&](TR::IlValue* value) {
         return b->Mul(value, b->ConstDouble(-1));
       });
       break;
 
     case Opcode::F64Sqrt:
-      EmitUnaryOp<double>(b, pc, [&](TR::IlValue* value) {
+      EmitUnaryOp<double>(b, [&](TR::IlValue* value) {
         return b->Call("f64_sqrt", 1, value);
       });
       break;
 
     case Opcode::F64Add:
-      EmitBinaryOp<double>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<double>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->Add(lhs, rhs);
       });
       break;
 
     case Opcode::F64Sub:
-      EmitBinaryOp<double>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<double>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->Sub(lhs, rhs);
       });
       break;
 
     case Opcode::F64Mul:
-      EmitBinaryOp<double>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<double>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->Mul(lhs, rhs);
       });
       break;
 
     case Opcode::F64Div:
-      EmitBinaryOp<double>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<double>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->Div(lhs, rhs);
       });
       break;
 
     case Opcode::F64Copysign:
-      EmitBinaryOp<double>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<double>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->Call("f64_copysign", 2, lhs, rhs);
       });
       break;
 
     case Opcode::F64Eq:
-      EmitBinaryOp<double, int>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<double, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->EqualTo(lhs, rhs);
       });
       break;
 
     case Opcode::F64Ne:
-      EmitBinaryOp<double, int>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<double, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->NotEqualTo(lhs, rhs);
       });
       break;
 
     case Opcode::F64Lt:
-      EmitBinaryOp<double, int>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<double, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->LessThan(lhs, rhs);
       });
       break;
 
     case Opcode::F64Le:
-      EmitBinaryOp<double, int>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<double, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->LessOrEqualTo(lhs, rhs);
       });
       break;
 
     case Opcode::F64Gt:
-      EmitBinaryOp<double, int>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<double, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->GreaterThan(lhs, rhs);
       });
       break;
 
     case Opcode::F64Ge:
-      EmitBinaryOp<double, int>(b, pc, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<double, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->GreaterOrEqualTo(lhs, rhs);
       });
       break;
@@ -1440,163 +1515,162 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
     case Opcode::I32WrapI64: {
       auto* value = Pop(b, "i64");
       Push(b, "i32",
-      b->  ConvertTo(Int32, value),
-           pc);
+      b->  ConvertTo(Int32, value));
+	   //           pc);
       break;
     }
 
     case Opcode::I64ExtendSI32: {
       auto* value = Pop(b, "i32");
       Push(b, "i64",
-      b->  ConvertTo(Int64, value),
-           pc);
+      b->  ConvertTo(Int64, value));
       break;
     }
 
     case Opcode::I64ExtendUI32: {
       auto* value = Pop(b, "i32");
       Push(b, "i64",
-      b->  UnsignedConvertTo(Int64, value),
-           pc);
+      b->  UnsignedConvertTo(Int64, value));
+	   //     pc);
       break;
     }
 
     case Opcode::F32DemoteF64: {
       auto* value = Pop(b, "f64");
       Push(b, "f32",
-      b->  ConvertTo(Float, value),
-           pc);
+      b->  ConvertTo(Float, value));
+	   //     pc);
       break;
     }
 
     case Opcode::F64PromoteF32: {
       auto* value = Pop(b, "f32");
       Push(b, "f64",
-      b->  ConvertTo(Double, value),
-           pc);
+      b->  ConvertTo(Double, value));
+	   //           pc);
       break;
     }
 
     case Opcode::I32Extend8S: {
       auto* value = b->ConvertTo(Int32, b->ConvertTo(Int8, Pop(b, "i32")));
-      Push(b, "i32", value, pc);
+      Push(b, "i32", value);//, pc);
       break;
     }
 
     case Opcode::I32Extend16S: {
       auto* value = b->ConvertTo(Int32, b->ConvertTo(Int16, Pop(b, "i32")));
-      Push(b, "i32", value, pc);
+      Push(b, "i32", value);//, pc);
       break;
     }
 
     case Opcode::I64Extend8S: {
       auto* value = b->ConvertTo(Int32, b->ConvertTo(Int8, Pop(b, "i32")));
-      Push(b, "i32", value, pc);
+      Push(b, "i32", value);//, pc);
       break;
     }
 
     case Opcode::I64Extend16S: {
       auto* value = b->ConvertTo(Int32, b->ConvertTo(Int16, Pop(b, "i32")));
-      Push(b, "i32", value, pc);
+      Push(b, "i32", value);//, pc);
       break;
     }
 
     case Opcode::I64Extend32S: {
       auto* value = b->ConvertTo(Int64, b->ConvertTo(Int32, Pop(b, "i64")));
-      Push(b, "i64", value, pc);
+      Push(b, "i64", value);//, pc);
       break;
     }
 
     case Opcode::F32ConvertSI32: {
       auto* value = b->ConvertTo(Float, Pop(b, "i32"));
-      Push(b, "f32", value, pc);
+      Push(b, "f32", value);//, pc);
       break;
     }
 
     case Opcode::F32ConvertUI32: {
       auto* value = b->UnsignedConvertTo(Float, Pop(b, "i32"));
-      Push(b, "f32", value, pc);
+      Push(b, "f32", value);//, pc);
       break;
     }
 
     case Opcode::F32ConvertSI64: {
       auto* value = b->ConvertTo(Float, Pop(b, "i64"));
-      Push(b, "f32", value, pc);
+      Push(b, "f32", value);//, pc);
       break;
     }
 
     case Opcode::F32ConvertUI64: {
       auto* value = b->UnsignedConvertTo(Float, Pop(b, "i64"));
-      Push(b, "f32", value, pc);
+      Push(b, "f32", value);//, pc);
       break;
     }
 
     case Opcode::F64ConvertSI32: {
       auto* value = b->ConvertTo(Double, Pop(b, "i32"));
-      Push(b, "f64", value, pc);
+      Push(b, "f64", value);//, pc);
       break;
     }
 
     case Opcode::F64ConvertUI32: {
       auto* value = b->UnsignedConvertTo(Double, Pop(b, "i32"));
-      Push(b, "f64", value, pc);
+      Push(b, "f64", value);//, pc);
       break;
     }
 
     case Opcode::F64ConvertSI64: {
       auto* value = b->ConvertTo(Double, Pop(b, "i64"));
-      Push(b, "f64", value, pc);
+      Push(b, "f64", value);//, pc);
       break;
     }
 
     case Opcode::F64ConvertUI64: {
       auto* value = b->UnsignedConvertTo(Double, Pop(b, "i64"));
-      Push(b, "f64", value, pc);
+      Push(b, "f64", value);//, pc);
       break;
     }
 
     case Opcode::F32ReinterpretI32: {
       auto* value = b->CoerceTo(Float, Pop(b, "i32"));
-      Push(b, "f32", value, pc);
+      Push(b, "f32", value);//, pc);
       break;
     }
 
     case Opcode::I32ReinterpretF32: {
       auto* value = b->CoerceTo(Int32, Pop(b, "f32"));
-      Push(b, "i32", value, pc);
+      Push(b, "i32", value);//, pc);
       break;
     }
 
     case Opcode::F64ReinterpretI64: {
       auto* value = b->CoerceTo(Double, Pop(b, "i64"));
-      Push(b, "f64", value, pc);
+      Push(b, "f64", value);//, pc);
       break;
     }
 
     case Opcode::I64ReinterpretF64: {
       auto* value = b->CoerceTo(Int64, Pop(b, "f64"));
-      Push(b, "i64", value, pc);
+      Push(b, "i64", value);//, pc);
       break;
     }
 
     case Opcode::I32TruncSF32:
-      EmitTruncation<int32_t, float>(b, pc);
+      EmitTruncation<int32_t, float>(pc);
       break;
 
     case Opcode::I32TruncUF32:
-      EmitUnsignedTruncation<uint32_t, float>(b, pc);
+      EmitUnsignedTruncation<uint32_t, float>(pc);
       break;
 
     case Opcode::I32TruncSF64:
-      EmitTruncation<int32_t, double>(b, pc);
+      EmitTruncation<int32_t, double>(pc);
       break;
 
     case Opcode::I32TruncUF64:
-      EmitUnsignedTruncation<uint32_t, double>(b, pc);
+      EmitUnsignedTruncation<uint32_t, double>(pc);
       break;
 
     case Opcode::I64TruncSF32:
-      EmitTruncation<int64_t, float>(b, pc);
+      EmitTruncation<int64_t, float>(pc);
       break;
 
 //    UNSIGNED TYPE NOT HANDLED
@@ -1605,7 +1679,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
 //      break;
 
     case Opcode::I64TruncSF64:
-      EmitTruncation<int64_t, double>(b, pc);
+      EmitTruncation<int64_t, double>(pc);
       break;
 
 //    UNSIGNED TYPE NOT HANDLED
@@ -1614,6 +1688,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
 //      break;
 
     case Opcode::InterpAlloca: {
+      throw std::runtime_error("AOTFunctionBuilder: interpreted alloca not supported");
       auto pInt32 = typeDictionary()->PointerTo(Int32);
       auto* stack_top_addr = b->ConstAddress(&thread_->value_stack_top_);
       auto* stack_base_addr = b->ConstAddress(thread_->value_stack_.data());
@@ -1643,9 +1718,11 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
     case Opcode::InterpBrUnless: {
       auto target = &istream[ReadU32(&pc)];
       auto condition = Pop(b, "i32");
-      auto it = std::find_if(workItems_.begin(), workItems_.end(), [&](const BytecodeWorkItem& b) {
-        return target == b.pc;
-      });
+      auto it = std::find_if(workItems_.begin(), workItems_.end(),
+			     [&](const BytecodeWorkItem& b) {
+			       return target == b.pc;
+			     });
+
       if (it != workItems_.end()) {
         b->IfCmpEqualZero(&it->builder, condition);
       } else {
