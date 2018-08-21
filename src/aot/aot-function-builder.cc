@@ -15,9 +15,10 @@
  */
 
 #include "aot-function-builder.h"
-#include "wabtjit.h"
+#include "aot-type-dictionary.h"
 #include "src/cast.h"
 #include "src/interp.h"
+#include "ilgen/TypeDictionary.hpp"
 #include "ilgen/VirtualMachineState.hpp"
 #include "infra/Assert.hpp"
 
@@ -27,7 +28,7 @@
 
 namespace wabt {
 
-namespace jit {
+namespace aot {
 
 // The following functions are required to be able to properly parse opcodes. However, their
 // original definitions are defined with static linkage in src/interp.cc. Because of this, the only
@@ -110,18 +111,24 @@ void* AOTFunctionBuilder::MemoryTranslationHelper(interp::Thread* th, uint32_t m
 */
 
 AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFunc* fn,
-				       AOTTypeDictionary* types)
+				       AOTTypeDictionary* types, AOTManager& aotManager)
     : TR::MethodBuilder(types),
       thread_(thread),
       fn_(fn),
+      aotManager_(aotManager),
       valueType_(types->LookupUnion("Value")),
       pValueType_(types->PointerTo(types->LookupUnion("Value")))
 {
+  valueStackType_ = DefineStruct("ValueStack");
+    DefineField("ValueStack", "stack_base_", pValueType_); //->toConst());
+    DefineField("ValueStack", "stack_top_", pValueType_);
+  EndStruct("ValueStack");
+
   DefineLine(__LINE__);
   DefineFile(__FILE__);
   DefineName(fn->dbg_name_.c_str());
 
-  DefineParameter("value_stack", types->pValueType_);
+  DefineParameter("value_stack", pValueType_);
 
   // remember: we don't define other parameters here because
   // WASM is a stack-based language, ie. they go on to the stack!!
@@ -674,7 +681,8 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
     }
 
     case Opcode::GetGlobal: {
-      interp::Global* g = thread_->env()->GetGlobal(ReadU32(&pc));
+      throw std::runtime_error("AOTFunctionBuilder: get_global not supported");
+      /* interp::Global* g = thread_->env()->GetGlobal(ReadU32(&pc));
 
       // The type of value stored in a global will never change, so we're safe
       // to use the current type of the global.
@@ -688,7 +696,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
         // With immutable globals, we can just substitute their actual value as
         // a constant at compile-time.
         Push(b, type_field, Const(b, &g->typed_value));//, pc);
-      }
+      }*/
 
       break;
     }
@@ -696,7 +704,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
     case Opcode::SetGlobal: {
       //TODO: add support for this
       throw std::runtime_error("AOTFunctionBuilder: set_global not supported");
-
+      /*
       interp::Global* g = thread_->env()->GetGlobal(ReadU32(&pc));
       assert(g->mutable_);
 
@@ -707,6 +715,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
       auto* addr = b->Const(&g->typed_value.value);
 
       b->StoreIndirect("Value", type_field, addr, Pop(b, type_field));
+      */
       break;
     }
 
@@ -739,7 +748,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
 
       // the AOT manager keeps a vector of all the FunctionBuilder objects,
       // indexed by their internal offsets.
-      auto targetBuilder = aotManager_.getFB(func_index);
+      auto& targetBuilder = aotManager_.getFB(func_index);
 
       b->Store("result",
 	       Call(targetBuilder, 1, "value_stack"));
@@ -936,7 +945,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
       Push(b,
            "f32",
       b->  LoadAt(typeDictionary()->PointerTo(Float), addr));
-      
+
       break;
     }
 

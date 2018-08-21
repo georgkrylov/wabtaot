@@ -17,7 +17,7 @@
 #ifndef FUNCTIONBUILDER_HPP
 #define FUNCTIONBUILDER_HPP
 
-#include "function-builder.h"
+#include "aot-manager.h"
 #include "aot-type-dictionary.h"
 #include "ilgen/BytecodeBuilder.hpp"
 #include "ilgen/MethodBuilder.hpp"
@@ -27,11 +27,11 @@
 #include <type_traits>
 
 namespace wabt {
-namespace jit {
+namespace aot {
 
-class AOTFunctionBuilder : public FunctionBuilder {
+class AOTFunctionBuilder : public TR::MethodBuilder {
  public:
-  AOTFunctionBuilder(interp::Thread*, interp::DefinedFunc*, AOTTypeDictionary*);
+  AOTFunctionBuilder(interp::Thread*, interp::DefinedFunc*, AOTTypeDictionary*, AOTManager&);
   bool buildIL() override;
 
   /**
@@ -40,7 +40,7 @@ class AOTFunctionBuilder : public FunctionBuilder {
    * @param type is the name of the field in the Value union corresponding to the type of the value being pushed
    * @param value is the IlValue representing the value being pushed
    */
-  void Push(TR::IlBuilder* b, const char* type, TR::IlValue* value, const uint8_t* pc);
+  void Push(TR::IlBuilder* b, const char* type, TR::IlValue* value); //, const uint8_t* pc);
 
   /**
    * @brief Generate pop from the interpreter stack
@@ -75,10 +75,11 @@ class AOTFunctionBuilder : public FunctionBuilder {
  private:
   struct BytecodeWorkItem {
     TR::BytecodeBuilder* builder;
-    const uint8_t* pc;
+    //    const uint8_t* pc;
 
-    BytecodeWorkItem(TR::BytecodeBuilder* builder, const uint8_t* pc)
-      : builder(builder), pc(pc) {}
+    BytecodeWorkItem(TR::BytecodeBuilder* builder) //, const uint8_t* pc)
+      : builder(builder)
+    {}
   };
 
   template <typename T>
@@ -92,51 +93,55 @@ class AOTFunctionBuilder : public FunctionBuilder {
   void EmitBinaryOp(TR::IlBuilder* b, const uint8_t* pc, TOpHandler h);
 
   template <typename T, typename TResult = T, typename TOpHandler>
-  void EmitUnaryOp(TR::IlBuilder* b, const uint8_t* pc, TOpHandler h);
+  void EmitUnaryOp(TR::IlBuilder* b, /* const uint8_t* pc,*/ TOpHandler h);
 
   template <typename T>
-  void EmitIntDivide(TR::IlBuilder* b, const uint8_t* pc);
+  void EmitIntDivide(TR::IlBuilder* b);//, const uint8_t* pc);
 
   template <typename T>
-  void EmitIntRemainder(TR::IlBuilder* b, const uint8_t* pc);
+  void EmitIntRemainder(TR::IlBuilder* b);//, const uint8_t* pc);
 
   template <typename T>
-  TR::IlValue* EmitMemoryPreAccess(TR::IlBuilder* b, const uint8_t** pc);
+  TR::IlValue* EmitMemoryPreAccess(TR::IlBuilder* b);//, const uint8_t** pc);
 
-  void EmitTrap(TR::IlBuilder* b, TR::IlValue* result, const uint8_t* pc);
-  void EmitCheckTrap(TR::IlBuilder* b, TR::IlValue* result, const uint8_t* pc);
-  void EmitTrapIf(TR::IlBuilder* b, TR::IlValue* condition, TR::IlValue* result, const uint8_t* pc);
+  void EmitTrap(TR::IlBuilder* b, TR::IlValue* result);//, const uint8_t* pc);
+  void EmitCheckTrap(TR::IlBuilder* b, TR::IlValue* result);//, const uint8_t* pc);
+  void EmitTrapIf(TR::IlBuilder* b, TR::IlValue* condition, TR::IlValue* result);//, const uint8_t* pc);
 
   template <typename F>
   TR::IlValue* EmitIsNan(TR::IlBuilder* b, TR::IlValue* value);
 
   template <typename ToType, typename FromType>
-  void EmitTruncation(TR::IlBuilder* b, const uint8_t* pc);
+  void EmitTruncation(TR::IlBuilder* b);//, const uint8_t* pc);
   template <typename ToType, typename FromType>
-  void EmitUnsignedTruncation(TR::IlBuilder* b, const uint8_t* pc);
+  void EmitUnsignedTruncation(TR::IlBuilder* b);//, const uint8_t* pc);
 
   template <typename>
-  TR::IlValue* CalculateShiftAmount(TR::IlBuilder* b, TR::IlValue* amount);
+  TR::IlValue* CalculateShiftAmount(TR::IlBuilder* b);//, TR::IlValue* amount);
 
   using Result_t = std::underlying_type<wabt::interp::Result>::type;
 
-  static Result_t CallHelper(wabt::interp::Thread* th, wabt::interp::IstreamOffset offset, uint8_t* current_pc);
+  //  static Result_t CallHelper(wabt::interp::Thread* th, wabt::interp::IstreamOffset offset);
 
-  static Result_t CallIndirectHelper(wabt::interp::Thread* th, Index table_index, Index sig_index, Index entry_index, uint8_t* current_pc);
+  //  static Result_t CallIndirectHelper(wabt::interp::Thread* th, Index table_index, Index sig_index, Index entry_index);
+  //, uint8_t* current_pc);
 
-  static Result_t CallHostHelper(wabt::interp::Thread* th, Index func_index);
+  //static Result_t CallHostHelper(wabt::interp::Thread* th, Index func_index);
 
-  static void* MemoryTranslationHelper(interp::Thread* th, uint32_t memory_id, uint64_t address, uint32_t size);
+  //  static void* MemoryTranslationHelper(interp::Thread* th, uint32_t memory_id, uint64_t address, uint32_t size);
 
-//  std::vector<BytecodeWorkItem> workItems_;
-//
-//  interp::Thread* thread_;
-//  interp::DefinedFunc* fn_;
-//
-//  TR::IlType* const valueType_;
-//  TR::IlType* const pValueType_;
+  std::vector<BytecodeWorkItem> workItems_;
 
-  bool Emit(TR::BytecodeBuilder* b, const uint8_t* istream, const uint8_t* pc);
+  interp::Thread* thread_;
+  interp::DefinedFunc* fn_;
+
+  AOTManager& aotManager_;
+  
+  TR::IlType* const valueType_;
+  TR::IlType* const pValueType_;
+  TR::IlType *valueStackType_;
+  
+  bool Emit(TR::BytecodeBuilder* b, const uint8_t* istream);//, const uint8_t* pc);
 };
 
 }

@@ -25,20 +25,6 @@
 namespace wabt{
 namespace jit {
 
-wabt::Result compileAOT(interp::Thread* thread, interp::Environment& env) {
-  for(Index i = 0; i < env.GetFuncCount(); ++i) {
-    if(auto* fn = cast<wabt::interp::DefinedFunc>(env.GetFunc(i))) {
-      TypeDictionary types;
-      FunctionBuilder builder(thread, fn, &types);
-      uint8_t* function = nullptr;
-
-      compileMethodBuilder(&builder, &function);
-    }
-  }
-
-  return wabt::Result::Ok;
-}
-
 JITedFunction compile(interp::Thread* thread, interp::DefinedFunc* fn) {
   TypeDictionary types;
   FunctionBuilder builder(thread, fn, &types);

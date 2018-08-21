@@ -14,15 +14,8 @@
  * limitations under the License.
  */
 
-#include "type-dictionary.h"
+#include "aot-type-dictionary.h"
 #include "src/interp.h"
 
-const int32_t STACK_SIZE = 1024;
-
-wabt::jit::AOTTypeDictionary::AOTTypeDictionary() : TypeDictionary()
-{  
-  valueStackType_ = DefineStruct("ValueStack");
-    DefineField("ValueStack", "stack_base_", pValueType_); //->toConst());
-    DefineField("ValueStack", "stack_top_", pValueType_);    
-  EndStruct("ValueStack");
-}
+wabt::aot::AOTTypeDictionary::AOTTypeDictionary() : TypeDictionary()
+{}

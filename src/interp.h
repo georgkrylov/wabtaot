@@ -36,6 +36,10 @@ namespace jit {
 class FunctionBuilder;
 }
 
+namespace aot {
+class AOTFunctionBuilder;  
+}
+
 namespace interp {
 
 #define FOREACH_INTERP_RESULT(V)                                            \
@@ -532,7 +536,9 @@ class Thread {
 
  private:
   friend class wabt::jit::FunctionBuilder;
+  friend class wabt::aot::AOTFunctionBuilder;
   friend class Executor;
+  
   const uint8_t* GetIstream() const { return env_->istream_->data.data(); }
 
   Memory* ReadMemory(const uint8_t** pc);

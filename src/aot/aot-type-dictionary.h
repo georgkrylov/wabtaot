@@ -17,17 +17,15 @@
 #ifndef AOTTYPEDICTIONARY_HPP
 #define AOTTYPEDICTIONARY_HPP
 
-#include "TypeDictionary.h"
+#include "ilgen/TypeDictionary.hpp"
+#include "../jit/type-dictionary.h"
 
 namespace wabt {
-namespace jit {
+namespace aot {
 
-template <std::size_t STACK_SIZE>
-class AOTTypeDictionary<STACK_SIZE> : public TypeDictionary {
+class AOTTypeDictionary : public wabt::jit::TypeDictionary {
  public:
   AOTTypeDictionary();
-
-  TR::IlType *valueStackType_;
 };
 
 }

@@ -281,6 +281,8 @@ endfunction()
 
 add_omr()
 add_subdirectory(src/jit)
+add_subdirectory(src/aot)
+
 target_link_libraries(libwabt PUBLIC wabtjit)
 
 if (NOT EMSCRIPTEN)
