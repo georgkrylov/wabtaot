@@ -18,8 +18,7 @@
 #include "aot-type-dictionary.h"
 #include "src/cast.h"
 #include "src/interp.h"
-#include "ilgen/TypeDictionary.hpp"
-#include "ilgen/VirtualMachineState.hpp"
+//#include "ilgen/TypeDictionary.hpp"
 #include "infra/Assert.hpp"
 
 #include <cmath>
@@ -30,6 +29,8 @@ namespace wabt {
 
 namespace aot {
 
+static constexpr int64_t STACK_SIZE = 1024;
+  
 // The following functions are required to be able to properly parse opcodes. However, their
 // original definitions are defined with static linkage in src/interp.cc. Because of this, the only
 // way to use them is to simply copy their definitions here.
@@ -111,19 +112,14 @@ void* AOTFunctionBuilder::MemoryTranslationHelper(interp::Thread* th, uint32_t m
 */
 
 AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFunc* fn,
-				       AOTTypeDictionary* types, AOTManager& aotManager)
-    : TR::MethodBuilder(types),
+				       AOTTypeDictionary* types)
+    : TR::MethodBuilder(types),      
       thread_(thread),
       fn_(fn),
-      aotManager_(aotManager),
+      types_(types),
       valueType_(types->LookupUnion("Value")),
       pValueType_(types->PointerTo(types->LookupUnion("Value")))
 {
-  valueStackType_ = DefineStruct("ValueStack");
-    DefineField("ValueStack", "stack_base_", pValueType_); //->toConst());
-    DefineField("ValueStack", "stack_top_", pValueType_);
-  EndStruct("ValueStack");
-
   DefineLine(__LINE__);
   DefineFile(__FILE__);
   DefineName(fn->dbg_name_.c_str());
@@ -211,8 +207,8 @@ void AOTFunctionBuilder::Push(TR::IlBuilder* b, const char* type,
   auto pInt32 = typeDictionary()->PointerTo(Int32);
   // auto* stack_top_addr = b->ConstAddress(&thread_->value_stack_top_);
   // auto* stack_base_addr = b->ConstAddress(thread_->value_stack_.data());
-  IlValue* stack_top_addr = nullptr;
-  IlValue* stack_base_addr = nullptr;
+  TR::IlValue* stack_top_addr = nullptr;
+  TR::IlValue* stack_base_addr = nullptr;
 
   b->StructFieldInstanceAddress("value_stack", "stack_top_", stack_top_addr);
   b->StructFieldInstanceAddress("value_stack", "stack_base_", stack_base_addr);
@@ -249,8 +245,8 @@ void AOTFunctionBuilder::Push(TR::IlBuilder* b, const char* type,
 TR::IlValue* AOTFunctionBuilder::Pop(TR::IlBuilder* b, const char* type) {
   auto pInt32 = typeDictionary()->PointerTo(Int32);
 
-  IlValue* stack_top_addr = nullptr;
-  IlValue* stack_base_addr = nullptr;
+  TR::IlValue* stack_top_addr = nullptr;
+  TR::IlValue* stack_base_addr = nullptr;
 
   b->StructFieldInstanceAddress("value_stack", "stack_top_", stack_top_addr);
   b->StructFieldInstanceAddress("value_stack", "stack_base_", stack_base_addr);
@@ -286,8 +282,8 @@ void AOTFunctionBuilder::DropKeep(TR::IlBuilder* b, uint32_t drop_count, uint8_t
 //  auto* stack_top_addr = b->ConstAddress(&thread_->value_stack_top_);
 //  auto* stack_base_addr = b->ConstAddress(thread_->value_stack_.data());
 
-  IlValue* stack_top_addr = nullptr;
-  IlValue* stack_base_addr = nullptr;
+  TR::IlValue* stack_top_addr = nullptr;
+  TR::IlValue* stack_base_addr = nullptr;
 
   b->StructFieldInstanceAddress("value_stack", "stack_top_", stack_top_addr);
   b->StructFieldInstanceAddress("value_stack", "stack_base_", stack_base_addr);
@@ -323,8 +319,8 @@ TR::IlValue* AOTFunctionBuilder::Pick(TR::IlBuilder* b, Index depth) {
   //  auto* stack_top_addr = b->ConstAddress(&thread_->value_stack_top_);
   //  auto* stack_base_addr = b->ConstAddress(thread_->value_stack_.data());
 
-  IlValue* stack_top_addr = nullptr;
-  IlValue* stack_base_addr = nullptr;
+  TR::IlValue* stack_top_addr = nullptr;
+  TR::IlValue* stack_base_addr = nullptr;
 
   b->StructFieldInstanceAddress("value_stack", "stack_top_", stack_top_addr);
   b->StructFieldInstanceAddress("value_stack", "stack_base_", stack_base_addr);
@@ -458,7 +454,7 @@ void AOTFunctionBuilder::EmitIntRemainder(TR::IlBuilder* b) {//, const uint8_t* 
     return return_value;
   });
 }
-
+  /*
 template <typename T>
 TR::IlValue* AOTFunctionBuilder::EmitMemoryPreAccess(TR::IlBuilder* b) { //, const uint8_t** pc) {
   throw std::runtime_error("AOTFunctionBuilder: EmitMemoryPreAccess not supported!");
@@ -472,23 +468,21 @@ TR::IlValue* AOTFunctionBuilder::EmitMemoryPreAccess(TR::IlBuilder* b) { //, con
   // for now.. probably throw an exception. More complexity than I'd like to
   // deal with right now.
 
-  /*
   auto address = b->Call("MemoryTranslationHelper",
                          4,
                          th_addr,
                          mem_id,
                          b->Add(b->UnsignedConvertTo(Int64, Pop(b, "i32")), offset),
                          b->ConstInt32(sizeof(T)));
-  */
 
   EmitTrapIf(b,
   b->        EqualTo(address, b->ConstAddress(nullptr)),
-  b->        Const(static_cast<Result_t>(interp::Result::TrapMemoryAccessOutOfBounds)));/*,
-										       *pc);*/
+  b->        Const(static_cast<Result_t>(interp::Result::TrapMemoryAccessOutOfBounds)),
+             *pc);
 
   return address;
 }
-
+*/
 void AOTFunctionBuilder::EmitTrap(TR::IlBuilder* b, TR::IlValue* result) { //, const uint8_t* pc) {
 // this seems to return the PC to the line after the last call, the one that trapped.
 //  if (pc != nullptr) {
@@ -520,7 +514,7 @@ template <>
 TR::IlValue* AOTFunctionBuilder::EmitIsNan<float>(TR::IlBuilder* b, TR::IlValue* value) {
   return b->GreaterThan(
          b->           And(
-         b->               CoerceTo(Int32, value),
+         b->               ConvertTo(Int32, value),
          b->               ConstInt32(0x7fffffffU)),
          b->           ConstInt32(0x7f800000U));
 }
@@ -529,21 +523,22 @@ template <>
 TR::IlValue* AOTFunctionBuilder::EmitIsNan<double>(TR::IlBuilder* b, TR::IlValue* value) {
   return b->GreaterThan(
          b->           And(
-         b->               CoerceTo(Int64, value),
+         b->               ConvertTo(Int64, value),
          b->               ConstInt64(0x7fffffffffffffffULL)),
          b->           ConstInt64(0x7ff0000000000000ULL));
 }
 
 template <typename ToType, typename FromType>
-void AOTFunctionBuilder::EmitTruncation(TR::IlBuilder* b) { // , const uint8_t* pc) {
-  static_assert(std::is_floating_point<FromType>::value, "FromType in EmitTruncation call must be a floating point type");
+void AOTFunctionBuilder::EmitTruncation(TR::IlBuilder* b) {//, const uint8_t* pc) {
+  static_assert(std::is_floating_point<FromType>::value,
+		"FromType in EmitTruncation call must be a floating point type");
 
   auto* value = Pop(b, TypeFieldName<FromType>());
 
   // TRAP_IF is NaN
   EmitTrapIf(b,
              EmitIsNan<FromType>(b, value),
-	     b->        Const(static_cast<Result_t>(interp::Result::TrapInvalidConversionToInteger)));//,
+	     b-> Const(static_cast<Result_t>(interp::Result::TrapInvalidConversionToInteger)));
   //             pc);
 
   // TRAP_UNLESS conversion is in range
@@ -563,7 +558,7 @@ void AOTFunctionBuilder::EmitTruncation(TR::IlBuilder* b) { // , const uint8_t* 
   auto* new_value = std::is_unsigned<ToType>::value ? b->UnsignedConvertTo(target_type, value)
                                                     : b->ConvertTo(target_type, value);
 
-  Push(b, TypeFieldName<ToType>(), new_value, pc);
+  Push(b, TypeFieldName<ToType>(), new_value);//, pc);
 }
 
 /**
@@ -611,8 +606,8 @@ TR::IlValue* AOTFunctionBuilder::CalculateShiftAmount(TR::IlBuilder* b, TR::IlVa
 }
 
 bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
-                           const uint8_t* istream,
-                           const uint8_t* pc) {
+			      const uint8_t* istream,
+			      const uint8_t* pc) {
   Opcode opcode = ReadOpcode(&pc);
   TR_ASSERT(!opcode.IsInvalid(), "Invalid opcode");
 
@@ -748,10 +743,9 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
 
       // the AOT manager keeps a vector of all the FunctionBuilder objects,
       // indexed by their internal offsets.
-      auto& targetBuilder = aotManager_.getFB(func_index);
 
       b->Store("result",
-	       Call(targetBuilder, 1, "value_stack"));
+      b->      Call(fn_->dbg_name_.c_str(), 1, Load("value_stack")));
 
       /*
       b->Store("result",
@@ -767,7 +761,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
 
     case Opcode::CallIndirect: {
       throw std::runtime_error("indirect calls not supported");
-
+      /*
       auto th_addr = b->ConstAddress(thread_);
       auto table_index = b->ConstInt32(ReadU32(&pc));
       auto sig_index = b->ConstInt32(ReadU32(&pc));
@@ -778,16 +772,16 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
       /*
       b->Store("result",
       b->      Call("CallIndirectHelper", 5, th_addr, table_index, sig_index, entry_index, current_pc));
-      */
+      
       // Don't pass the pc since a trap in a called function should not update the thread's pc
-      EmitCheckTrap(b, b->Load("result"), nullptr);
-
+      EmitCheckTrap(b, b->Load("result"));
+*/
       break;
     }
 
     case Opcode::InterpCallHost: {
       throw std::runtime_error("interpreted host calls not supported");
-      Index func_index = ReadU32(&pc);
+      //    Index func_index = ReadU32(&pc);
 
       // TODO: again, more of the same.
 
@@ -796,229 +790,271 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
       b->      Call("CallHostHelper", 2,
       b->           ConstAddress(thread_),
       b->           ConstInt32(func_index)));
-      */
-      EmitCheckTrap(b, b->Load("result"));
 
+      EmitCheckTrap(b, b->Load("result"), nullptr);
+      */
       break;
     }
 
     case Opcode::I32Load8S: {
       throw std::runtime_error("linear memory access not supported");
       // TODO: again, more of the same.
+      /*
       auto* addr = EmitMemoryPreAccess<int8_t>(b, &pc);
       Push(b,
            "i32",
       b->  ConvertTo(Int32,
       b->            LoadAt(typeDictionary()->PointerTo(Int8), addr)));
            //pc);
+	   */
       break;
     }
 
     case Opcode::I32Load8U: {
       throw std::runtime_error("linear memory access not supported");
       // TODO: again, more of the same.
+      /*
       auto* addr = EmitMemoryPreAccess<int8_t>(b, &pc);
       Push(b,
            "i32",
       b->  UnsignedConvertTo(Int32,
       b->                    LoadAt(typeDictionary()->PointerTo(Int8), addr)));
+      */
       break;
     }
 
     case Opcode::I32Load16S: {
       throw std::runtime_error("linear memory access not supported");
       // TODO: again, more of the same.
+      /*
       auto* addr = EmitMemoryPreAccess<int16_t>(b, &pc);
       Push(b,
            "i32",
       b->  ConvertTo(Int32,
       b->            LoadAt(typeDictionary()->PointerTo(Int16), addr)));
            //pc);
-      break;
+	   */
+      break;      
     }
 
     case Opcode::I32Load16U: {
       throw std::runtime_error("linear memory access not supported");
       // TODO: again, more of the same.
+      /*
       auto* addr = EmitMemoryPreAccess<int16_t>(b, &pc);
       Push(b,
            "i32",
       b->  UnsignedConvertTo(Int32,
       b->                    LoadAt(typeDictionary()->PointerTo(Int16), addr)));
-      // pc);
+      // pc);      
+      */
       break;
     }
 
     case Opcode::I64Load8S: {
       throw std::runtime_error("linear memory access not supported");
       // TODO: again, more of the same.
+      /*
       auto* addr = EmitMemoryPreAccess<int8_t>(b, &pc);
       Push(b,
            "i64",
       b->  ConvertTo(Int64,
       b->            LoadAt(typeDictionary()->PointerTo(Int8), addr)));
 	   //           pc);
+	   */
       break;
     }
 
     case Opcode::I64Load8U: {
       throw std::runtime_error("linear memory access not supported");
       // TODO: again, more of the same.
+      /*
       auto* addr = EmitMemoryPreAccess<int8_t>(b, &pc);
       Push(b,
            "i64",
       b->  UnsignedConvertTo(Int64,
       b->                    LoadAt(typeDictionary()->PointerTo(Int8), addr)));
 	   //      pc);
+	   */
       break;
     }
 
     case Opcode::I64Load16S: {
       throw std::runtime_error("linear memory access not supported");
       // TODO: again, more of the same.
+      /*
       auto* addr = EmitMemoryPreAccess<int16_t>(b, &pc);
       Push(b,
            "i64",
       b->  ConvertTo(Int64,
       b->            LoadAt(typeDictionary()->PointerTo(Int16), addr)));
-
+      */
       break;
     }
 
     case Opcode::I64Load16U: {
       throw std::runtime_error("linear memory access not supported");
       // TODO: again, more of the same.
+      /*
       auto* addr = EmitMemoryPreAccess<int16_t>(b, &pc);
       Push(b,
            "i64",
       b->  UnsignedConvertTo(Int64,
       b->                    LoadAt(typeDictionary()->PointerTo(Int16), addr)));
-
+      */
       break;
     }
 
     case Opcode::I64Load32S: {
       throw std::runtime_error("linear memory access not supported");
+      /*
       auto* addr = EmitMemoryPreAccess<int32_t>(b, &pc);
       Push(b,
            "i64",
       b->  ConvertTo(Int64,
       b->            LoadAt(typeDictionary()->PointerTo(Int32), addr)));
-
+      */
       break;
     }
 
     case Opcode::I64Load32U: {
       throw std::runtime_error("linear memory access not supported");
+      /*
       auto* addr = EmitMemoryPreAccess<int32_t>(b, &pc);
       Push(b,
            "i64",
       b->  UnsignedConvertTo(Int64,
       b->                    LoadAt(typeDictionary()->PointerTo(Int32), addr)));
 	   //     pc);
+      */
       break;
     }
 
     case Opcode::I32Load: {
       throw std::runtime_error("linear memory access not supported");
+      /*
       auto* addr = EmitMemoryPreAccess<int32_t>(b, &pc);
       Push(b,
            "i32",
       b->  LoadAt(typeDictionary()->PointerTo(Int32), addr));
-
+      */
       break;
     }
 
     case Opcode::I64Load: {
       throw std::runtime_error("linear memory access not supported");
+            /*
       auto* addr = EmitMemoryPreAccess<int64_t>(b, &pc);
+
       Push(b,
            "i64",
       b->  LoadAt(typeDictionary()->PointerTo(Int64), addr));
 	   //           pc);
+      */
       break;
     }
 
     case Opcode::F32Load: {
       throw std::runtime_error("linear memory access not supported");
+      /*
       auto* addr = EmitMemoryPreAccess<float>(b, &pc);
       Push(b,
            "f32",
       b->  LoadAt(typeDictionary()->PointerTo(Float), addr));
-
+      */
       break;
     }
 
     case Opcode::F64Load: {
       throw std::runtime_error("linear memory access not supported");
+      /*
       auto* addr = EmitMemoryPreAccess<double>(b, &pc);
       Push(b,
            "f64",
       b->  LoadAt(typeDictionary()->PointerTo(Double), addr),
            pc);
+      */
       break;
     }
 
     case Opcode::I32Store8: {
       throw std::runtime_error("linear memory access not supported");
+      /*
       auto value = b->ConvertTo(Int8, Pop(b, "i32"));
       b->StoreAt(EmitMemoryPreAccess<int8_t>(b, &pc), value);
+      */
       break;
     }
 
     case Opcode::I32Store16: {
       throw std::runtime_error("linear memory access not supported");
+      /*
       auto value = b->ConvertTo(Int16, Pop(b, "i32"));
       b->StoreAt(EmitMemoryPreAccess<int16_t>(b, &pc), value);
+      */
       break;
     }
 
     case Opcode::I64Store8: {
       throw std::runtime_error("linear memory access not supported");
+      /*
       auto value = b->ConvertTo(Int8, Pop(b, "i64"));
       b->StoreAt(EmitMemoryPreAccess<int8_t>(b, &pc), value);
+      */
       break;
     }
 
     case Opcode::I64Store16: {
       throw std::runtime_error("linear memory access not supported");
+      /*
       auto value = b->ConvertTo(Int16, Pop(b, "i64"));
       b->StoreAt(EmitMemoryPreAccess<int16_t>(b, &pc), value);
+      */
       break;
     }
 
     case Opcode::I64Store32: {
       throw std::runtime_error("linear memory access not supported");
+      /*
       auto value = b->ConvertTo(Int32, Pop(b, "i64"));
       b->StoreAt(EmitMemoryPreAccess<int32_t>(b, &pc), value);
+      */
       break;
     }
 
     case Opcode::I32Store: {
       throw std::runtime_error("linear memory access not supported");
+      /*
       auto value = Pop(b, "i32");
       b->StoreAt(EmitMemoryPreAccess<int32_t>(b, &pc), value);
+      */
       break;
     }
 
     case Opcode::I64Store: {
       throw std::runtime_error("linear memory access not supported");
+      /*
       auto value = Pop(b, "i64");
       b->StoreAt(EmitMemoryPreAccess<int64_t>(b, &pc), value);
+      */
       break;
     }
 
     case Opcode::F32Store: {
       throw std::runtime_error("linear memory access not supported");
+      /*
       auto value = Pop(b, "f32");
       b->StoreAt(EmitMemoryPreAccess<float>(b, &pc), value);
+      */
       break;
     }
 
     case Opcode::F64Store: {
       throw std::runtime_error("linear memory access not supported");
+      /*
       auto value = Pop(b, "f64");
       b->StoreAt(EmitMemoryPreAccess<double>(b, &pc), value);
+      */
       break;
     }
 
@@ -1639,47 +1675,47 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
     }
 
     case Opcode::F32ReinterpretI32: {
-      auto* value = b->CoerceTo(Float, Pop(b, "i32"));
+      auto* value = b->ConvertTo(Float, Pop(b, "i32"));
       Push(b, "f32", value);//, pc);
       break;
     }
 
     case Opcode::I32ReinterpretF32: {
-      auto* value = b->CoerceTo(Int32, Pop(b, "f32"));
+      auto* value = b->ConvertTo(Int32, Pop(b, "f32"));
       Push(b, "i32", value);//, pc);
       break;
     }
 
     case Opcode::F64ReinterpretI64: {
-      auto* value = b->CoerceTo(Double, Pop(b, "i64"));
+      auto* value = b->ConvertTo(Double, Pop(b, "i64"));
       Push(b, "f64", value);//, pc);
       break;
     }
 
     case Opcode::I64ReinterpretF64: {
-      auto* value = b->CoerceTo(Int64, Pop(b, "f64"));
+      auto* value = b->ConvertTo(Int64, Pop(b, "f64"));
       Push(b, "i64", value);//, pc);
       break;
     }
 
     case Opcode::I32TruncSF32:
-      EmitTruncation<int32_t, float>(pc);
+      EmitTruncation<int32_t, float>(b);//pc);
       break;
 
     case Opcode::I32TruncUF32:
-      EmitUnsignedTruncation<uint32_t, float>(pc);
+      EmitUnsignedTruncation<uint32_t, float>(b);//pc);
       break;
 
     case Opcode::I32TruncSF64:
-      EmitTruncation<int32_t, double>(pc);
+      EmitTruncation<int32_t, double>(b);//pc);
       break;
 
     case Opcode::I32TruncUF64:
-      EmitUnsignedTruncation<uint32_t, double>(pc);
+      EmitUnsignedTruncation<uint32_t, double>(b);//pc);
       break;
 
     case Opcode::I64TruncSF32:
-      EmitTruncation<int64_t, float>(pc);
+      EmitTruncation<int64_t, float>(b);//pc);
       break;
 
 //    UNSIGNED TYPE NOT HANDLED
@@ -1688,7 +1724,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
 //      break;
 
     case Opcode::I64TruncSF64:
-      EmitTruncation<int64_t, double>(pc);
+      EmitTruncation<int64_t, double>(b);//pc);
       break;
 
 //    UNSIGNED TYPE NOT HANDLED
@@ -1711,8 +1747,8 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
       b->        UnsignedGreaterOrEqualTo(
                      stack_top,
       b->            Const(static_cast<int32_t>(thread_->value_stack_.size()))),
-      b->        Const(static_cast<Result_t>(interp::Result::TrapValueStackExhausted)),
-                 pc);
+      b->        Const(static_cast<Result_t>(interp::Result::TrapValueStackExhausted)));
+		 //                 pc);
 
       TR::IlBuilder* set_zero = nullptr;
       b->ForLoopUp("i", &set_zero, old_value_stack_top, stack_top, b->Const(1));

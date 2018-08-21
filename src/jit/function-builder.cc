@@ -553,7 +553,7 @@ template <>
 TR::IlValue* FunctionBuilder::EmitIsNan<float>(TR::IlBuilder* b, TR::IlValue* value) {
   return b->GreaterThan(
          b->           And(
-         b->               CoerceTo(Int32, value),
+         b->               ConvertTo(Int32, value),
          b->               ConstInt32(0x7fffffffU)),
          b->           ConstInt32(0x7f800000U));
 }
@@ -562,7 +562,7 @@ template <>
 TR::IlValue* FunctionBuilder::EmitIsNan<double>(TR::IlBuilder* b, TR::IlValue* value) {
   return b->GreaterThan(
          b->           And(
-         b->               CoerceTo(Int64, value),
+         b->               ConvertTo(Int64, value),
          b->               ConstInt64(0x7fffffffffffffffULL)),
          b->           ConstInt64(0x7ff0000000000000ULL));
 }
@@ -1609,25 +1609,25 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
     }
 
     case Opcode::F32ReinterpretI32: {
-      auto* value = b->CoerceTo(Float, Pop(b, "i32"));
+      auto* value = b->ConvertTo(Float, Pop(b, "i32"));
       Push(b, "f32", value, pc);
       break;
     }
 
     case Opcode::I32ReinterpretF32: {
-      auto* value = b->CoerceTo(Int32, Pop(b, "f32"));
+      auto* value = b->ConvertTo(Int32, Pop(b, "f32"));
       Push(b, "i32", value, pc);
       break;
     }
 
     case Opcode::F64ReinterpretI64: {
-      auto* value = b->CoerceTo(Double, Pop(b, "i64"));
+      auto* value = b->ConvertTo(Double, Pop(b, "i64"));
       Push(b, "f64", value, pc);
       break;
     }
 
     case Opcode::I64ReinterpretF64: {
-      auto* value = b->CoerceTo(Int64, Pop(b, "f64"));
+      auto* value = b->ConvertTo(Int64, Pop(b, "f64"));
       Push(b, "i64", value, pc);
       break;
     }

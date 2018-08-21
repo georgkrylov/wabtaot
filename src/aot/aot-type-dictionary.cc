@@ -17,5 +17,12 @@
 #include "aot-type-dictionary.h"
 #include "src/interp.h"
 
-wabt::aot::AOTTypeDictionary::AOTTypeDictionary() : TypeDictionary()
-{}
+wabt::aot::AOTTypeDictionary::AOTTypeDictionary() : wabt::jit::TypeDictionary()
+{
+  TR::IlType* pValueType_ = PointerTo(LookupUnion("Value"));
+  
+  DefineStruct("ValueStack");
+    DefineField("ValueStack", "stack_base_", pValueType_); //->toConst());
+    DefineField("ValueStack", "stack_top_", pValueType_);
+  CloseStruct("ValueStack");
+}

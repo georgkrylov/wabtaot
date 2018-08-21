@@ -8,17 +8,23 @@
 namespace wabt {
 namespace aot {
 
+class AOTFunctionBuilder;
+  
 class AOTManager {
  public:
-  AOTManager(std::size_t n)
-   : func_index_(std::vector<TR::MethodBuilder*>(n, nullptr))
-    {}
+  AOTManager(std::size_t n) {
+    func_index_.reserve(n);
+  }
+
+  void emplace_back_FB(AOTFunctionBuilder&& b) {
+    func_index_.emplace_back(std::move(b));
+  }
   
-  TR::MethodBuilder*& getFB(uint32_t i) {
+  AOTFunctionBuilder& getFB(uint32_t i) {
     return func_index_[i];
   }
  private:
-  std::vector<TR::MethodBuilder*> func_index_;
+  std::vector<AOTFunctionBuilder> func_index_;
 };
 
 }

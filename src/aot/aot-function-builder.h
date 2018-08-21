@@ -17,7 +17,6 @@
 #ifndef FUNCTIONBUILDER_HPP
 #define FUNCTIONBUILDER_HPP
 
-#include "aot-manager.h"
 #include "aot-type-dictionary.h"
 #include "ilgen/BytecodeBuilder.hpp"
 #include "ilgen/MethodBuilder.hpp"
@@ -31,7 +30,7 @@ namespace aot {
 
 class AOTFunctionBuilder : public TR::MethodBuilder {
  public:
-  AOTFunctionBuilder(interp::Thread*, interp::DefinedFunc*, AOTTypeDictionary*, AOTManager&);
+  AOTFunctionBuilder(interp::Thread*, interp::DefinedFunc*, AOTTypeDictionary*);
   bool buildIL() override;
 
   /**
@@ -75,10 +74,10 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
  private:
   struct BytecodeWorkItem {
     TR::BytecodeBuilder* builder;
-    //    const uint8_t* pc;
+    const uint8_t* pc;
 
-    BytecodeWorkItem(TR::BytecodeBuilder* builder) //, const uint8_t* pc)
-      : builder(builder)
+    BytecodeWorkItem(TR::BytecodeBuilder* builder, const uint8_t* pc)
+    : builder(builder), pc(pc)
     {}
   };
 
@@ -90,7 +89,7 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
   TR::IlValue* Const(TR::IlBuilder* b, const interp::TypedValue* v) const;
 
   template <typename T, typename TResult = T, typename TOpHandler>
-  void EmitBinaryOp(TR::IlBuilder* b, const uint8_t* pc, TOpHandler h);
+  void EmitBinaryOp(TR::IlBuilder* b, /* const uint8_t* pc,*/ TOpHandler h);
 
   template <typename T, typename TResult = T, typename TOpHandler>
   void EmitUnaryOp(TR::IlBuilder* b, /* const uint8_t* pc,*/ TOpHandler h);
@@ -117,7 +116,7 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
   void EmitUnsignedTruncation(TR::IlBuilder* b);//, const uint8_t* pc);
 
   template <typename>
-  TR::IlValue* CalculateShiftAmount(TR::IlBuilder* b);//, TR::IlValue* amount);
+  TR::IlValue* CalculateShiftAmount(TR::IlBuilder* b, TR::IlValue* amount);
 
   using Result_t = std::underlying_type<wabt::interp::Result>::type;
 
@@ -135,13 +134,12 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
   interp::Thread* thread_;
   interp::DefinedFunc* fn_;
 
-  AOTManager& aotManager_;
+  AOTTypeDictionary* types_;
   
   TR::IlType* const valueType_;
   TR::IlType* const pValueType_;
-  TR::IlType *valueStackType_;
   
-  bool Emit(TR::BytecodeBuilder* b, const uint8_t* istream);//, const uint8_t* pc);
+  bool Emit(TR::BytecodeBuilder* b, const uint8_t* istream, const uint8_t* pc);
 };
 
 }

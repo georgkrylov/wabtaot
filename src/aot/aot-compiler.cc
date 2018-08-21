@@ -14,7 +14,6 @@
 #include "../wast-lexer.h"
 #include "../wast-parser.h"
 
-#include "aot-manager.h"
 #include "aot-type-dictionary.h"
 #include "aot-function-builder.h"
 
@@ -56,20 +55,21 @@ wabt::Result compileAOT(interp::Environment& env, DefinedModule* module)
   using namespace wabt::aot;
   
   auto func_count = env.GetFuncCount();
-  AOTManager aot_manager(func_count);
 
   interp::Thread thread(&env);
 
   for(Index i = 0; i < func_count; ++i) {
     if(auto* fn = cast<wabt::interp::DefinedFunc>(env.GetFunc(i))) {
       AOTTypeDictionary types;
-      AOTFunctionBuilder builder(&thread, fn, &types, aot_manager);
+      AOTFunctionBuilder builder(&thread, fn, &types);
+
       uint8_t* function = nullptr;
-
-      aot_manager.getFB(i) = &builder;
-
-      compileMethodBuilder(&builder, &function);
+      compileMethodBuilder(&builder, &function);        
     }
+  }
+
+  for(Index i = 0; i < func_count; ++i) {
+    
   }
 
   return wabt::Result::Ok;
@@ -91,7 +91,9 @@ int main(int argc, char** argv) {
 
   result = ReadModule(src_filename, &env, &error_handler, &module);
 
+  //TODO: initializeJitWithOptions(...)
   if(Succeeded(result)) {
 
   }
+  //TODO: shutdownJit()
 }
