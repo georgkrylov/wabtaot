@@ -18,7 +18,6 @@
 #include "aot-type-dictionary.h"
 #include "src/cast.h"
 #include "src/interp.h"
-//#include "ilgen/TypeDictionary.hpp"
 #include "infra/Assert.hpp"
 
 #include <cmath>
@@ -112,11 +111,12 @@ void* AOTFunctionBuilder::MemoryTranslationHelper(interp::Thread* th, uint32_t m
 */
 
 AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFunc* fn,
-				       AOTTypeDictionary* types)
+				       AOTTypeDictionary* types, AOTManager& aotManager)
     : TR::MethodBuilder(types),      
       thread_(thread),
       fn_(fn),
       types_(types),
+      aotManager_(aotManager),
       valueType_(types->LookupUnion("Value")),
       pValueType_(types->PointerTo(types->LookupUnion("Value")))
 {
@@ -744,8 +744,10 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
       // the AOT manager keeps a vector of all the FunctionBuilder objects,
       // indexed by their internal offsets.
 
+      auto& builder = aotManager_.getFB(func_index);
+      
       b->Store("result",
-      b->      Call(fn_->dbg_name_.c_str(), 1, Load("value_stack")));
+      b->      Call(builder.fn_->dbg_name_.c_str(), 1, Load("value_stack")));
 
       /*
       b->Store("result",
@@ -769,13 +771,12 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
       auto current_pc = b->Const(pc);
 
       // TODO: again, more of the same.
-      /*
       b->Store("result",
       b->      Call("CallIndirectHelper", 5, th_addr, table_index, sig_index, entry_index, current_pc));
       
       // Don't pass the pc since a trap in a called function should not update the thread's pc
       EmitCheckTrap(b, b->Load("result"));
-*/
+      */
       break;
     }
 

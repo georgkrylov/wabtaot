@@ -17,6 +17,7 @@
 #ifndef FUNCTIONBUILDER_HPP
 #define FUNCTIONBUILDER_HPP
 
+#include "aot-manager.h"
 #include "aot-type-dictionary.h"
 #include "ilgen/BytecodeBuilder.hpp"
 #include "ilgen/MethodBuilder.hpp"
@@ -30,7 +31,7 @@ namespace aot {
 
 class AOTFunctionBuilder : public TR::MethodBuilder {
  public:
-  AOTFunctionBuilder(interp::Thread*, interp::DefinedFunc*, AOTTypeDictionary*);
+  AOTFunctionBuilder(interp::Thread*, interp::DefinedFunc*, AOTTypeDictionary*, AOTManager&);
   bool buildIL() override;
 
   /**
@@ -135,6 +136,7 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
   interp::DefinedFunc* fn_;
 
   AOTTypeDictionary* types_;
+  AOTManager aotManager_;
   
   TR::IlType* const valueType_;
   TR::IlType* const pValueType_;

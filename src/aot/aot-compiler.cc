@@ -20,6 +20,7 @@
 #include "Jit.hpp"
 
 #include <iostream>
+#include <memory>
 
 using namespace wabt;
 using namespace wabt::interp;
@@ -47,29 +48,32 @@ static wabt::Result ReadModule(const char* module_filename,
     result = ReadBinaryInterp(env, DataOrNull(file_data), file_data.size(),
                               &options, error_handler, out_module);
   }
+  
   return result;
 }
 
 wabt::Result compileAOT(interp::Environment& env, DefinedModule* module)
 {
   using namespace wabt::aot;
-  
+
   auto func_count = env.GetFuncCount();
 
   interp::Thread thread(&env);
+  AOTManager aotManager(func_count);
 
   for(Index i = 0; i < func_count; ++i) {
     if(auto* fn = cast<wabt::interp::DefinedFunc>(env.GetFunc(i))) {
       AOTTypeDictionary types;
-      AOTFunctionBuilder builder(&thread, fn, &types);
-
-      uint8_t* function = nullptr;
-      compileMethodBuilder(&builder, &function);        
+      auto* builder = new AOTFunctionBuilder(&thread, fn, &types, aotManager);
+      aotManager.push_back_FB(builder);
     }
   }
 
   for(Index i = 0; i < func_count; ++i) {
-    
+    auto& builder = aotManager.getFB(i);
+    uint8_t* function = nullptr;
+
+    compileMethodBuilder(&builder, &function);
   }
 
   return wabt::Result::Ok;
@@ -85,15 +89,18 @@ int main(int argc, char** argv) {
   wabt::Result result;
 
   Environment env;
-  // InitEnvironment(&env);
+  
   DefinedModule* module = nullptr; //new DefinedModule();
   ErrorHandlerFile error_handler(Location::Type::Binary);
 
   result = ReadModule(src_filename, &env, &error_handler, &module);
 
-  //TODO: initializeJitWithOptions(...)
+  initializeJitWithOptions("-Xjit:acceptHugeMethods,enableBasicBlockHoisting,omitFramePointer,useILValidator,"
+                           "enableExecutableELFGeneration");
+			   
   if(Succeeded(result)) {
-
+    compileAOT(env, module);
   }
-  //TODO: shutdownJit()
+  
+  shutdownJit();
 }

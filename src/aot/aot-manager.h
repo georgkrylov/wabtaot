@@ -16,15 +16,21 @@ class AOTManager {
     func_index_.reserve(n);
   }
 
-  void emplace_back_FB(AOTFunctionBuilder&& b) {
-    func_index_.emplace_back(std::move(b));
+  ~AOTManager() {
+    for(auto* ptr: func_index_) {
+      delete ptr;
+    }
+  }
+  
+  void push_back_FB(AOTFunctionBuilder* b) {
+    func_index_.push_back(b);
   }
   
   AOTFunctionBuilder& getFB(uint32_t i) {
-    return func_index_[i];
+    return *func_index_[i];
   }
  private:
-  std::vector<AOTFunctionBuilder> func_index_;
+  std::vector<AOTFunctionBuilder*> func_index_;
 };
 
 }
