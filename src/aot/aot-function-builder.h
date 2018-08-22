@@ -33,7 +33,9 @@ class AOTManager;
   
 class AOTFunctionBuilder : public TR::MethodBuilder {
  public:
-  AOTFunctionBuilder(interp::Thread*, interp::DefinedFunc*, AOTTypeDictionary*, AOTManager&);
+  AOTFunctionBuilder(interp::Thread*, interp::DefinedFunc*,
+		     std::string&&, AOTTypeDictionary*,
+		     AOTManager&);
   bool buildIL() override;
 
   virtual ~AOTFunctionBuilder() {}
@@ -76,6 +78,12 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
    */
   TR::IlValue* Pick(TR::IlBuilder* b, Index depth);
 
+  void defineFunction(const char *);
+  
+  const std::string& getName() const {
+    return fn_name_;
+  }
+  
  private:
   struct BytecodeWorkItem {
     TR::BytecodeBuilder* builder;
@@ -139,6 +147,8 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
   interp::Thread* thread_;
   interp::DefinedFunc* fn_;
 
+  std::string fn_name_;
+  
   AOTTypeDictionary* types_;
   AOTManager& aotManager_;
   
@@ -152,15 +162,27 @@ class AOTManager {
  public:
   AOTManager(std::size_t n) {}
   
-  void push_back_FB(uint32_t offset, std::unique_ptr<AOTFunctionBuilder>&& b) {
-    func_index_[offset] = std::move(b);
+  void push_back_FB(uint32_t offset, std::unique_ptr<AOTFunctionBuilder>&& b,
+		    std::unique_ptr<AOTTypeDictionary>&& t)
+  {
+    func_index_[offset] = {std::move(b), std::move(t)};
   }
   
   AOTFunctionBuilder& getFB(uint32_t i) {
-    return *func_index_[i];
+    return *func_index_[i].first;
+  }
+
+  void broadcastNames() {
+    for(auto& builder_kv: func_index_) {
+      for(auto& inner_kv: func_index_) {
+	inner_kv.second.first->defineFunction(builder_kv.second.first->getName().c_str());
+      }
+    }
   }
  private:
-  std::map<uint32_t, std::unique_ptr<AOTFunctionBuilder>> func_index_;
+  std::map<uint32_t, std::pair<std::unique_ptr<AOTFunctionBuilder>,
+                               std::unique_ptr<AOTTypeDictionary>>>
+    func_index_;
 };
 
 }

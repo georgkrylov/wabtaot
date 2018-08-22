@@ -19,6 +19,7 @@
 
 #include "Jit.hpp"
 
+#include <algorithm>
 #include <iostream>
 #include <memory>
 
@@ -63,12 +64,20 @@ wabt::Result compileAOT(interp::Environment& env, DefinedModule* module)
 
   for(Index i = 0; i < func_count; ++i) {
     if(auto* fn = cast<wabt::interp::DefinedFunc>(env.GetFunc(i))) {
-      AOTTypeDictionary types;
-      std::unique_ptr<AOTFunctionBuilder> builder(new AOTFunctionBuilder(&thread, fn, &types, aotManager));
-      aotManager.push_back_FB(fn->offset, std::move(builder));
+      std::unique_ptr<AOTTypeDictionary> types(new AOTTypeDictionary());
+      std::string name = "$$func_" + std::to_string(i);
+      
+      AOTFunctionBuilder* builder = new AOTFunctionBuilder(&thread, fn, std::move(name),
+							   types.get(), aotManager);
+            
+      std::unique_ptr<AOTFunctionBuilder> builder_ptr(builder);
+      
+      aotManager.push_back_FB(fn->offset, std::move(builder_ptr), std::move(types));
     }
   }
 
+  aotManager.broadcastNames();    
+  
   for(Index i = 0; i < func_count; ++i) {
     if(auto* fn = cast<wabt::interp::DefinedFunc>(env.GetFunc(i))) {
       auto& builder = aotManager.getFB(fn->offset);

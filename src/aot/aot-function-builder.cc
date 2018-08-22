@@ -111,10 +111,12 @@ void* AOTFunctionBuilder::MemoryTranslationHelper(interp::Thread* th, uint32_t m
 */
 
 AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFunc* fn,
-				       AOTTypeDictionary* types, AOTManager& aotManager)
+				       std::string&& name, AOTTypeDictionary* types,
+				       AOTManager& aotManager)
     : TR::MethodBuilder(types),      
       thread_(thread),
       fn_(fn),
+      fn_name_(std::move(name)),
       types_(types),
       aotManager_(aotManager),
       valueType_(types->LookupUnion("Value")),
@@ -122,15 +124,15 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFu
 {
   DefineLine(__LINE__);
   DefineFile(__FILE__);
-  DefineName(fn->dbg_name_.c_str());
-
+  DefineName(fn_name_.c_str());  
+  
   DefineParameter("value_stack", pValueType_);
 
   // remember: we don't define other parameters here because
   // WASM is a stack-based language, ie. they go on to the stack!!
 
   DefineReturnType(types->toIlType<Result_t>());
-
+  
   DefineFunction("f32_sqrt", __FILE__, "0",
                  reinterpret_cast<void*>(static_cast<float (*)(float)>(std::sqrt)),
                  Float,
@@ -171,6 +173,14 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFu
   */
 }
 
+void AOTFunctionBuilder::defineFunction(const char* name) {
+  DefineFunction(name, __FILE__, "0",
+		 nullptr,
+		 types_->toIlType<void>(), //pValueType_,
+		 1,
+		 pValueType_);
+}
+  
 bool AOTFunctionBuilder::buildIL() {
   // setVMState(new TR::VirtualMachineState());
 
@@ -747,7 +757,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
       auto& builder = aotManager_.getFB(func_index);
       
       b->Store("result",
-      b->      Call(&builder, 1, Load("value_stack")));
+      b->      Call(builder.fn_name_.c_str(), 1, Load("value_stack")));
 
       /*
       b->Store("result",
