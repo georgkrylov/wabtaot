@@ -23,6 +23,7 @@
 
 #include "src/interp.h"
 
+#include <map>
 #include <type_traits>
 
 namespace wabt {
@@ -149,22 +150,19 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
   
 class AOTManager {
  public:
-  AOTManager(std::size_t n) {
-    func_index_.reserve(n);
-  }
+  AOTManager(std::size_t n) {}
   
-  void push_back_FB(std::unique_ptr<AOTFunctionBuilder>&& b) {
-    func_index_.push_back(std::move(b));
+  void push_back_FB(uint32_t offset, std::unique_ptr<AOTFunctionBuilder>&& b) {
+    func_index_[offset] = std::move(b);
   }
   
   AOTFunctionBuilder& getFB(uint32_t i) {
     return *func_index_[i];
   }
  private:
-  std::vector<std::unique_ptr<AOTFunctionBuilder>> func_index_;
+  std::map<uint32_t, std::unique_ptr<AOTFunctionBuilder>> func_index_;
 };
 
 }
 }
-
 #endif // FUNCTIONBUILDER_HPP

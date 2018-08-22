@@ -65,15 +65,17 @@ wabt::Result compileAOT(interp::Environment& env, DefinedModule* module)
     if(auto* fn = cast<wabt::interp::DefinedFunc>(env.GetFunc(i))) {
       AOTTypeDictionary types;
       std::unique_ptr<AOTFunctionBuilder> builder(new AOTFunctionBuilder(&thread, fn, &types, aotManager));
-      aotManager.push_back_FB(std::move(builder));
+      aotManager.push_back_FB(fn->offset, std::move(builder));
     }
   }
 
   for(Index i = 0; i < func_count; ++i) {
-    auto& builder = aotManager.getFB(i);
-    uint8_t* function = nullptr;
-
-    compileMethodBuilder(&builder, &function);
+    if(auto* fn = cast<wabt::interp::DefinedFunc>(env.GetFunc(i))) {
+      auto& builder = aotManager.getFB(fn->offset);
+      uint8_t* function = nullptr;
+      
+      compileMethodBuilder(&builder, &function);
+    }
   }
 
   return wabt::Result::Ok;
@@ -95,12 +97,7 @@ int main(int argc, char** argv) {
 
   result = ReadModule(src_filename, &env, &error_handler, &module);
 
-  initializeJitWithOptions("-Xjit:acceptHugeMethods,enableBasicBlockHoisting,omitFramePointer,useILValidator,"
-                           "enableExecutableELFGeneration");
-			   
   if(Succeeded(result)) {
     compileAOT(env, module);
   }
-  
-  shutdownJit();
 }
