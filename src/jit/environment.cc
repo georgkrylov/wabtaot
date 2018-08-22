@@ -26,7 +26,6 @@ JitEnvironment::JitEnvironment() {
   if (instance_count_ == 0)
      initializeJitWithOptions("-Xjit:acceptHugeMethods,enableBasicBlockHoisting,"
 			      "omitFramePointer,useILValidator,enableExecutableELFGeneration");
-			      //			      "objectFile=wasm_obj.o");
   ++instance_count_;
 }
 

@@ -747,7 +747,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
       auto& builder = aotManager_.getFB(func_index);
       
       b->Store("result",
-      b->      Call(builder.fn_->dbg_name_.c_str(), 1, Load("value_stack")));
+      b->      Call(&builder, 1, Load("value_stack")));
 
       /*
       b->Store("result",
