@@ -17,7 +17,6 @@
 #ifndef FUNCTIONBUILDER_HPP
 #define FUNCTIONBUILDER_HPP
 
-#include "aot-manager.h"
 #include "aot-type-dictionary.h"
 #include "ilgen/BytecodeBuilder.hpp"
 #include "ilgen/MethodBuilder.hpp"
@@ -29,11 +28,15 @@
 namespace wabt {
 namespace aot {
 
+class AOTManager;
+  
 class AOTFunctionBuilder : public TR::MethodBuilder {
  public:
   AOTFunctionBuilder(interp::Thread*, interp::DefinedFunc*, AOTTypeDictionary*, AOTManager&);
   bool buildIL() override;
 
+  virtual ~AOTFunctionBuilder() {}
+  
   /**
    * @brief Generate push to the interpreter stack
    * @param b is the builder object used to generate the code
@@ -136,12 +139,29 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
   interp::DefinedFunc* fn_;
 
   AOTTypeDictionary* types_;
-  AOTManager aotManager_;
+  AOTManager& aotManager_;
   
   TR::IlType* const valueType_;
   TR::IlType* const pValueType_;
   
   bool Emit(TR::BytecodeBuilder* b, const uint8_t* istream, const uint8_t* pc);
+};
+  
+class AOTManager {
+ public:
+  AOTManager(std::size_t n) {
+    func_index_.reserve(n);
+  }
+  
+  void push_back_FB(std::unique_ptr<AOTFunctionBuilder>&& b) {
+    func_index_.push_back(std::move(b));
+  }
+  
+  AOTFunctionBuilder& getFB(uint32_t i) {
+    return *func_index_[i];
+  }
+ private:
+  std::vector<std::unique_ptr<AOTFunctionBuilder>> func_index_;
 };
 
 }

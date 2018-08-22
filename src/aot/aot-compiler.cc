@@ -64,8 +64,8 @@ wabt::Result compileAOT(interp::Environment& env, DefinedModule* module)
   for(Index i = 0; i < func_count; ++i) {
     if(auto* fn = cast<wabt::interp::DefinedFunc>(env.GetFunc(i))) {
       AOTTypeDictionary types;
-      auto* builder = new AOTFunctionBuilder(&thread, fn, &types, aotManager);
-      aotManager.push_back_FB(builder);
+      std::unique_ptr<AOTFunctionBuilder> builder(new AOTFunctionBuilder(&thread, fn, &types, aotManager));
+      aotManager.push_back_FB(std::move(builder));
     }
   }
 
