@@ -19,6 +19,7 @@
 #include "src/cast.h"
 #include "src/interp.h"
 #include "infra/Assert.hpp"
+#include "ilgen/VirtualMachineState.hpp"
 
 #include <cmath>
 #include <limits>
@@ -29,7 +30,7 @@ namespace wabt {
 namespace aot {
 
 static constexpr int64_t STACK_SIZE = 1024;
-  
+
 // The following functions are required to be able to properly parse opcodes. However, their
 // original definitions are defined with static linkage in src/interp.cc. Because of this, the only
 // way to use them is to simply copy their definitions here.
@@ -113,7 +114,7 @@ void* AOTFunctionBuilder::MemoryTranslationHelper(interp::Thread* th, uint32_t m
 AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFunc* fn,
 				       std::string&& name, AOTTypeDictionary* types,
 				       AOTManager& aotManager)
-    : TR::MethodBuilder(types),      
+    : TR::MethodBuilder(types),
       thread_(thread),
       fn_(fn),
       fn_name_(std::move(name)),
@@ -124,15 +125,15 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFu
 {
   DefineLine(__LINE__);
   DefineFile(__FILE__);
-  DefineName(fn_name_.c_str());  
-  
+  DefineName(fn_name_.c_str());
+
   DefineParameter("value_stack", pValueType_);
 
   // remember: we don't define other parameters here because
   // WASM is a stack-based language, ie. they go on to the stack!!
 
   DefineReturnType(types->toIlType<Result_t>());
-  
+
   DefineFunction("f32_sqrt", __FILE__, "0",
                  reinterpret_cast<void*>(static_cast<float (*)(float)>(std::sqrt)),
                  Float,
@@ -176,13 +177,13 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFu
 void AOTFunctionBuilder::defineFunction(const char* name) {
   DefineFunction(name, __FILE__, "0",
 		 nullptr,
-		 types_->toIlType<void>(), //pValueType_,
+		 types_->toIlType<void>(),
 		 1,
 		 pValueType_);
 }
-  
+
 bool AOTFunctionBuilder::buildIL() {
-  // setVMState(new TR::VirtualMachineState());
+  setVMState(new TR::VirtualMachineState());
 
   const uint8_t* istream = thread_->GetIstream();
 
@@ -219,9 +220,9 @@ void AOTFunctionBuilder::Push(TR::IlBuilder* b, const char* type,
   // auto* stack_base_addr = b->ConstAddress(thread_->value_stack_.data());
   TR::IlValue* stack_top_addr = nullptr;
   TR::IlValue* stack_base_addr = nullptr;
-
-  b->StructFieldInstanceAddress("value_stack", "stack_top_", stack_top_addr);
-  b->StructFieldInstanceAddress("value_stack", "stack_base_", stack_base_addr);
+  
+  stack_top_addr  = b->StructFieldInstanceAddress("ValueStack", "stack_top_", Load("value_stack"));
+  stack_base_addr = b->StructFieldInstanceAddress("ValueStack", "stack_base_", Load("value_stack"));
 
   auto* stack_top = b->LoadAt(pInt32, stack_top_addr);
 
@@ -258,8 +259,8 @@ TR::IlValue* AOTFunctionBuilder::Pop(TR::IlBuilder* b, const char* type) {
   TR::IlValue* stack_top_addr = nullptr;
   TR::IlValue* stack_base_addr = nullptr;
 
-  b->StructFieldInstanceAddress("value_stack", "stack_top_", stack_top_addr);
-  b->StructFieldInstanceAddress("value_stack", "stack_base_", stack_base_addr);
+  stack_top_addr  = b->StructFieldInstanceAddress("ValueStack", "stack_top_", Load("value_stack"));
+  stack_base_addr = b->StructFieldInstanceAddress("ValueStack", "stack_base_", Load("value_stack"));
 
   auto* new_stack_top = b->Sub(
                         b->    LoadAt(pInt32, stack_top_addr),
@@ -295,9 +296,9 @@ void AOTFunctionBuilder::DropKeep(TR::IlBuilder* b, uint32_t drop_count, uint8_t
   TR::IlValue* stack_top_addr = nullptr;
   TR::IlValue* stack_base_addr = nullptr;
 
-  b->StructFieldInstanceAddress("value_stack", "stack_top_", stack_top_addr);
-  b->StructFieldInstanceAddress("value_stack", "stack_base_", stack_base_addr);
-
+  stack_top_addr  = b->StructFieldInstanceAddress("ValueStack", "stack_top_", Load("value_stack"));
+  stack_base_addr = b->StructFieldInstanceAddress("ValueStack", "stack_base_", Load("value_stack"));
+  
   auto* stack_top = b->LoadAt(pInt32, stack_top_addr);
   auto* new_stack_top = b->Sub(stack_top, b->Const(static_cast<int32_t>(drop_count)));
 
@@ -332,8 +333,8 @@ TR::IlValue* AOTFunctionBuilder::Pick(TR::IlBuilder* b, Index depth) {
   TR::IlValue* stack_top_addr = nullptr;
   TR::IlValue* stack_base_addr = nullptr;
 
-  b->StructFieldInstanceAddress("value_stack", "stack_top_", stack_top_addr);
-  b->StructFieldInstanceAddress("value_stack", "stack_base_", stack_base_addr);
+  stack_top_addr  = b->StructFieldInstanceAddress("ValueStack", "stack_top_", Load("value_stack"));
+  stack_base_addr = b->StructFieldInstanceAddress("ValueStack", "stack_base_", Load("value_stack"));
 
   auto* offset = b->Sub(
                  b->    LoadAt(pInt32, stack_top_addr),
@@ -755,9 +756,9 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
       // indexed by their internal offsets.
 
       auto& builder = aotManager_.getFB(func_index);
-      
-      b->Store("result",
-      b->      Call(builder.fn_name_.c_str(), 1, Load("value_stack")));
+
+      //b->Store("result",
+      b->      Call(builder.fn_name_.c_str(), 1, Load("value_stack")); // );
 
       /*
       b->Store("result",
@@ -766,7 +767,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
 
       // Don't pass the pc since a trap in a called function should not update the thread's pc
       //MARK: also, omit the argument for a pc, since, y'know, this is an AOT builder..
-      EmitCheckTrap(b, b->Load("result"));//, nullptr);
+      //EmitCheckTrap(b, b->Load("result"));//, nullptr);
 
       break;
     }
@@ -783,7 +784,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
       // TODO: again, more of the same.
       b->Store("result",
       b->      Call("CallIndirectHelper", 5, th_addr, table_index, sig_index, entry_index, current_pc));
-      
+
       // Don't pass the pc since a trap in a called function should not update the thread's pc
       EmitCheckTrap(b, b->Load("result"));
       */
@@ -845,7 +846,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
       b->            LoadAt(typeDictionary()->PointerTo(Int16), addr)));
            //pc);
 	   */
-      break;      
+      break;
     }
 
     case Opcode::I32Load16U: {
@@ -857,7 +858,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
            "i32",
       b->  UnsignedConvertTo(Int32,
       b->                    LoadAt(typeDictionary()->PointerTo(Int16), addr)));
-      // pc);      
+      // pc);
       */
       break;
     }
