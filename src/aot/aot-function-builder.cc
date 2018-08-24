@@ -29,6 +29,8 @@ namespace wabt {
 
 namespace aot {
 
+using namespace wabt::interp;
+
 // The following functions are required to be able to properly parse opcodes. However, their
 // original definitions are defined with static linkage in src/interp.cc. Because of this, the only
 // way to use them is to simply copy their definitions here.
@@ -109,14 +111,26 @@ void* AOTFunctionBuilder::MemoryTranslationHelper(interp::Thread* th, uint32_t m
 }
 */
 
+TR::IlType* toIlType(Type type) {
+  switch type {
+      Type::I32: return toIlType<decltype(Value::i32)>();
+      Type::I64: return toIlType<decltype(Value::i64)>();
+      Type::F32: return toIlType<decltype(Value::f32)>();
+      Type::F64: return toIlType<decltype(Value::f64)>();
+      default: return toIlType<void>();
+  }
+}
+  
 AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFunc* fn,
 				       std::string&& name, AOTTypeDictionary* types,
-				       AOTManager& aotManager)
+				       Environment& env, AOTManager& aotManager,
+				       OMR::VirtualMachineOperandStack* stack = nullptr)
     : TR::MethodBuilder(types),
       thread_(thread),
       fn_(fn),
       fn_name_(std::move(name)),
       types_(types),
+      env_(env),
       aotManager_(aotManager),
       valueType_(types->LookupUnion("Value")),
       pValueType_(types->PointerTo(types->LookupUnion("Value")))
@@ -124,8 +138,6 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFu
   DefineLine(__LINE__);
   DefineFile(__FILE__);
   DefineName(fn_name_.c_str());
-
-  DefineParameter("value_stack", types_->LookupStruct("ValueStack"));
 
   DefineReturnType(types->toIlType<Result_t>());
 
@@ -151,22 +163,20 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFu
                  2,
                  Double,
                  Double);
-  /*
-  DefineFunction("CallHostHelper", __FILE__, "0",
-                 reinterpret_cast<void*>(CallHostHelper),
-                 types->toIlType<Result_t>(),
-                 2,
-                 types->toIlType<void*>(),
-                 types->toIlType<Index>());
-  DefineFunction("MemoryTranslationHelper", __FILE__, "0",
-                 reinterpret_cast<void*>(MemoryTranslationHelper),
-                 types->toIlType<void*>(),
-                 4,
-                 types->toIlType<void*>(),
-                 types->toIlType<uint32_t>(),
-                 types->toIlType<uint64_t>(),
-                 types->toIlType<uint32_t>());
-  */
+
+  auto* stackTop = DefineLocal("stackTop", pValueType_);
+  stackTop_ = new OMR::VirtualMachineRegister(this, "stackTop", types_->PointerTo(pValueType_),
+					      1, stackTop);
+  
+  if(stack == nullptr) {
+    stack_ = new OMR::VirtualMachineOperandStack(this, 64, valueType_, stackTop_);
+  } else {
+    stack_ = stack;
+  }
+  
+  for(auto& type: env_.GetFuncSignature(fn_->sig_index).param_types) {
+    DefineParameter("", toIlType(type));
+  }
 }
 
 void AOTFunctionBuilder::defineFunction(const char* name) {
@@ -212,7 +222,7 @@ void AOTFunctionBuilder::Push(TR::IlBuilder* b, const char* type,
 {
   TR::IlValue* stack_top_addr = nullptr;
   TR::IlValue* stack_base_addr = nullptr;
-  
+
   stack_top_addr  = b->StructFieldInstanceAddress("ValueStack", "stack_top_", Load("value_stack"));
   stack_base_addr = b->StructFieldInstanceAddress("ValueStack", "stack_base_", Load("value_stack"));
 
@@ -222,10 +232,10 @@ void AOTFunctionBuilder::Push(TR::IlBuilder* b, const char* type,
   /*
   Value v;
   v.i64 = STACK_SIZE;
-  
+
   TypedValue stack_size(Type::i64, v);
   */
-  
+
   EmitTrapIf(b,
   b->        UnsignedGreaterOrEqualTo(
                  stack_top,
@@ -291,7 +301,7 @@ void AOTFunctionBuilder::DropKeep(TR::IlBuilder* b, uint32_t drop_count, uint8_t
 
   stack_top_addr  = b->StructFieldInstanceAddress("ValueStack", "stack_top_", Load("value_stack"));
   stack_base_addr = b->StructFieldInstanceAddress("ValueStack", "stack_base_", Load("value_stack"));
-  
+
   auto* stack_top = b->LoadAt(pValueType_, stack_top_addr);
   auto* new_stack_top = b->Sub(stack_top, b->Const(static_cast<int32_t>(drop_count)));
 

@@ -20,6 +20,7 @@
 #include "aot-type-dictionary.h"
 #include "ilgen/BytecodeBuilder.hpp"
 #include "ilgen/MethodBuilder.hpp"
+#include "ilgen/VirtualMachineOperandStack.hpp"
 
 #include "src/interp.h"
 
@@ -28,20 +29,23 @@
 
 namespace wabt {
 namespace aot {
+
+using namespace wabt::interp;
   
 class AOTManager;
   
 class AOTFunctionBuilder : public TR::MethodBuilder {
  public:
   AOTFunctionBuilder(interp::Thread*, interp::DefinedFunc*,
-		     std::string&&, AOTTypeDictionary*,
-		     AOTManager&);
+		     std::string&&, AOTTypeDictionary*,		     
+		     Environment&, AOTManager&,
+		     OMR::VirtualMachineOperandStack*);
   bool buildIL() override;
 
   virtual ~AOTFunctionBuilder() {}
   
   /**
-   * @brief Generate push to the interpreter stack
+   * @brief Generate push to the VM operand stack
    * @param b is the builder object used to generate the code
    * @param type is the name of the field in the Value union corresponding to the type of the value being pushed
    * @param value is the IlValue representing the value being pushed
@@ -149,12 +153,16 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
 
   std::string fn_name_;
   
-  AOTTypeDictionary* types_;
+  AOTTypeDictionary* types_;  
+  Environment& env_;
   AOTManager& aotManager_;
+  OMR::VirtualMachineOperandStack* stack_;
   
   TR::IlType* const valueType_;
   TR::IlType* const pValueType_;
-  
+
+  OMR::VirtualMachineRegister* stackTop_;
+
   bool Emit(TR::BytecodeBuilder* b, const uint8_t* istream, const uint8_t* pc);
 };
   
