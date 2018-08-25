@@ -28,7 +28,7 @@
 
 namespace wabt {
 namespace aot {
-
+  
 class AOTManager;
   
 class AOTFunctionBuilder : public TR::MethodBuilder {

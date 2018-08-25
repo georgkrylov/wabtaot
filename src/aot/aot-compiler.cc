@@ -14,6 +14,7 @@
 #include "../wast-lexer.h"
 #include "../wast-parser.h"
 
+#include "aot-start-function.h"
 #include "aot-type-dictionary.h"
 #include "aot-function-builder.h"
 
@@ -76,7 +77,16 @@ wabt::Result compileAOT(interp::Environment& env, DefinedModule* module)
     }
   }
 
-  aotManager.broadcastNames();    
+  aotManager.broadcastNames();
+
+  // create start method.
+  {
+    auto startFnName = aotManager.getFB(module->start_func_index).getName();
+    AOTStartFunctionBuilder start_fn_builder(startFnName.c_str());
+    uint8_t* fn_ptr = nullptr;
+    
+    compileMethodBuilder(&start_fn_builder, &fn_ptr);
+  }
   
   for(Index i = 0; i < func_count; ++i) {
     if(auto* fn = cast<wabt::interp::DefinedFunc>(env.GetFunc(i))) {

@@ -19,6 +19,7 @@
 
 #include "ilgen/TypeDictionary.hpp"
 #include "../jit/type-dictionary.h"
+#include "constants.h"
 
 namespace wabt {
 namespace aot {
