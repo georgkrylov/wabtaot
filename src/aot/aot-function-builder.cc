@@ -133,8 +133,8 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFu
     fn_name_(fn_name),
     env_(env),
     aotManager_(aotManager),
-    valueType_(Int32),
-    pValueType_(types_->PointerTo(Int32))
+    valueType_(Int64),
+    pValueType_(types_->PointerTo(Int64))
 {
   DefineLine(__LINE__);
   DefineFile(__FILE__);
@@ -193,7 +193,7 @@ bool AOTFunctionBuilder::buildIL() {
 
   // expects a non-NULL Compilation object to exist, so must be
   // constructed here, at compile time
-  stack_ = new OMR::VirtualMachineOperandStack(this, 64, valueType_, nullptr);
+  stack_ = new TR::VirtualMachineOperandStack(this, 64, valueType_, nullptr);
 
   const uint8_t* istream = thread_->GetIstream();
 
@@ -616,9 +616,17 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
     // case Opcode::BrIf: This opcode is never generated as it's always
     // transformed into a BrUnless. So, there's no need to handle it.
 
-    case Opcode::Return:
-      b->Return(b->Const(static_cast<Result_t>(interp::Result::Ok)));
+    case Opcode::Return: {
+      const auto& result_type = env_.GetFuncSignature(fn_->sig_index)->result_types;
+      if(result_type.empty()) {
+	b->Return();
+      } else {	
+	auto* value = Pop(b, TypeFieldName(result_type.front()));
+	b->Return(value);
+      }
+
       return true;
+    }
 
     case Opcode::Unreachable:
       EmitTrap(b, b->Const(static_cast<Result_t>(interp::Result::TrapUnreachable)));

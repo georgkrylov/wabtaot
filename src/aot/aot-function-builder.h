@@ -21,6 +21,7 @@
 #include "ilgen/BytecodeBuilder.hpp"
 #include "ilgen/MethodBuilder.hpp"
 #include "ilgen/VirtualMachineOperandStack.hpp"
+#include "ilgen/VirtualMachineRegister.hpp"
 
 #include "src/interp.h"
 
@@ -164,7 +165,7 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
   
   Environment& env_;
   AOTManager& aotManager_;
-  OMR::VirtualMachineOperandStack* stack_;
+  TR::VirtualMachineOperandStack* stack_;
   
   TR::IlType* const valueType_;
   TR::IlType* const pValueType_;

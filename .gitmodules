@@ -7,6 +7,6 @@
 [submodule "third_party/ply"]
 	path = third_party/ply
 	url = https://github.com/dabeaz/ply
-[submodule "omr"]
-	path = third_/party/omr
-	url = https://github.com/eclipse/omr
+[submodule "third_party/omr"]
+	path = third_party/omr
+	url = https://bitbucket.org/mthom/omr
