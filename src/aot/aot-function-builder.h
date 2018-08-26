@@ -36,10 +36,9 @@ class AOTManager;
   
 class AOTFunctionBuilder : public TR::MethodBuilder {
  public:
-  AOTFunctionBuilder(interp::Thread*, interp::DefinedFunc*,
-		     std::string&&, AOTTypeDictionary*,		     
-		     Environment&, AOTManager&,
-		     OMR::VirtualMachineOperandStack*);
+  AOTFunctionBuilder(interp::Thread*, interp::DefinedFunc*, std::string&&,
+		     AOTTypeDictionary*, Environment&, AOTManager&);
+  
   bool buildIL() override;
 
   virtual ~AOTFunctionBuilder() {}
@@ -80,14 +79,18 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
    * the union, instead of loading the union directly. This behaviour differs
    * from `Thread::Pick()` and users must take this into account.
    */
-  TR::IlValue* Pick(TR::IlBuilder* b, Index depth);
+  TR::IlValue* Pick(Index depth);
 
-  void defineFunction(const char *);
+  void defineFunction(const std::string&, interp::DefinedFunc*);
+
+  interp::DefinedFunc* getFn() {
+    return fn_;
+  }
   
   const std::string& getName() const {
     return fn_name_;
   }
-  
+
  private:
   struct BytecodeWorkItem {
     TR::BytecodeBuilder* builder;
@@ -98,10 +101,13 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
     {}
   };
 
+  TR::IlType* functionReturnType(interp::DefinedFunc*);
+  
   template <typename T>
   const char* TypeFieldName() const;
 
   const char* TypeFieldName(Type t) const;
+  TR::IlType* TypeFieldType(Type t) const;
 
   TR::IlValue* Const(TR::IlBuilder* b, const interp::TypedValue* v) const;
 
@@ -112,25 +118,25 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
   void EmitUnaryOp(TR::IlBuilder* b, /* const uint8_t* pc,*/ TOpHandler h);
 
   template <typename T>
-  void EmitIntDivide(TR::IlBuilder* b);//, const uint8_t* pc);
+  void EmitIntDivide(TR::IlBuilder* b);
 
   template <typename T>
-  void EmitIntRemainder(TR::IlBuilder* b);//, const uint8_t* pc);
+  void EmitIntRemainder(TR::IlBuilder* b);
 
   template <typename T>
-  TR::IlValue* EmitMemoryPreAccess(TR::IlBuilder* b);//, const uint8_t** pc);
+  TR::IlValue* EmitMemoryPreAccess(TR::IlBuilder* b);
 
-  void EmitTrap(TR::IlBuilder* b, TR::IlValue* result);//, const uint8_t* pc);
-  void EmitCheckTrap(TR::IlBuilder* b, TR::IlValue* result);//, const uint8_t* pc);
-  void EmitTrapIf(TR::IlBuilder* b, TR::IlValue* condition, TR::IlValue* result);//, const uint8_t* pc);
+  void EmitTrap(TR::IlBuilder* b, TR::IlValue* result);
+  void EmitCheckTrap(TR::IlBuilder* b, TR::IlValue* result);
+  void EmitTrapIf(TR::IlBuilder* b, TR::IlValue* condition, TR::IlValue* result);
 
   template <typename F>
   TR::IlValue* EmitIsNan(TR::IlBuilder* b, TR::IlValue* value);
 
   template <typename ToType, typename FromType>
-  void EmitTruncation(TR::IlBuilder* b);//, const uint8_t* pc);
+  void EmitTruncation(TR::IlBuilder* b);
   template <typename ToType, typename FromType>
-  void EmitUnsignedTruncation(TR::IlBuilder* b);//, const uint8_t* pc);
+  void EmitUnsignedTruncation(TR::IlBuilder* b);
 
   template <typename>
   TR::IlValue* CalculateShiftAmount(TR::IlBuilder* b, TR::IlValue* amount);
@@ -151,17 +157,16 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
   interp::Thread* thread_;
   interp::DefinedFunc* fn_;
 
+  AOTTypeDictionary* types_;
+  
   std::string fn_name_;
   
-  AOTTypeDictionary* types_;  
   Environment& env_;
   AOTManager& aotManager_;
   OMR::VirtualMachineOperandStack* stack_;
   
   TR::IlType* const valueType_;
   TR::IlType* const pValueType_;
-
-  OMR::VirtualMachineRegister* stackTop_;
 
   bool Emit(TR::BytecodeBuilder* b, const uint8_t* istream, const uint8_t* pc);
 };
@@ -180,10 +185,15 @@ class AOTManager {
     return *func_index_[i].first;
   }
 
+  AOTTypeDictionary* getTD(uint32_t i) {
+    return func_index_[i].second.get();
+  }
+  
   void broadcastNames() {
     for(auto& builder_kv: func_index_) {
       for(auto& inner_kv: func_index_) {
-	inner_kv.second.first->defineFunction(builder_kv.second.first->getName().c_str());
+	auto& builder_fn = builder_kv.second.first;
+	inner_kv.second.first->defineFunction(builder_fn->getName(), builder_fn->getFn());
       }
     }
   }

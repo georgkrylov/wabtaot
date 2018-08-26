@@ -111,35 +111,36 @@ void* AOTFunctionBuilder::MemoryTranslationHelper(interp::Thread* th, uint32_t m
 }
 */
 
-TR::IlType* toIlType(Type type) {
-  switch type {
-      Type::I32: return toIlType<decltype(Value::i32)>();
-      Type::I64: return toIlType<decltype(Value::i64)>();
-      Type::F32: return toIlType<decltype(Value::f32)>();
-      Type::F64: return toIlType<decltype(Value::f64)>();
-      default: return toIlType<void>();
-  }
+TR::IlType* AOTFunctionBuilder::functionReturnType(interp::DefinedFunc* fn)
+{
+    const auto& result_types = env_.GetFuncSignature(fn->sig_index)->result_types;
+
+    if(!result_types.empty()) {
+      // use the first result_type, for now.
+      return TypeFieldType(result_types.front());
+    }
+
+    return NoType;
 }
-  
+
 AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFunc* fn,
-				       std::string&& name, AOTTypeDictionary* types,
-				       Environment& env, AOTManager& aotManager,
-				       OMR::VirtualMachineOperandStack* stack = nullptr)
-    : TR::MethodBuilder(types),
-      thread_(thread),
-      fn_(fn),
-      fn_name_(std::move(name)),
-      types_(types),
-      env_(env),
-      aotManager_(aotManager),
-      valueType_(types->LookupUnion("Value")),
-      pValueType_(types->PointerTo(types->LookupUnion("Value")))
+				       std::string&& fn_name, AOTTypeDictionary* types,
+				       Environment& env, AOTManager& aotManager)
+  : TR::MethodBuilder(types),
+    types_(types),
+    thread_(thread),
+    fn_(fn),
+    fn_name_(fn_name),
+    env_(env),
+    aotManager_(aotManager),
+    valueType_(types_->LookupUnion("Value")),
+    pValueType_(types_->PointerTo(types_->LookupUnion("Value")))
 {
   DefineLine(__LINE__);
   DefineFile(__FILE__);
   DefineName(fn_name_.c_str());
 
-  DefineReturnType(types->toIlType<Result_t>());
+  TR::IlType* result_type = functionReturnType(fn_);
 
   DefineFunction("f32_sqrt", __FILE__, "0",
                  reinterpret_cast<void*>(static_cast<float (*)(float)>(std::sqrt)),
@@ -164,35 +165,40 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFu
                  Double,
                  Double);
 
-  auto* stackTop = DefineLocal("stackTop", pValueType_);
-  stackTop_ = new OMR::VirtualMachineRegister(this, "stackTop", types_->PointerTo(pValueType_),
-					      1, stackTop);
-  
-  if(stack == nullptr) {
-    stack_ = new OMR::VirtualMachineOperandStack(this, 64, valueType_, stackTop_);
-  } else {
-    stack_ = stack;
+  for(const auto type: env_.GetFuncSignature(fn_->sig_index)->param_types) {
+    DefineParameter("", TypeFieldType(type));
   }
-  
-  for(auto& type: env_.GetFuncSignature(fn_->sig_index).param_types) {
-    DefineParameter("", toIlType(type));
-  }
+
+  DefineReturnType(result_type);
 }
 
-void AOTFunctionBuilder::defineFunction(const char* name) {
-  DefineFunction(name, __FILE__, "0",
+void AOTFunctionBuilder::defineFunction(const std::string& name, interp::DefinedFunc* fn) {
+  std::vector<TR::IlType*> types;
+
+  for(auto t: env_.GetFuncSignature(fn->sig_index)->param_types) {
+    types.push_back(TypeFieldType(t));
+  }
+
+  TR::IlType* result_type = functionReturnType(fn);
+
+  DefineFunction(name.c_str(), __FILE__, "0",
 		 (void*) 18, // this is a magic number that makes trampoline lookup seemingly work.
-		 types_->toIlType<void>(),
-		 1,
-		 types_->LookupStruct("ValueStack"));
+		 result_type,
+		 types.size(),
+		 (TR::IlType**) types.data());
 }
 
 bool AOTFunctionBuilder::buildIL() {
   setVMState(new TR::VirtualMachineState());
 
+  // expects a non-NULL Compilation object to exist, so must be
+  // constructed here, at compile time
+  stack_ = new OMR::VirtualMachineOperandStack(this, 64, valueType_, nullptr);
+
   const uint8_t* istream = thread_->GetIstream();
 
-  workItems_.emplace_back(OrphanBytecodeBuilder(0, const_cast<char*>(ReadOpcodeAt(&istream[fn_->offset]).GetName())),
+  workItems_.emplace_back(OrphanBytecodeBuilder(0,
+						const_cast<char*>(ReadOpcodeAt(&istream[fn_->offset]).GetName())),
                           &istream[fn_->offset]);
   AppendBuilder(workItems_[0].builder);
 
@@ -217,40 +223,11 @@ bool AOTFunctionBuilder::buildIL() {
  * stack_base_addr[stack_top] = value;
  * *stack_top_addr = stack_top + 1;
  */
-void AOTFunctionBuilder::Push(TR::IlBuilder* b, const char* type,
-			      TR::IlValue* value) //, const uint8_t* pc)
+void AOTFunctionBuilder::Push(TR::IlBuilder* b, const char* type, TR::IlValue* value)
 {
-  TR::IlValue* stack_top_addr = nullptr;
-  TR::IlValue* stack_base_addr = nullptr;
-
-  stack_top_addr  = b->StructFieldInstanceAddress("ValueStack", "stack_top_", Load("value_stack"));
-  stack_base_addr = b->StructFieldInstanceAddress("ValueStack", "stack_base_", Load("value_stack"));
-
-  auto* stack_top  = b->LoadAt(pValueType_, stack_top_addr);
-  auto* stack_base = b->LoadAt(pValueType_, stack_base_addr);
-
-  /*
-  Value v;
-  v.i64 = STACK_SIZE;
-
-  TypedValue stack_size(Type::i64, v);
-  */
-
-  EmitTrapIf(b,
-  b->        UnsignedGreaterOrEqualTo(
-                 stack_top,
-  b->            Add(b->Const(STACK_SIZE), stack_base)),
-  b->        Const(static_cast<Result_t>(interp::Result::TrapValueStackExhausted)));
-
-  b->StoreIndirect("Value", type,
-  b->              IndexAt(pValueType_,
-                           stack_base_addr,
-                           stack_top),
-                   value);
-  b->StoreAt(stack_top_addr,
-  b->        Add(
-                 stack_top,
-  b->            Const(1)));
+  auto* value_wrapper = b->NewValue(types_->LookupUnion("Value"));
+  b->StoreIndirect("Value", type, value_wrapper, value);
+  stack_->Push(b, value_wrapper);
 }
 
 /**
@@ -263,20 +240,8 @@ void AOTFunctionBuilder::Push(TR::IlBuilder* b, const char* type,
  * return stack_base_addr[new_stack_top];
  */
 TR::IlValue* AOTFunctionBuilder::Pop(TR::IlBuilder* b, const char* type) {
-  TR::IlValue* stack_top_addr = nullptr;
-  TR::IlValue* stack_base_addr = nullptr;
-
-  stack_top_addr  = b->StructFieldInstanceAddress("ValueStack", "stack_top_", Load("value_stack"));
-  stack_base_addr = b->StructFieldInstanceAddress("ValueStack", "stack_base_", Load("value_stack"));
-
-  auto* new_stack_top = b->Sub(
-                        b->    LoadAt(pValueType_, stack_top_addr),
-                        b->    Const(1));
-  b->StoreAt(stack_top_addr, new_stack_top);
-  return b->LoadIndirect("Value", type,
-         b->             IndexAt(pValueType_,
-                                 stack_base_addr,
-                                 new_stack_top));
+  auto* value = stack_->Pop(b);
+  return b->LoadIndirect("Value", type, value);
 }
 
 /**
@@ -296,29 +261,15 @@ TR::IlValue* AOTFunctionBuilder::Pop(TR::IlBuilder* b, const char* type) {
 void AOTFunctionBuilder::DropKeep(TR::IlBuilder* b, uint32_t drop_count, uint8_t keep_count) {
   TR_ASSERT(keep_count <= 1, "Invalid keep count");
 
-  TR::IlValue* stack_top_addr = nullptr;
-  TR::IlValue* stack_base_addr = nullptr;
-
-  stack_top_addr  = b->StructFieldInstanceAddress("ValueStack", "stack_top_", Load("value_stack"));
-  stack_base_addr = b->StructFieldInstanceAddress("ValueStack", "stack_base_", Load("value_stack"));
-
-  auto* stack_top = b->LoadAt(pValueType_, stack_top_addr);
-  auto* new_stack_top = b->Sub(stack_top, b->Const(static_cast<int32_t>(drop_count)));
-
-  if (keep_count == 1) {
-    auto* old_top_value = b->LoadAt(pValueType_,
-                          b->       IndexAt(pValueType_,
-                                            stack_base_addr,
-                          b->               Sub(stack_top, b->Const(1))));
-
-    b->StoreAt(
-    b->        IndexAt(pValueType_,
-                       stack_base_addr,
-    b->                Sub(new_stack_top, b->Const(1))),
-               old_top_value);
+  if(keep_count == 1) {
+    if(drop_count > 0) {
+      auto* top = stack_->Pop(b);
+      stack_->Drop(b, drop_count - 1);
+      stack_->Push(b, top);
+    }
+  } else {
+    stack_->Drop(b, drop_count);
   }
-
-  b->StoreAt(stack_top_addr, new_stack_top);
 }
 
 /**
@@ -328,19 +279,8 @@ void AOTFunctionBuilder::DropKeep(TR::IlBuilder* b, uint32_t drop_count, uint8_t
  *
  * return &value_stack_[value_stack_top_ - depth];
  */
-TR::IlValue* AOTFunctionBuilder::Pick(TR::IlBuilder* b, Index depth) {
-  TR::IlValue* stack_top_addr = nullptr;
-  TR::IlValue* stack_base_addr = nullptr;
-
-  stack_top_addr  = b->StructFieldInstanceAddress("ValueStack", "stack_top_", Load("value_stack"));
-  stack_base_addr = b->StructFieldInstanceAddress("ValueStack", "stack_base_", Load("value_stack"));
-
-  auto* offset = b->Sub(
-                 b->    LoadAt(pValueType_, stack_top_addr),
-                 b->    ConstInt32(depth));
-  return b->IndexAt(pValueType_,
-                    stack_base_addr,
-                    offset);
+TR::IlValue* AOTFunctionBuilder::Pick(Index depth) {
+  return stack_->Pick(depth);
 }
 
 template <>
@@ -389,6 +329,22 @@ const char* AOTFunctionBuilder::TypeFieldName(Type t) const {
   }
 }
 
+TR::IlType* AOTFunctionBuilder::TypeFieldType(Type t) const {
+  switch (t) {
+    case Type::I32:
+      return types_->toIlType<int32_t>();
+    case Type::I64:
+      return types_->toIlType<int64_t>();
+    case Type::F32:
+      return types_->toIlType<float>();
+    case Type::F64:
+      return types_->toIlType<double>();
+    default:
+      TR_ASSERT_FATAL(false, "Invalid primitive type");
+      return nullptr;
+  }
+}
+
 TR::IlValue* AOTFunctionBuilder::Const(TR::IlBuilder* b, const interp::TypedValue* v) const {
   switch (v->type) {
     case Type::I32:
@@ -426,15 +382,13 @@ void AOTFunctionBuilder::EmitIntDivide(TR::IlBuilder* b) {
   EmitBinaryOp<T>(b, [&](TR::IlValue* dividend, TR::IlValue* divisor) {
     EmitTrapIf(b,
     b->        EqualTo(divisor, b->Const(static_cast<T>(0))),
-    b->        Const(static_cast<Result_t>(interp::Result::TrapIntegerDivideByZero)));/*,
-										      pc);*/
+    b->        Const(static_cast<Result_t>(interp::Result::TrapIntegerDivideByZero)));
 
     EmitTrapIf(b,
     b->        And(
     b->            EqualTo(dividend, b->Const(std::numeric_limits<T>::min())),
     b->            EqualTo(divisor, b->Const(static_cast<T>(-1)))),
-    b->        Const(static_cast<Result_t>(interp::Result::TrapIntegerOverflow)));/*,
-										  pc);*/
+    b->        Const(static_cast<Result_t>(interp::Result::TrapIntegerOverflow)));
 
     return b->Div(dividend, divisor);
   });
@@ -722,7 +676,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
     case Opcode::GetLocal: {
       // note: to work around JitBuilder's lack of support unions as value types,
       // just copy a field that's the size of the entire union
-      auto* local_addr = Pick(b, ReadU32(&pc));
+      auto* local_addr = Pick(/*b,*/ReadU32(&pc));
       Push(b, "i64", b->LoadIndirect("Value", "i64", local_addr));
       break;
     }
@@ -730,29 +684,28 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
     case Opcode::SetLocal: {
       // see note for GetLocal
       auto* value = Pop(b, "i64");
-      auto* local_addr = Pick(b, ReadU32(&pc));
+      auto* local_addr = Pick(/*b, */ReadU32(&pc));
       b->StoreIndirect("Value", "i64", local_addr, value);
       break;
     }
 
     case Opcode::TeeLocal:
       // see note for GetLocal
-      b->StoreIndirect("Value", "i64", Pick(b, ReadU32(&pc)), b->LoadIndirect("Value", "i64", Pick(b, 1)));
+      b->StoreIndirect("Value", "i64", Pick(/*b, */ReadU32(&pc)), b->LoadIndirect("Value", "i64", Pick(/*b, */1)));
       break;
 
     case Opcode::Call: {
       auto func_index = ReadU32(&pc);
-      // auto th_addr = b->ConstAddress(thread_);
-      // auto offset = b->ConstInt32(ReadU32(&pc));
-      // auto current_pc = b->Const(pc);
-
-      // the AOT manager keeps a vector of all the FunctionBuilder objects,
-      // indexed by their internal offsets.
-
       auto& builder = aotManager_.getFB(func_index);
 
-      //b->Store("result",
-      b->      Call(builder.fn_name_.c_str(), 1, Load("value_stack")); // );
+      std::vector<TR::IlValue*> args;
+      
+      for(auto& t: env_.GetFuncSignature(builder.fn_->sig_index)->param_types) {
+	args.push_back(Pop(this, TypeFieldName(t)));
+      }
+
+      auto* value = Call(builder.fn_name_.c_str(), args.size(), args.data());
+      stack_->Push(this, value);
 
       /*
       b->Store("result",
@@ -1743,7 +1696,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
       /*
       auto pInt32 = typeDictionary()->PointerTo(Int32);
       auto* stack_top_addr = b->ConstAddress(&thread_->value_stack_top_);
-      auto* stack_base_addr = b->ConstAddress(thread_->value_stack_.data());
+      auto* stack_base_addr = b->ConstAddress(thread_->value_stack_->data());
 
       auto* old_value_stack_top = b->LoadAt(pInt32, stack_top_addr);
       auto* count = b->ConstInt32(ReadU32(&pc));

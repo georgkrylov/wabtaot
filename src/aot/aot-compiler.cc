@@ -49,7 +49,7 @@ static wabt::Result ReadModule(const char* module_filename,
     result = ReadBinaryInterp(env, DataOrNull(file_data), file_data.size(),
                               &options, error_handler, out_module);
   }
-  
+
   return result;
 }
 
@@ -66,23 +66,25 @@ wabt::Result compileAOT(interp::Environment& env, DefinedModule* module)
     if(auto* fn = cast<wabt::interp::DefinedFunc>(env.GetFunc(i))) {
       std::unique_ptr<AOTTypeDictionary> types(new AOTTypeDictionary());
       std::string name = "$$func_" + std::to_string(i);
-      
-      AOTFunctionBuilder* builder = new AOTFunctionBuilder(&thread, fn, std::move(name),
-							   types.get(), aotManager);
-            
+
+      AOTFunctionBuilder* builder = new AOTFunctionBuilder(&thread, fn,
+							   std::move(name),
+							   types.get(),
+							   env, aotManager);
+
       std::unique_ptr<AOTFunctionBuilder> builder_ptr(builder);
-      
+
       aotManager.push_back_FB(fn->offset, std::move(builder_ptr), std::move(types));
     }
   }
 
   aotManager.broadcastNames();
-  
+
   for(Index i = 0; i < func_count; ++i) {
     if(auto* fn = cast<wabt::interp::DefinedFunc>(env.GetFunc(i))) {
       auto& builder = aotManager.getFB(fn->offset);
       uint8_t* function = nullptr;
-      
+
       compileMethodBuilder(&builder, &function);
     }
   }
@@ -100,7 +102,7 @@ int main(int argc, char** argv) {
   wabt::Result result;
 
   Environment env;
-  
+
   DefinedModule* module = nullptr; //new DefinedModule();
   ErrorHandlerFile error_handler(Location::Type::Binary);
 
