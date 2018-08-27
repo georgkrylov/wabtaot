@@ -106,8 +106,9 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
   template <typename T>
   const char* TypeFieldName() const;
 
-  const char* TypeFieldName(Type t) const;
-  TR::IlType* TypeFieldType(Type t) const;
+  const char* TypeFieldName(Type) const;
+  TR::IlType* TypeFieldType(Type) const;
+  TR::IlType* TypeFieldType(const char*) const;
 
   TR::IlValue* Const(TR::IlBuilder* b, const interp::TypedValue* v) const;
 

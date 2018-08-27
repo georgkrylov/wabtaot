@@ -133,8 +133,8 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFu
     fn_name_(fn_name),
     env_(env),
     aotManager_(aotManager),
-    valueType_(types_->LookupUnion("Value")),
-    pValueType_(types_->PointerTo(types_->LookupUnion("Value")))
+    valueType_(Int32),
+    pValueType_(types_->PointerTo(Int32))
 {
   DefineLine(__LINE__);
   DefineFile(__FILE__);
@@ -225,8 +225,7 @@ bool AOTFunctionBuilder::buildIL() {
  */
 void AOTFunctionBuilder::Push(TR::IlBuilder* b, const char* type, TR::IlValue* value)
 {
-  auto* value_wrapper = b->NewValue(types_->LookupUnion("Value"));
-  b->StoreIndirect("Value", type, value_wrapper, value);
+  auto* value_wrapper = b->ConvertTo(valueType_, value);  
   stack_->Push(b, value_wrapper);
 }
 
@@ -241,7 +240,7 @@ void AOTFunctionBuilder::Push(TR::IlBuilder* b, const char* type, TR::IlValue* v
  */
 TR::IlValue* AOTFunctionBuilder::Pop(TR::IlBuilder* b, const char* type) {
   auto* value = stack_->Pop(b);
-  return b->LoadIndirect("Value", type, value);
+  return b->ConvertTo(TypeFieldType(type), value);
 }
 
 /**
@@ -343,6 +342,21 @@ TR::IlType* AOTFunctionBuilder::TypeFieldType(Type t) const {
       TR_ASSERT_FATAL(false, "Invalid primitive type");
       return nullptr;
   }
+}
+
+TR::IlType* AOTFunctionBuilder::TypeFieldType(const char* t) const {
+  if(strcmp(t, "i32") == 0) {
+      return types_->toIlType<int32_t>();
+  } else if(strcmp(t, "i64") == 0) {
+      return types_->toIlType<int64_t>();
+  } else if(strcmp(t, "f32") == 0) {
+      return types_->toIlType<float>();
+  } else if(strcmp(t, "f64") == 0) {
+      return types_->toIlType<double>();
+  }
+
+  TR_ASSERT_FATAL(false, "Invalid primitive type");
+  return nullptr;  
 }
 
 TR::IlValue* AOTFunctionBuilder::Const(TR::IlBuilder* b, const interp::TypedValue* v) const {
@@ -706,11 +720,6 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
 
       auto* value = Call(builder.fn_name_.c_str(), args.size(), args.data());
       stack_->Push(this, value);
-
-      /*
-      b->Store("result",
-      b->      Call("CallHelper", 3, th_addr, offset, current_pc));
-      */
 
       // Don't pass the pc since a trap in a called function should not update the thread's pc
       //MARK: also, omit the argument for a pc, since, y'know, this is an AOT builder..
