@@ -106,7 +106,8 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
     {}
   };
 
-  TR::IlType* functionReturnType(interp::DefinedFunc*);
+  TR::IlType* functionReturnType(AOTFunctionBuilder&);
+  TR::IlType* functionReturnType(const std::string&, interp::DefinedFunc*);
   
   template <typename T>
   const char* TypeFieldName() const;
@@ -175,7 +176,14 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
   TR::IlType* const pValueType_;
   TR::IlType* returnType_;
 
+  uint32_t stackCount_ = 0;
+  
   bool Emit(TR::BytecodeBuilder* b, const uint8_t* istream, const uint8_t* pc);
+
+  // this is a buffer for strings, which must be kept alive for the sake of
+  // OMR, which does not copy strings passed to, say, field names,, just the
+  // addresses of their char* buffer.
+  std::vector<std::string> stringBuf_;
 };
   
 class AOTManager {

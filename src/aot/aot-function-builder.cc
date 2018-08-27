@@ -1,4 +1,4 @@
-/*
+  /*
  * Copyright 2017 wasmjit-omr project participants
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -94,6 +94,14 @@ inline Opcode ReadOpcodeAt(const uint8_t* pc) {
       TRAP(type);            \
   } while (0)
 
+
+/*
+FunctionBuilder::Result_t AOTFunctionBuilder::CallHostHelper(wabt::interp::Thread* th, Index func_index) {
+  return static_cast<Result_t>(th->CallHost(cast<wabt::interp::HostFunc>(th->env_->funcs_[func_index].get())));
+}
+*/
+
+
 /*
 FunctionBuilder::Result_t AOTFunctionBuilder::CallHostHelper(wabt::interp::Thread* th, Index func_index) {
   return static_cast<Result_t>(th->CallHost(cast<wabt::interp::HostFunc>(th->env_->funcs_[func_index].get())));
@@ -113,7 +121,12 @@ void* AOTFunctionBuilder::MemoryTranslationHelper(interp::Thread* th, uint32_t m
 /*
  Build a struct containing the return types of the function, as its fields.
  */
-TR::IlType* AOTFunctionBuilder::functionReturnType(interp::DefinedFunc* fn)
+TR::IlType* AOTFunctionBuilder::functionReturnType(AOTFunctionBuilder& builder)
+{
+  return functionReturnType(builder.fn_name_, builder.fn_);
+}
+
+TR::IlType* AOTFunctionBuilder::functionReturnType(const std::string& name, interp::DefinedFunc* fn)
 {
     const auto& result_types = env_.GetFuncSignature(fn->sig_index)->result_types;
 
@@ -121,30 +134,38 @@ TR::IlType* AOTFunctionBuilder::functionReturnType(interp::DefinedFunc* fn)
       return NoType;
     }
 
-    std::string return_type_name = fn_name_ + "_return_type";
-    TR::IlType* return_type = types_->DefineStruct(return_type_name.c_str());
+    std::string return_type_name = name + "_return_type";
+    stringBuf_.push_back(return_type_name);
+
+    auto return_type_idx = stringBuf_.size() - 1;
+
+    TR::IlType* return_type = types_->DefineStruct(stringBuf_.back().c_str());
 
     int arg = 0;
-    
+
     for(auto& t: result_types) {
       char field_name[5]; // shouldn't have more than 1024 args!
-      sprintf(field_name, "%d", arg++);      
-      types_->DefineField(return_type_name.c_str(), field_name, TypeFieldType(t));
+      sprintf(field_name, "%d", arg++);
+
+      stringBuf_.push_back(field_name);
+      const char* field_name_buf = stringBuf_.back().c_str();
+
+      types_->DefineField(return_type_name.c_str(), field_name_buf, TypeFieldType(t));
     }
 
-    types_->CloseStruct(return_type_name.c_str());
+    types_->CloseStruct(stringBuf_[return_type_idx].c_str());
 
     return return_type;
 }
 
 AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFunc* fn,
-				       std::string&& fn_name, AOTTypeDictionary* types,
-				       Environment& env, AOTManager& aotManager)
+                                       std::string&& fn_name, AOTTypeDictionary* types,
+                                       Environment& env, AOTManager& aotManager)
   : TR::MethodBuilder(types),
     types_(types),
     thread_(thread),
     fn_(fn),
-    fn_name_(fn_name),
+    fn_name_(std::move(fn_name)),
     env_(env),
     aotManager_(aotManager),
     valueType_(Int64),
@@ -154,7 +175,7 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFu
   DefineFile(__FILE__);
   DefineName(fn_name_.c_str());
 
-  returnType_ = functionReturnType(fn_);
+  returnType_ = functionReturnType(fn_name_, fn);
 
   DefineFunction("f32_sqrt", __FILE__, "0",
                  reinterpret_cast<void*>(static_cast<float (*)(float)>(std::sqrt)),
@@ -180,11 +201,13 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFu
                  Double);
 
   int arg = 0;
-  
+
   for(const auto& t: env_.GetFuncSignature(fn_->sig_index)->param_types) {
     char param[6]; // ie, "p6" is the sixth parameter.
     sprintf(param, "p%d", arg++);
-    DefineParameter(param, TypeFieldType(t));
+
+    stringBuf_.push_back(param);
+    DefineParameter(stringBuf_.back().c_str(), TypeFieldType(t));
   }
 
   DefineReturnType(returnType_);
@@ -192,22 +215,27 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFu
 
 void AOTFunctionBuilder::pushParams() {
   int arg = 0;
-  
+
   for(const auto& t: env_.GetFuncSignature(fn_->sig_index)->param_types) {
     char param[6]; // ie, "p6" is the sixth parameter.
     sprintf(param, "p%d", arg++);
-    Push(this, TypeFieldName(t), Load(param));
+
+    stringBuf_.push_back(param);    
+    Push(this, TypeFieldName(t), Load(stringBuf_.back().c_str()));
   }
 }
 
-void AOTFunctionBuilder::defineFunction(const std::string& name, interp::DefinedFunc* fn) {
+void AOTFunctionBuilder::defineFunction(const std::string& name, interp::DefinedFunc* fn)
+{
+  if(fn == fn_) return;
+
   std::vector<TR::IlType*> types;
 
   for(auto t: env_.GetFuncSignature(fn->sig_index)->param_types) {
     types.push_back(TypeFieldType(t));
   }
 
-  TR::IlType* result_type = functionReturnType(fn);
+  TR::IlType* result_type = fn == fn_ ? returnType_ : functionReturnType(name, fn);
 
   DefineFunction(name.c_str(), __FILE__, "0",
 		 (void*) 18, // this is a magic number that makes trampoline lookup seemingly work.
@@ -224,7 +252,7 @@ bool AOTFunctionBuilder::buildIL() {
   stack_ = new TR::VirtualMachineOperandStack(this, 64, valueType_, nullptr);
 
   pushParams();
-  
+
   const uint8_t* istream = thread_->GetIstream();
 
   workItems_.emplace_back(OrphanBytecodeBuilder(0,
@@ -255,7 +283,8 @@ bool AOTFunctionBuilder::buildIL() {
  */
 void AOTFunctionBuilder::Push(TR::IlBuilder* b, const char* type, TR::IlValue* value)
 {
-  auto* value_wrapper = b->ConvertTo(valueType_, value);  
+  auto* value_wrapper = b->ConvertTo(valueType_, value);
+  stackCount_++;
   stack_->Push(b, value_wrapper);
 }
 
@@ -270,6 +299,8 @@ void AOTFunctionBuilder::Push(TR::IlBuilder* b, const char* type, TR::IlValue* v
  */
 TR::IlValue* AOTFunctionBuilder::Pop(TR::IlBuilder* b, const char* type) {
   auto* value = stack_->Pop(b);
+
+  stackCount_++;
   return b->ConvertTo(TypeFieldType(type), value);
 }
 
@@ -291,13 +322,16 @@ void AOTFunctionBuilder::DropKeep(TR::IlBuilder* b, uint32_t drop_count, uint8_t
   TR_ASSERT(keep_count <= 1, "Invalid keep count");
 
   if(keep_count == 1) {
-    if(drop_count > 0) {
+    if(drop_count > 0 && stackCount_ >= drop_count - 1) {
       auto* top = stack_->Pop(b);
       stack_->Drop(b, drop_count - 1);
       stack_->Push(b, top);
+
+      stackCount_ -= drop_count - 1;
     }
-  } else {
+  } else if(stackCount_ >= drop_count) {
     stack_->Drop(b, drop_count);
+    stackCount_ -= drop_count;
   }
 }
 
@@ -386,7 +420,7 @@ TR::IlType* AOTFunctionBuilder::TypeFieldType(const char* t) const {
   }
 
   TR_ASSERT_FATAL(false, "Invalid primitive type");
-  return nullptr;  
+  return nullptr;
 }
 
 TR::IlValue* AOTFunctionBuilder::Const(TR::IlBuilder* b, const interp::TypedValue* v) const {
@@ -604,37 +638,44 @@ void AOTFunctionBuilder::EmitUnsignedTruncation(TR::IlBuilder* b) { // , const u
 
 // return a struct of type (fn_name_ + "_return_type").
 TR::IlValue* AOTFunctionBuilder::popReturnValues(TR::IlBuilder* b) {
+  if(returnType_ == NoType)
+    return nullptr;
+
   const auto& result_types = env_.GetFuncSignature(fn_->sig_index)->result_types;
-  auto* value = b->CreateLocalStruct(returnType_);
+
+  auto* value = CreateLocalStruct(returnType_);
   std::string return_type_name = fn_name_ + "_return_type";
-  
+
   int arg = 0;
-  
+
   for(auto& t: result_types) {
     char param[6];
     sprintf(param, "%d", arg++);
 
     auto* arg = Pop(b, TypeFieldName(t));
-    
-    b->StoreIndirect(return_type_name.c_str(), param, value, arg);
+
+    StoreIndirect(return_type_name.c_str(), param, value, arg);
   }
 
   return value;
 }
 
 void AOTFunctionBuilder::pushReturnValues(AOTFunctionBuilder& builder, TR::IlBuilder* b,
-					  TR::IlValue* value)
+					  TR::IlValue* returnValues)
 {
-  auto* returnValues = b->ConvertTo(builder.returnType_, value);
-  std::string returnTypeName = builder.fn_name_ + "_return_type";
-  
+  if(builder.returnType_ == NoType)
+    return;
+
+  std::string returnTypeName = builder.fn_name_ + "_return_type";  
   int arg = 0;
-  
-  for(auto& t: env_.GetFuncSignature(fn_->sig_index)->result_types) {
+
+  for(auto& t: env_.GetFuncSignature(builder.fn_->sig_index)->result_types) {
     char param[6];
     sprintf(param, "%d", arg++);
-    
-    auto* arg = b->LoadIndirect(returnTypeName.c_str(), param, returnValues);
+
+    // not calling through b because we need the local type dictionary to identify
+    // $$func_X_return_type. X is builder->fn_->sig_index, of course..
+    auto* arg = LoadIndirect(returnTypeName.c_str(), param, returnValues);
     Push(b, TypeFieldName(t), arg);
   }
 }
@@ -684,13 +725,13 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
     // transformed into a BrUnless. So, there's no need to handle it.
 
     case Opcode::Return: {
-      const auto& result_type = env_.GetFuncSignature(fn_->sig_index)->result_types;
-      if(result_type.empty()) {
+      auto* value = popReturnValues(b); // of type fn_name + "_return_type"
+      //auto* value = Pop(b, TypeFieldName(result_type.front()));
+
+      if(value == nullptr) {
 	b->Return();
       } else {
-	auto* value = popReturnValues(b); // of type fn_name + "_return_type"
-	//auto* value = Pop(b, TypeFieldName(result_type.front()));
-	b->Return(value);
+        b->Return(value);
       }
 
       return true;
@@ -789,7 +830,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
       auto& builder = aotManager_.getFB(func_index);
 
       std::vector<TR::IlValue*> args;
-      
+
       for(auto& t: env_.GetFuncSignature(builder.fn_->sig_index)->param_types) {
 	args.push_back(Pop(b, TypeFieldName(t)));
       }
