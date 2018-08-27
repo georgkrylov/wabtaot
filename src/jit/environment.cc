@@ -25,7 +25,8 @@ unsigned short JitEnvironment::instance_count_ = 0;
 JitEnvironment::JitEnvironment() {
   if (instance_count_ == 0)
      initializeJitWithOptions("-Xjit:acceptHugeMethods,enableBasicBlockHoisting,"
-			      "omitFramePointer,useILValidator,enableExecutableELFGeneration");
+			      "omitFramePointer,useILValidator,enableRelocatableELFGeneration,"
+			      "objectFile=i64_arithmetic.o");
   ++instance_count_;
 }
 
