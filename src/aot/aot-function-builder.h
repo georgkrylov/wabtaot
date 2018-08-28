@@ -42,8 +42,8 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
   
   bool buildIL() override;
 
-  TR::IlValue* popReturnValues(TR::IlBuilder*);
-  void pushReturnValues(AOTFunctionBuilder&, TR::IlBuilder*, TR::IlValue*);
+  TR::IlValue* popReturnValue(TR::IlBuilder*);
+  void pushReturnValue(AOTFunctionBuilder&, TR::IlBuilder*, TR::IlValue*);
   void pushParams();
   
   virtual ~AOTFunctionBuilder() {}
@@ -106,8 +106,7 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
     {}
   };
 
-  TR::IlType* functionReturnType(AOTFunctionBuilder&);
-  TR::IlType* functionReturnType(const std::string&, interp::DefinedFunc*);
+  TR::IlType* functionReturnType(interp::DefinedFunc*);
   
   template <typename T>
   const char* TypeFieldName() const;
@@ -133,9 +132,9 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
   template <typename T>
   TR::IlValue* EmitMemoryPreAccess(TR::IlBuilder* b);
 
-  void EmitTrap(TR::IlBuilder* b, TR::IlValue* result);
-  void EmitCheckTrap(TR::IlBuilder* b, TR::IlValue* result);
-  void EmitTrapIf(TR::IlBuilder* b, TR::IlValue* condition, TR::IlValue* result);
+  void EmitTrap(TR::IlBuilder* b, interp::Result);
+  // void EmitCheckTrap(TR::IlBuilder* b, TR::IlValue* result);
+  void EmitTrapIf(TR::IlBuilder* b, TR::IlValue* condition, interp::Result);
 
   template <typename F>
   TR::IlValue* EmitIsNan(TR::IlBuilder* b, TR::IlValue* value);
@@ -179,11 +178,6 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
   uint32_t stackCount_ = 0;
   
   bool Emit(TR::BytecodeBuilder* b, const uint8_t* istream, const uint8_t* pc);
-
-  // this is a buffer for strings, which must be kept alive for the sake of
-  // OMR, which does not copy strings passed to, say, field names,, just the
-  // addresses of their char* buffer.
-  std::vector<std::string> stringBuf_;
 };
   
 class AOTManager {

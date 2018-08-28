@@ -83,7 +83,7 @@ namespace interp {
   /* the expected export kind doesn't match. */                             \
   V(ExportKindMismatch, "export kind mismatch")
 
-enum class Result {
+enum class Result : int32_t {
 #define V(Name, str) Name,
   FOREACH_INTERP_RESULT(V)
 #undef V

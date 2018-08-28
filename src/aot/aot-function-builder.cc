@@ -121,41 +121,31 @@ void* AOTFunctionBuilder::MemoryTranslationHelper(interp::Thread* th, uint32_t m
 /*
  Build a struct containing the return types of the function, as its fields.
  */
-TR::IlType* AOTFunctionBuilder::functionReturnType(AOTFunctionBuilder& builder)
-{
-  return functionReturnType(builder.fn_name_, builder.fn_);
-}
 
-TR::IlType* AOTFunctionBuilder::functionReturnType(const std::string& name, interp::DefinedFunc* fn)
+TR::IlType* AOTFunctionBuilder::functionReturnType(interp::DefinedFunc* fn)
 {
     const auto& result_types = env_.GetFuncSignature(fn->sig_index)->result_types;
 
     if(result_types.empty()) {
       return NoType;
+    } else {
+      return TypeFieldType(result_types.front());
     }
+}
 
-    std::string return_type_name = name + "_return_type";
-    stringBuf_.push_back(return_type_name);
-
-    auto return_type_idx = stringBuf_.size() - 1;
-
-    TR::IlType* return_type = types_->DefineStruct(stringBuf_.back().c_str());
-
-    int arg = 0;
-
-    for(auto& t: result_types) {
-      char field_name[5]; // shouldn't have more than 1024 args!
-      sprintf(field_name, "%d", arg++);
-
-      stringBuf_.push_back(field_name);
-      const char* field_name_buf = stringBuf_.back().c_str();
-
-      types_->DefineField(return_type_name.c_str(), field_name_buf, TypeFieldType(t));
-    }
-
-    types_->CloseStruct(stringBuf_[return_type_idx].c_str());
-
-    return return_type;
+void trapWith(int32_t r) { //interp::Result r) {
+  interp::Result result = static_cast<interp::Result>(r);
+  
+  switch(result) {
+    interp::Result::TrapIntegerDivideByZero:
+      printf("trap: division by zero\n");
+      exit(-1);
+      break;
+    default:
+//    printf("as yet unidentified trap condition!\n");
+//    exit(-1);
+      break;
+  }
 }
 
 AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFunc* fn,
@@ -175,7 +165,7 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFu
   DefineFile(__FILE__);
   DefineName(fn_name_.c_str());
 
-  returnType_ = functionReturnType(fn_name_, fn);
+  returnType_ = functionReturnType(fn_);
 
   DefineFunction("f32_sqrt", __FILE__, "0",
                  reinterpret_cast<void*>(static_cast<float (*)(float)>(std::sqrt)),
@@ -199,15 +189,19 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFu
                  2,
                  Double,
                  Double);
-
+  DefineFunction("trapWith", __FILE__, "0",
+		 reinterpret_cast<void*>(static_cast<void (*)(Result_t)>(trapWith)),
+		 NoType,
+		 1,
+		 Int32);
+  
   int arg = 0;
 
   for(const auto& t: env_.GetFuncSignature(fn_->sig_index)->param_types) {
     char param[6]; // ie, "p6" is the sixth parameter.
     sprintf(param, "p%d", arg++);
 
-    stringBuf_.push_back(param);
-    DefineParameter(stringBuf_.back().c_str(), TypeFieldType(t));
+    DefineParameter(param, TypeFieldType(t));
   }
 
   DefineReturnType(returnType_);
@@ -220,8 +214,7 @@ void AOTFunctionBuilder::pushParams() {
     char param[6]; // ie, "p6" is the sixth parameter.
     sprintf(param, "p%d", arg++);
 
-    stringBuf_.push_back(param);    
-    Push(this, TypeFieldName(t), Load(stringBuf_.back().c_str()));
+    Push(this, TypeFieldName(t), Load(param));
   }
 }
 
@@ -235,7 +228,7 @@ void AOTFunctionBuilder::defineFunction(const std::string& name, interp::Defined
     types.push_back(TypeFieldType(t));
   }
 
-  TR::IlType* result_type = fn == fn_ ? returnType_ : functionReturnType(name, fn);
+  TR::IlType* result_type = fn == fn_ ? returnType_ : functionReturnType(fn);
 
   DefineFunction(name.c_str(), __FILE__, "0",
 		 (void*) 18, // this is a magic number that makes trampoline lookup seemingly work.
@@ -460,13 +453,13 @@ void AOTFunctionBuilder::EmitIntDivide(TR::IlBuilder* b) {
   EmitBinaryOp<T>(b, [&](TR::IlValue* dividend, TR::IlValue* divisor) {
     EmitTrapIf(b,
     b->        EqualTo(divisor, b->Const(static_cast<T>(0))),
-    b->        Const(static_cast<Result_t>(interp::Result::TrapIntegerDivideByZero)));
+	       interp::Result::TrapIntegerDivideByZero);
 
     EmitTrapIf(b,
     b->        And(
     b->            EqualTo(dividend, b->Const(std::numeric_limits<T>::min())),
     b->            EqualTo(divisor, b->Const(static_cast<T>(-1)))),
-    b->        Const(static_cast<Result_t>(interp::Result::TrapIntegerOverflow)));
+	       interp::Result::TrapIntegerOverflow));
 
     return b->Div(dividend, divisor);
   });
@@ -480,7 +473,7 @@ void AOTFunctionBuilder::EmitIntRemainder(TR::IlBuilder* b) {//, const uint8_t* 
   EmitBinaryOp<T>(b, [&](TR::IlValue* dividend, TR::IlValue* divisor) {
     EmitTrapIf(b,
     b->        EqualTo(divisor, b->Const(static_cast<T>(0))),
-    b->        Const(static_cast<Result_t>(interp::Result::TrapIntegerDivideByZero)));
+	       interp::Result::TrapIntegerDivideByZero);
 
     TR::IlValue* return_value = b->Const(static_cast<T>(0));
 
@@ -524,17 +517,11 @@ TR::IlValue* AOTFunctionBuilder::EmitMemoryPreAccess(TR::IlBuilder* b) { //, con
   return address;
 }
 */
-void AOTFunctionBuilder::EmitTrap(TR::IlBuilder* b, TR::IlValue* result) { //, const uint8_t* pc) {
-// this seems to return the PC to the line after the last call, the one that trapped.
-//  if (pc != nullptr) {
-//    b->StoreAt(b->ConstAddress(&thread_->pc_),
-//               b->ConstInt32(pc - thread_->GetIstream()));
-//  }
-
-//TODO: maybe print out the result somehow? Except it's wrapped in an IlValue..
-  b->Return(result);
+void AOTFunctionBuilder::EmitTrap(TR::IlBuilder* b, interp::Result r) {
+  b->Call("trapWith", static_cast<int32_t>(r));
 }
 
+/*
 void AOTFunctionBuilder::EmitCheckTrap(TR::IlBuilder* b, TR::IlValue* result) { //, const uint8_t* pc) {
   TR::IlBuilder* trap_handler = nullptr;
 
@@ -543,8 +530,11 @@ void AOTFunctionBuilder::EmitCheckTrap(TR::IlBuilder* b, TR::IlValue* result) { 
 
   EmitTrap(trap_handler, result); //, pc);
 }
+*/
 
-void AOTFunctionBuilder::EmitTrapIf(TR::IlBuilder* b, TR::IlValue* condition, TR::IlValue* result) { //, const uint8_t* pc) {
+void AOTFunctionBuilder::EmitTrapIf(TR::IlBuilder* b, TR::IlValue* condition,
+				    interp::Result result)
+{ //, const uint8_t* pc) {
   TR::IlBuilder* trap_handler = nullptr;
 
   b->IfThen(&trap_handler, condition);
@@ -579,7 +569,7 @@ void AOTFunctionBuilder::EmitTruncation(TR::IlBuilder* b) {//, const uint8_t* pc
   // TRAP_IF is NaN
   EmitTrapIf(b,
              EmitIsNan<FromType>(b, value),
-	     b-> Const(static_cast<Result_t>(interp::Result::TrapInvalidConversionToInteger)));
+	     interp::Result::TrapInvalidConversionToInteger);
 
   // TRAP_UNLESS conversion is in range
   EmitTrapIf(b,
@@ -588,7 +578,7 @@ void AOTFunctionBuilder::EmitTruncation(TR::IlBuilder* b) {//, const uint8_t* pc
   b->                    Const(static_cast<FromType>(std::numeric_limits<ToType>::lowest()))),
   b->           GreaterThan(value,
   b->                       Const(static_cast<FromType>(std::numeric_limits<ToType>::max())))),
-  b->        Const(static_cast<Result_t>(interp::Result::TrapIntegerOverflow)));
+	     interp::Result::TrapIntegerOverflow);
 
   auto* target_type = b->typeDictionary()->toIlType<ToType>();
 
@@ -619,7 +609,7 @@ void AOTFunctionBuilder::EmitUnsignedTruncation(TR::IlBuilder* b) { // , const u
   // TRAP_IF is NaN
   EmitTrapIf(b,
              EmitIsNan<FromType>(b, value),
-  b->        Const(static_cast<Result_t>(interp::Result::TrapInvalidConversionToInteger)));
+	     interp::Result::TrapInvalidConversionToInteger);
 
   // TRAP_UNLESS conversion is in range
   EmitTrapIf(b,
@@ -628,7 +618,7 @@ void AOTFunctionBuilder::EmitUnsignedTruncation(TR::IlBuilder* b) { // , const u
   b->                    Const(static_cast<FromType>(std::numeric_limits<ToType>::lowest()))),
   b->           GreaterThan(value,
   b->                       Const(static_cast<FromType>(std::numeric_limits<ToType>::max())))),
-  b->        Const(static_cast<Result_t>(interp::Result::TrapIntegerOverflow)));
+	     interp::Result::TrapIntegerOverflow);
 
   auto* target_type = b->typeDictionary()->toIlType<ToType>();
   auto* new_value = b->UnsignedConvertTo(target_type, b->ConvertTo(Int64, value));
@@ -637,46 +627,26 @@ void AOTFunctionBuilder::EmitUnsignedTruncation(TR::IlBuilder* b) { // , const u
 }
 
 // return a struct of type (fn_name_ + "_return_type").
-TR::IlValue* AOTFunctionBuilder::popReturnValues(TR::IlBuilder* b) {
-  if(returnType_ == NoType)
-    return nullptr;
-
+TR::IlValue* AOTFunctionBuilder::popReturnValue(TR::IlBuilder* b) {
   const auto& result_types = env_.GetFuncSignature(fn_->sig_index)->result_types;
-
-  auto* value = b->CreateLocalStruct(returnType_);
-  std::string return_type_name = fn_name_ + "_return_type";
-
-  int arg = 0;
-
-  for(auto& t: result_types) {
-    char param[6];
-    sprintf(param, "%d", arg++);
-
-    auto* arg = Pop(b, TypeFieldName(t));
-
-    b->StoreIndirect(return_type_name.c_str(), param, value, arg);
+  
+  if(result_types.empty())
+    return nullptr;
+  else {
+    
+    return Pop(b, TypeFieldName(result_types.front()));
   }
-
-  return value;
 }
 
-void AOTFunctionBuilder::pushReturnValues(AOTFunctionBuilder& builder, TR::IlBuilder* b,
-					  TR::IlValue* returnValues)
+void AOTFunctionBuilder::pushReturnValue(AOTFunctionBuilder& builder, TR::IlBuilder* b,
+					 TR::IlValue* returnValue)
 {
-  if(builder.returnType_ == NoType)
+  const auto& result_types = env_.GetFuncSignature(builder.fn_->sig_index)->result_types;
+
+  if(result_types.empty())
     return;
-
-  std::string returnTypeName = builder.fn_name_ + "_return_type";  
-  int arg = 0;
-
-  for(auto& t: env_.GetFuncSignature(builder.fn_->sig_index)->result_types) {
-    char param[6];
-    sprintf(param, "%d", arg++);
-
-    // not calling through b because we need the local type dictionary to identify
-    // $$func_X_return_type. X is builder->fn_->sig_index, of course..
-    auto* arg = b->LoadIndirect(returnTypeName.c_str(), param, returnValues);
-    Push(b, TypeFieldName(t), arg);
+  else {    
+    Push(b, TypeFieldName(result_types.front()), returnValue);
   }
 }
 
@@ -725,7 +695,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
     // transformed into a BrUnless. So, there's no need to handle it.
 
     case Opcode::Return: {
-      auto* value = popReturnValues(b); // of type fn_name + "_return_type"
+      auto* value = popReturnValue(b); // of type fn_name + "_return_type"
       //auto* value = Pop(b, TypeFieldName(result_type.front()));
 
       if(value == nullptr) {
@@ -738,7 +708,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
     }
 
     case Opcode::Unreachable:
-      EmitTrap(b, b->Const(static_cast<Result_t>(interp::Result::TrapUnreachable)));
+      EmitTrap(b, interp::Result::TrapUnreachable);
       return true;
 
     case Opcode::I32Const: {
@@ -807,8 +777,8 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
     case Opcode::GetLocal: {
       // note: to work around JitBuilder's lack of support unions as value types,
       // just copy a field that's the size of the entire union
-      auto* local_addr = Pick(/*b,*/ReadU32(&pc));
-      Push(b, "i64", b->LoadIndirect("Value", "i64", local_addr));
+      auto* local_addr = Pick(ReadU32(&pc));
+      Push(b, "i64", b->ConvertTo(Int64, local_addr)); //b->LoadIndirect("Value", "i64", local_addr));
       break;
     }
 
@@ -816,13 +786,16 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
       // see note for GetLocal
       auto* value = Pop(b, "i64");
       auto* local_addr = Pick(/*b, */ReadU32(&pc));
-      b->StoreIndirect("Value", "i64", local_addr, value);
+      b->StoreOver(local_addr, value);
+      // b->StoreIndirect("Value", "i64", local_addr, value);
       break;
     }
 
     case Opcode::TeeLocal:
       // see note for GetLocal
-      b->StoreIndirect("Value", "i64", Pick(/*b, */ReadU32(&pc)), b->LoadIndirect("Value", "i64", Pick(/*b, */1)));
+      //      b->StoreIndirect("Value", "i64", Pick(/*b, */ReadU32(&pc)), b->LoadIndirect("Value", "i64", Pick(/*b, */1)));
+      auto* local_addr = Pick(ReadU32(&pc));
+      b->StoreOver(local_addr, b->ConvertTo(Int64, Pick(1)));
       break;
 
     case Opcode::Call: {
@@ -836,7 +809,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
       }
 
       auto* value = b->Call(builder.fn_name_.c_str(), args.size(), args.data());
-      pushReturnValues(builder, b, value);
+      pushReturnValue(builder, b, value);
       // stack_->Push(this, value);
 
       // Don't pass the pc since a trap in a called function should not update the thread's pc

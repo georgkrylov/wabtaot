@@ -1,0 +1,28 @@
+This is a TODO documenting coverage of the AOT compiler.. thus far!
+Coverage in terms of op codes, I mean.
+
+* DONE Select: Apparently, yes?? Looks like this:
+  #+NAME: Opcode::Select handler
+  #+BEGIN_SRC C++
+      TR::IlBuilder* true_path = nullptr;
+      TR::IlBuilder* false_path = nullptr;
+
+      b->IfThenElse(&true_path, &false_path, Pop(b, "i32"));
+      DropKeep(true_path, 1, 0);
+      DropKeep(false_path, 1, 1);
+      break;
+  #+END_SRC
+* DONE Br: Ditto. Handles a bunch of builder logic. Seems fine.
+* DONE Return: We know this. Answer's yes.
+* TODO Unreachable: No. EmitTrap needs implementing. 
+* DONE I32Const, I64Const, F32Const, F64Const: yep, we understand all these already.
+* TODO GetGlobal, SetGlobal: Not implemented yet!
+* TODO (sort of) GetLocal: sort of. We ConvertTo rather than LoadIndirect now.
+* TODO SetLocal: sort of. Changed it to use StoreOver. Test this!
+* TODO TeeLocal: again, StoreOver. Test.
+* DONE Call: Yep, we've been using it. I think.
+* TODO CallIndirect: nothing!
+* TODO InterpCallHost: I don't know the exact semantics involved, but it seems we're doing the right thing here.
+* TODO The next two dozen instructions or so (the typed Loads and Stores) all deal with writing to the linear memory, which is not implemented yet.
+* DONE {I32, I64, F32, F64}{Add, Sub, Mul, DivS, RemS, And, Or, Shr, Shl, Xor, ShrS, ShrU, ShlS, ShlU, etc}: yep, these should work as they did in the JIT case.
+
