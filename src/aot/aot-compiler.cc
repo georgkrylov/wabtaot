@@ -65,7 +65,7 @@ wabt::Result compileAOT(interp::Environment& env, DefinedModule* module)
   for(Index i = 0; i < func_count; ++i) {
     if(auto* fn = cast<wabt::interp::DefinedFunc>(env.GetFunc(i))) {
       std::unique_ptr<AOTTypeDictionary> types(new AOTTypeDictionary());
-      std::string name = "$$func_" + std::to_string(i);
+      std::string name = "func_" + std::to_string(i);
 
       AOTFunctionBuilder* builder = new AOTFunctionBuilder(&thread, fn,
 							   std::move(name),

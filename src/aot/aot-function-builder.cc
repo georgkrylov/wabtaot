@@ -643,7 +643,7 @@ TR::IlValue* AOTFunctionBuilder::popReturnValues(TR::IlBuilder* b) {
 
   const auto& result_types = env_.GetFuncSignature(fn_->sig_index)->result_types;
 
-  auto* value = CreateLocalStruct(returnType_);
+  auto* value = b->CreateLocalStruct(returnType_);
   std::string return_type_name = fn_name_ + "_return_type";
 
   int arg = 0;
@@ -654,7 +654,7 @@ TR::IlValue* AOTFunctionBuilder::popReturnValues(TR::IlBuilder* b) {
 
     auto* arg = Pop(b, TypeFieldName(t));
 
-    StoreIndirect(return_type_name.c_str(), param, value, arg);
+    b->StoreIndirect(return_type_name.c_str(), param, value, arg);
   }
 
   return value;
@@ -675,7 +675,7 @@ void AOTFunctionBuilder::pushReturnValues(AOTFunctionBuilder& builder, TR::IlBui
 
     // not calling through b because we need the local type dictionary to identify
     // $$func_X_return_type. X is builder->fn_->sig_index, of course..
-    auto* arg = LoadIndirect(returnTypeName.c_str(), param, returnValues);
+    auto* arg = b->LoadIndirect(returnTypeName.c_str(), param, returnValues);
     Push(b, TypeFieldName(t), arg);
   }
 }
@@ -835,7 +835,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
 	args.push_back(Pop(b, TypeFieldName(t)));
       }
 
-      auto* value = Call(builder.fn_name_.c_str(), args.size(), args.data());
+      auto* value = b->Call(builder.fn_name_.c_str(), args.size(), args.data());
       pushReturnValues(builder, b, value);
       // stack_->Push(this, value);
 
