@@ -110,17 +110,31 @@ void* AOTFunctionBuilder::MemoryTranslationHelper(interp::Thread* th, uint32_t m
   }
 }
 */
-
+/*
+ Build a struct containing the return types of the function, as its fields.
+ */
 TR::IlType* AOTFunctionBuilder::functionReturnType(interp::DefinedFunc* fn)
 {
     const auto& result_types = env_.GetFuncSignature(fn->sig_index)->result_types;
 
-    if(!result_types.empty()) {
-      // use the first result_type, for now.
-      return TypeFieldType(result_types.front());
+    if(result_types.empty()) {
+      return NoType;
     }
 
-    return NoType;
+    std::string return_type_name = fn_name_ + "_return_type";
+    TR::IlType* return_type = types_->DefineStruct(return_type_name.c_str());
+
+    int arg = 0;
+    
+    for(auto& t: result_types) {
+      char field_name[5]; // shouldn't have more than 1024 args!
+      sprintf(field_name, "%d", arg++);      
+      types_->DefineField(return_type_name.c_str(), field_name, TypeFieldType(t));
+    }
+
+    types_->CloseStruct(return_type_name.c_str());
+
+    return return_type;
 }
 
 AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFunc* fn,
@@ -140,7 +154,7 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFu
   DefineFile(__FILE__);
   DefineName(fn_name_.c_str());
 
-  TR::IlType* result_type = functionReturnType(fn_);
+  returnType_ = functionReturnType(fn_);
 
   DefineFunction("f32_sqrt", __FILE__, "0",
                  reinterpret_cast<void*>(static_cast<float (*)(float)>(std::sqrt)),
@@ -165,11 +179,25 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFu
                  Double,
                  Double);
 
-  for(const auto type: env_.GetFuncSignature(fn_->sig_index)->param_types) {
-    DefineParameter("", TypeFieldType(type));
+  int arg = 0;
+  
+  for(const auto& t: env_.GetFuncSignature(fn_->sig_index)->param_types) {
+    char param[6]; // ie, "p6" is the sixth parameter.
+    sprintf(param, "p%d", arg++);
+    DefineParameter(param, TypeFieldType(t));
   }
 
-  DefineReturnType(result_type);
+  DefineReturnType(returnType_);
+}
+
+void AOTFunctionBuilder::pushParams() {
+  int arg = 0;
+  
+  for(const auto& t: env_.GetFuncSignature(fn_->sig_index)->param_types) {
+    char param[6]; // ie, "p6" is the sixth parameter.
+    sprintf(param, "p%d", arg++);
+    Push(this, TypeFieldName(t), Load(param));
+  }
 }
 
 void AOTFunctionBuilder::defineFunction(const std::string& name, interp::DefinedFunc* fn) {
@@ -195,6 +223,8 @@ bool AOTFunctionBuilder::buildIL() {
   // constructed here, at compile time
   stack_ = new TR::VirtualMachineOperandStack(this, 64, valueType_, nullptr);
 
+  pushParams();
+  
   const uint8_t* istream = thread_->GetIstream();
 
   workItems_.emplace_back(OrphanBytecodeBuilder(0,
@@ -572,6 +602,43 @@ void AOTFunctionBuilder::EmitUnsignedTruncation(TR::IlBuilder* b) { // , const u
   Push(b, TypeFieldName<ToType>(), new_value);
 }
 
+// return a struct of type (fn_name_ + "_return_type").
+TR::IlValue* AOTFunctionBuilder::popReturnValues(TR::IlBuilder* b) {
+  const auto& result_types = env_.GetFuncSignature(fn_->sig_index)->result_types;
+  auto* value = b->CreateLocalStruct(returnType_);
+  std::string return_type_name = fn_name_ + "_return_type";
+  
+  int arg = 0;
+  
+  for(auto& t: result_types) {
+    char param[6];
+    sprintf(param, "%d", arg++);
+
+    auto* arg = Pop(b, TypeFieldName(t));
+    
+    b->StoreIndirect(return_type_name.c_str(), param, value, arg);
+  }
+
+  return value;
+}
+
+void AOTFunctionBuilder::pushReturnValues(AOTFunctionBuilder& builder, TR::IlBuilder* b,
+					  TR::IlValue* value)
+{
+  auto* returnValues = b->ConvertTo(builder.returnType_, value);
+  std::string returnTypeName = builder.fn_name_ + "_return_type";
+  
+  int arg = 0;
+  
+  for(auto& t: env_.GetFuncSignature(fn_->sig_index)->result_types) {
+    char param[6];
+    sprintf(param, "%d", arg++);
+    
+    auto* arg = b->LoadIndirect(returnTypeName.c_str(), param, returnValues);
+    Push(b, TypeFieldName(t), arg);
+  }
+}
+
 template <typename T>
 TR::IlValue* AOTFunctionBuilder::CalculateShiftAmount(TR::IlBuilder* b, TR::IlValue* amount) {
   return b->UnsignedConvertTo(Int32,
@@ -620,8 +687,9 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
       const auto& result_type = env_.GetFuncSignature(fn_->sig_index)->result_types;
       if(result_type.empty()) {
 	b->Return();
-      } else {	
-	auto* value = Pop(b, TypeFieldName(result_type.front()));
+      } else {
+	auto* value = popReturnValues(b); // of type fn_name + "_return_type"
+	//auto* value = Pop(b, TypeFieldName(result_type.front()));
 	b->Return(value);
       }
 
@@ -723,11 +791,12 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
       std::vector<TR::IlValue*> args;
       
       for(auto& t: env_.GetFuncSignature(builder.fn_->sig_index)->param_types) {
-	args.push_back(Pop(this, TypeFieldName(t)));
+	args.push_back(Pop(b, TypeFieldName(t)));
       }
 
       auto* value = Call(builder.fn_name_.c_str(), args.size(), args.data());
-      stack_->Push(this, value);
+      pushReturnValues(builder, b, value);
+      // stack_->Push(this, value);
 
       // Don't pass the pc since a trap in a called function should not update the thread's pc
       //MARK: also, omit the argument for a pc, since, y'know, this is an AOT builder..

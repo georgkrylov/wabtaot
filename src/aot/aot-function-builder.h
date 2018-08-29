@@ -42,6 +42,10 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
   
   bool buildIL() override;
 
+  TR::IlValue* popReturnValues(TR::IlBuilder*);
+  void pushReturnValues(AOTFunctionBuilder&, TR::IlBuilder*, TR::IlValue*);
+  void pushParams();
+  
   virtual ~AOTFunctionBuilder() {}
   
   /**
@@ -169,6 +173,7 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
   
   TR::IlType* const valueType_;
   TR::IlType* const pValueType_;
+  TR::IlType* returnType_;
 
   bool Emit(TR::BytecodeBuilder* b, const uint8_t* istream, const uint8_t* pc);
 };
