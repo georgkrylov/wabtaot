@@ -16,6 +16,7 @@
 
 #include "aot-function-builder.h"
 #include "aot-type-dictionary.h"
+#include "trap-with.h"
 #include "src/cast.h"
 #include "src/interp.h"
 #include "infra/Assert.hpp"
@@ -133,21 +134,6 @@ TR::IlType* AOTFunctionBuilder::functionReturnType(interp::DefinedFunc* fn)
     }
 }
 
-void trapWith(int32_t r) { //interp::Result r) {
-  interp::Result result = static_cast<interp::Result>(r);
-  
-  switch(result) {
-    interp::Result::TrapIntegerDivideByZero:
-      printf("trap: division by zero\n");
-      exit(-1);
-      break;
-    default:
-//    printf("as yet unidentified trap condition!\n");
-//    exit(-1);
-      break;
-  }
-}
-
 AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFunc* fn,
                                        std::string&& fn_name, AOTTypeDictionary* types,
                                        Environment& env, AOTManager& aotManager)
@@ -231,10 +217,10 @@ void AOTFunctionBuilder::defineFunction(const std::string& name, interp::Defined
   TR::IlType* result_type = fn == fn_ ? returnType_ : functionReturnType(fn);
 
   DefineFunction(name.c_str(), __FILE__, "0",
-		 (void*) 18, // this is a magic number that makes trampoline lookup seemingly work.
+		 reinterpret_cast<void*>(18), // this is a magic number that makes trampoline lookup seemingly work.
 		 result_type,
 		 types.size(),
-		 (TR::IlType**) types.data());
+		 static_cast<TR::IlType**>(types.data()));
 }
 
 bool AOTFunctionBuilder::buildIL() {
@@ -459,7 +445,7 @@ void AOTFunctionBuilder::EmitIntDivide(TR::IlBuilder* b) {
     b->        And(
     b->            EqualTo(dividend, b->Const(std::numeric_limits<T>::min())),
     b->            EqualTo(divisor, b->Const(static_cast<T>(-1)))),
-	       interp::Result::TrapIntegerOverflow));
+	       interp::Result::TrapIntegerOverflow);
 
     return b->Div(dividend, divisor);
   });
@@ -518,7 +504,7 @@ TR::IlValue* AOTFunctionBuilder::EmitMemoryPreAccess(TR::IlBuilder* b) { //, con
 }
 */
 void AOTFunctionBuilder::EmitTrap(TR::IlBuilder* b, interp::Result r) {
-  b->Call("trapWith", static_cast<int32_t>(r));
+  b->Call("trapWith", 1, b->Const(static_cast<int32_t>(r)));
 }
 
 /*
@@ -791,20 +777,21 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
       break;
     }
 
-    case Opcode::TeeLocal:
+    case Opcode::TeeLocal: {
       // see note for GetLocal
       //      b->StoreIndirect("Value", "i64", Pick(/*b, */ReadU32(&pc)), b->LoadIndirect("Value", "i64", Pick(/*b, */1)));
       auto* local_addr = Pick(ReadU32(&pc));
       b->StoreOver(local_addr, b->ConvertTo(Int64, Pick(1)));
       break;
-
+    }
+      
     case Opcode::Call: {
       auto func_index = ReadU32(&pc);
       auto& builder = aotManager_.getFB(func_index);
 
       std::vector<TR::IlValue*> args;
 
-      for(auto& t: env_.GetFuncSignature(builder.fn_->sig_index)->param_types) {
+      for(const auto& t: env_.GetFuncSignature(builder.fn_->sig_index)->param_types) {
 	args.push_back(Pop(b, TypeFieldName(t)));
       }
 

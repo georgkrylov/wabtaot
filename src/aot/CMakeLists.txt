@@ -1,5 +1,6 @@
 
 add_executable(wabtaot
+  trap-with.cc
   aot-compiler.cc
   aot-type-dictionary.cc
   aot-function-builder.cc

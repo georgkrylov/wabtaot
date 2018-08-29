@@ -160,22 +160,23 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
 
   std::vector<BytecodeWorkItem> workItems_;
 
+  AOTTypeDictionary* types_;
+  
   interp::Thread* thread_;
   interp::DefinedFunc* fn_;
-
-  AOTTypeDictionary* types_;
   
   std::string fn_name_;
   
   Environment& env_;
   AOTManager& aotManager_;
-  TR::VirtualMachineOperandStack* stack_;
   
   TR::IlType* const valueType_;
   TR::IlType* const pValueType_;
-  TR::IlType* returnType_;
 
+  TR::VirtualMachineOperandStack* stack_;
   uint32_t stackCount_ = 0;
+  
+  TR::IlType* returnType_;
   
   bool Emit(TR::BytecodeBuilder* b, const uint8_t* istream, const uint8_t* pc);
 };

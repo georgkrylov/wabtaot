@@ -33,3 +33,1057 @@ Program received signal SIGSEGV, Segmentation fault.
 Currently logging to "backtrace.log".
 Logs will be appended to the log file.
 Output will be logged and displayed.
+Cannot access memory at address 0xe
+$1 = (TR::CodeCacheRelocationInfo *) 0xe
+b ELFRelocationResolver.hpp
+b OMR::X86::AMD64::ELFRelocationResolver::resolveRelocationType(TR::StaticRelocation const&)
+b TR::ELFRelocatableGenerator::ELFRelocatableGenerator(OMR::RawAllocator, TR::CodeCacheMemorySegment*)
+b TR::ELFRelocatableGenerator::buildSectionHeaders()
+b TR::ELFRelocatableGenerator::emitELF(char const*, TR::CodeCacheSymbol*, unsigned int, unsigned int, TR::CodeCacheRelocationInfo*, unsigned int)
+b TR::ELFRelocatableGenerator::initialize()
+b TR::ELFRelocatableGenerator::initializeELFHeader()
+b ELFRelocationResolver.hpp:
+b ELFRelocatableGenerator::ELFRelocatableGenerator(OMR::RawAllocator, TR::CodeCacheMemorySegment*)
+b ELFRelocatableGenerator::ELFRelocatableGenerator(OMR::RawAllocator, TR::CodeCacheMemorySegment*)
+Breakpoint 1 at 0x555555b2c3d1: file /home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp, line 41.
+r ~/wasmjit-omr
+r ~/wasmjit-omr
+r ~/wasmjit-omr/.clang-format
+r ~/wasmjit-omr/.git
+r ~/wasmjit-omr/.gitattributes
+r ~/wasmjit-omr/.gitignore
+r ~/wasmjit-omr/.gitmodules
+r ~/wasmjit-omr/.style.yapf
+r ~/wasmjit-omr/.travis.yml
+r ~/wasmjit-omr/AOT_stuff.org
+r ~/wasmjit-omr/CMakeLists.txt
+r ~/wasmjit-omr/Contributing.md
+r ~/wasmjit-omr/LICENSE
+r ~/wasmjit-omr/Makefile
+r ~/wasmjit-omr/README.md
+r ~/wasmjit-omr/appveyor.yml
+r ~/wasmjit-omr/backtrace.log
+r ~/wasmjit-omr/bin
+r ~/wasmjit-omr/cmake
+r ~/wasmjit-omr/demo
+r ~/wasmjit-omr/fuzz-in
+r ~/wasmjit-omr/i64_arithmetic.o
+r ~/wasmjit-omr/i64_arithmetic.wasm
+r ~/wasmjit-omr/i64_arithmetic_main.c
+r ~/wasmjit-omr/out
+r ~/wasmjit-omr/perf-16132.bin
+r ~/wasmjit-omr/scripts
+r ~/wasmjit-omr/src
+r ~/wasmjit-omr/test
+r ~/wasmjit-omr/third_party
+r ~/wasmjit-omr/ubsan.blacklist
+r ~/wasmjit-omr/.clang-format
+r ~/wasmjit-omr/.git
+r ~/wasmjit-omr/.gitattributes
+r ~/wasmjit-omr/.gitignore
+r ~/wasmjit-omr/.gitmodules
+r ~/wasmjit-omr/.style.yapf
+r ~/wasmjit-omr/.travis.yml
+r ~/wasmjit-omr/AOT_stuff.org
+r ~/wasmjit-omr/CMakeLists.txt
+r ~/wasmjit-omr/Contributing.md
+r ~/wasmjit-omr/LICENSE
+r ~/wasmjit-omr/Makefile
+r ~/wasmjit-omr/README.md
+r ~/wasmjit-omr/appveyor.yml
+r ~/wasmjit-omr/backtrace.log
+r ~/wasmjit-omr/bin
+r ~/wasmjit-omr/cmake
+r ~/wasmjit-omr/demo
+r ~/wasmjit-omr/fuzz-in
+r ~/wasmjit-omr/i64_arithmetic.o
+r ~/wasmjit-omr/i64_arithmetic.wasm
+r ~/wasmjit-omr/i64_arithmetic_main.c
+r ~/wasmjit-omr/out
+r ~/wasmjit-omr/perf-16132.bin
+r ~/wasmjit-omr/scripts
+r ~/wasmjit-omr/src
+r ~/wasmjit-omr/test
+r ~/wasmjit-omr/third_party
+r ~/wasmjit-omr/ubsan.blacklist
+r ~/wasmjit-omr/.clang-format
+r ~/wasmjit-omr/.git
+r ~/wasmjit-omr/.gitattributes
+r ~/wasmjit-omr/.gitignore
+r ~/wasmjit-omr/.gitmodules
+r ~/wasmjit-omr/.style.yapf
+r ~/wasmjit-omr/.travis.yml
+r ~/wasmjit-omr/AOT_stuff.org
+r ~/wasmjit-omr/CMakeLists.txt
+r ~/wasmjit-omr/Contributing.md
+r ~/wasmjit-omr/LICENSE
+r ~/wasmjit-omr/Makefile
+r ~/wasmjit-omr/README.md
+r ~/wasmjit-omr/appveyor.yml
+r ~/wasmjit-omr/backtrace.log
+r ~/wasmjit-omr/bin
+r ~/wasmjit-omr/cmake
+r ~/wasmjit-omr/demo
+r ~/wasmjit-omr/fuzz-in
+r ~/wasmjit-omr/i64_arithmetic.o
+r ~/wasmjit-omr/i64_arithmetic.wasm
+r ~/wasmjit-omr/i64_arithmetic_main.c
+r ~/wasmjit-omr/out
+r ~/wasmjit-omr/perf-16132.bin
+r ~/wasmjit-omr/scripts
+r ~/wasmjit-omr/src
+r ~/wasmjit-omr/test
+r ~/wasmjit-omr/third_party
+r ~/wasmjit-omr/ubsan.blacklist
+r ~/wasmjit-omr/i64_arithmetic.o
+r ~/wasmjit-omr/i64_arithmetic.wasm
+r ~/wasmjit-omr/i64_arithmetic_main.c
+r ~/wasmjit-omr/i64_arithmetic.o
+r ~/wasmjit-omr/i64_arithmetic.wasm
+r ~/wasmjit-omr/i64_arithmetic_main.c
+Starting program: /home/mark/wasmjit-omr/out/gcc/Debug/src/aot/wabtaot ~/wasmjit-omr/i64_arithmetic.wasm
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/usr/lib/libthread_db.so.1".
+
+Breakpoint 1, TR::ELFRelocatableGenerator::ELFRelocatableGenerator (this=0x555556229a90, 
+    rawAllocator=..., codeCache=0x7ffff6cc3fe8)
+    at /home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:41
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:41:1792:beg:0x555555b2c3d1
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:43:1944:beg:0x555555b2c3e0
+$2 = (TR::CodeCacheRelocationInfo *) 0x0
+No symbol "reloc" in current context.
+Undefined command: "hwatch".  Try "help".
+Hardware watchpoint 2: &this->_relocations
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:45:2040:beg:0x555555b2c41c
+Continuing.
+
+Watchpoint 2 deleted because the program has left the block in
+which its expression is valid.
+OMR::CodeCacheManager::initializeRelocatableELFGenerator (
+    this=0x555556205010 <initializeJitBuilder(TR_RuntimeHelper*, void**, int, char*)::fe+80>)
+    at /home/mark/wasmjit-omr/third_party/omr/compiler/runtime/OMRCodeCacheManager.cpp:1263
+/home/mark/wasmjit-omr/third_party/omr/compiler/runtime/OMRCodeCacheManager.cpp:1263:48368:beg:0x555555ad1211
+/home/mark/wasmjit-omr/third_party/omr/compiler/runtime/OMRCodeCacheManager.cpp:1267:48516:beg:0x555555ad121c
+p _elfExecutableGenerator
+p _elfRelocatableGenerator
+p _elfExecutableGenerator
+p _elfRelocatableGenerator
+p _elfExecutableGenerator
+p _elfRelocatableGenerator
+No breakpoint number 2.
+watch &_elfRelocatableGenerator
+watch &_elfRelocatableGenerator
+watch &_elfRelocatableGenerator
+watch &_elfRelocatableGenerator->_relaSection
+watch &_elfRelocatableGenerator->_relaSectionName
+watch &_elfRelocatableGenerator->_relocations
+watch &_elfRelocatableGenerator->_relaSection
+watch &_elfRelocatableGenerator->_relaSectionName
+watch &_elfRelocatableGenerator->_relocations
+watch &_elfRelocatableGenerator->_relaSection
+watch &_elfRelocatableGenerator->_relaSectionName
+watch &_elfRelocatableGenerator->_relocations
+watch &_elfRelocatableGenerator->_relocations
+watch &_elfRelocatableGenerator->_relocations
+Hardware watchpoint 3: &_elfRelocatableGenerator->_relocations
+OMR::CodeCacheManager::repositoryCodeCacheCreated (
+    this=0x555556205010 <initializeJitBuilder(TR_RuntimeHelper*, void**, int, char*)::fe+80>)
+    at /home/mark/wasmjit-omr/third_party/omr/compiler/runtime/OMRCodeCacheManager.cpp:992
+/home/mark/wasmjit-omr/third_party/omr/compiler/runtime/OMRCodeCacheManager.cpp:992:37628:beg:0x555555ad05c6
+Continuing.
+Error evaluating expression for watchpoint 3
+There is no member or method named _elfRelocatableGenerator.
+Watchpoint 3 deleted.
+OMR::PersistentAllocator::allocate (this=0x555556228ef1, size=48, hint=0x0)
+    at /home/mark/wasmjit-omr/third_party/omr/compiler/env/PersistentAllocator.cpp:38
+/home/mark/wasmjit-omr/third_party/omr/compiler/env/PersistentAllocator.cpp:38:1623:beg:0x555555979fc2
+r ~/wasmjit-omr
+r ~/wasmjit-omr
+r ~/wasmjit-omr/i64_arithmetic.o
+r ~/wasmjit-omr/i64_arithmetic.wasm
+r ~/wasmjit-omr/i64_arithmetic_main.c
+r ~/wasmjit-omr/i64_arithmetic.o
+r ~/wasmjit-omr/i64_arithmetic.wasm
+r ~/wasmjit-omr/i64_arithmetic_main.c
+Starting program: /home/mark/wasmjit-omr/out/gcc/Debug/src/aot/wabtaot ~/wasmjit-omr/i64_arithmetic.wasm
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/usr/lib/libthread_db.so.1".
+
+Breakpoint 1, TR::ELFRelocatableGenerator::ELFRelocatableGenerator (this=0x555556229a90, 
+    rawAllocator=..., codeCache=0x7ffff6cc3fe8)
+    at /home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:41
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:41:1792:beg:0x555555b2c3d1
+There is no member or method named _relocatable.
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:43:1944:beg:0x555555b2c3e0
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:45:2040:beg:0x555555b2c41c
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:46:2086:beg:0x555555b2c428
+OMR::CodeCacheManager::initializeRelocatableELFGenerator (
+    this=0x555556205010 <initializeJitBuilder(TR_RuntimeHelper*, void**, int, char*)::fe+80>)
+    at /home/mark/wasmjit-omr/third_party/omr/compiler/runtime/OMRCodeCacheManager.cpp:1263
+/home/mark/wasmjit-omr/third_party/omr/compiler/runtime/OMRCodeCacheManager.cpp:1263:48368:beg:0x555555ad1211
+/home/mark/wasmjit-omr/third_party/omr/compiler/runtime/OMRCodeCacheManager.cpp:1267:48516:beg:0x555555ad121c
+p _elfRelocatableGenerator
+p _elfRelocatableGenerator
+$3 = (TR::ELFRelocatableGenerator *) 0x555556229a90
+p &_elfExecutableGenerator
+p &_elfRelocatableGenerator
+p &_elfExecutableGenerator
+p &_elfRelocatableGenerator
+p &_elfExecutableGenerator
+p &_elfRelocatableGenerator
+p &_elfRelocatableGenerator
+p &_elfRelocatableGenerator
+p &_elfRelocatableGenerator->_relaSection
+p &_elfRelocatableGenerator->_relaSectionName
+p &_elfRelocatableGenerator->_relocations
+p &_elfRelocatableGenerator->_relaSection
+p &_elfRelocatableGenerator->_relaSectionName
+p &_elfRelocatableGenerator->_relocations
+p &_elfRelocatableGenerator->_relaSection
+p &_elfRelocatableGenerator->_relaSectionName
+p &_elfRelocatableGenerator->_relocations
+p &_elfRelocatableGenerator->_relocations
+Hardware watchpoint 4: &_elfRelocatableGenerator->_relocations
+OMR::CodeCacheManager::repositoryCodeCacheCreated (
+    this=0x555556205010 <initializeJitBuilder(TR_RuntimeHelper*, void**, int, char*)::fe+80>)
+    at /home/mark/wasmjit-omr/third_party/omr/compiler/runtime/OMRCodeCacheManager.cpp:992
+/home/mark/wasmjit-omr/third_party/omr/compiler/runtime/OMRCodeCacheManager.cpp:992:37628:beg:0x555555ad05c6
+Continuing.
+Error evaluating expression for watchpoint 4
+There is no member or method named _elfRelocatableGenerator.
+Watchpoint 4 deleted.
+OMR::PersistentAllocator::allocate (this=0x555556228ef1, size=48, hint=0x0)
+    at /home/mark/wasmjit-omr/third_party/omr/compiler/env/PersistentAllocator.cpp:38
+/home/mark/wasmjit-omr/third_party/omr/compiler/env/PersistentAllocator.cpp:38:1623:beg:0x555555979fc2
+r ~/wasmjit-omr
+r ~/wasmjit-omr
+Starting program: /home/mark/wasmjit-omr/out/gcc/Debug/src/aot/wabtaot ~/wasmjit-omr/i64_arithmetic.wasm
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/usr/lib/libthread_db.so.1".
+
+Breakpoint 1, TR::ELFRelocatableGenerator::ELFRelocatableGenerator (this=0x555556229a90, 
+    rawAllocator=..., codeCache=0x7ffff6cc3fe8)
+    at /home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:41
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:41:1792:beg:0x555555b2c3d1
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:43:1944:beg:0x555555b2c3e0
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:45:2040:beg:0x555555b2c41c
+p this->_relaSection
+p this->_relaSectionName
+p this->_relocations
+p this->_relaSection
+p this->_relaSectionName
+p this->_relocations
+p this->_relaSection
+p this->_relaSectionName
+p this->_relocations
+$4 = (TR::CodeCacheRelocationInfo *) 0x0
+$5 = (TR::CodeCacheRelocationInfo **) 0x555556229b48
+Hardware watchpoint 5: *0x555556229b48
+Continuing.
+
+Hardware watchpoint 5: *0x555556229b48
+
+Old value = 0
+New value = 1447926480
+TR::ELFRelocatableGenerator::emitELF (this=0x555556229a90, 
+    filename=0x555556229380 "i64_arithmetic.o", symbols=0x555556529cd0, numSymbols=34, 
+    totalELFSymbolNamesLength=265, relocations=0x5555564d9ad0, numRelocations=4)
+    at /home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:582
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:582:20358:beg:0x555555b2d998
+$6 = (TR::CodeCacheRelocationInfo *) 0x5555564d9ad0
+Continuing.
+
+Program received signal SIGSEGV, Segmentation fault.
+0x0000555555b2d1db in TR::ELFGenerator::writeRelaEntriesToFile (this=0x555556229a90, 
+    fp=0x55555622ada0)
+    at /home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:369
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:369:11752:beg:0x555555b2d1db
+$7 = (TR::CodeCacheRelocationInfo *) 0xe
+$8 = (TR::CodeCacheRelocationInfo *) 0x5555564d9ad0
+Breakpoint 6 at 0x555555b2d1d0: file /home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp, line 367.
+r ~/wasmjit-omr
+r ~/wasmjit-omr
+r ~/wasmjit-omr/i64_arithmetic.o
+r ~/wasmjit-omr/i64_arithmetic.wasm
+r ~/wasmjit-omr/i64_arithmetic_main.c
+r ~/wasmjit-omr/i64_arithmetic.o
+r ~/wasmjit-omr/i64_arithmetic.wasm
+r ~/wasmjit-omr/i64_arithmetic_main.c
+Starting program: /home/mark/wasmjit-omr/out/gcc/Debug/src/aot/wabtaot ~/wasmjit-omr/i64_arithmetic.wasm
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/usr/lib/libthread_db.so.1".
+
+Breakpoint 1, TR::ELFRelocatableGenerator::ELFRelocatableGenerator (this=0x555556229a90, 
+    rawAllocator=..., codeCache=0x7ffff6cc3fe8)
+    at /home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:41
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:41:1792:beg:0x555555b2c3d1
+Continuing.
+
+Hardware watchpoint 5: *0x555556229b48
+
+Old value = <unreadable>
+New value = 1447926480
+TR::ELFRelocatableGenerator::emitELF (this=0x555556229a90, 
+    filename=0x555556229380 "i64_arithmetic.o", symbols=0x555556529cd0, numSymbols=34, 
+    totalELFSymbolNamesLength=265, relocations=0x5555564d9ad0, numRelocations=4)
+    at /home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:582
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:582:20358:beg:0x555555b2d998
+$9 = (TR::CodeCacheRelocationInfo *) 0x5555564d9ad0
+Continuing.
+
+Breakpoint 6, TR::ELFGenerator::writeRelaEntriesToFile (this=0x555556229a90, fp=0x55555622ada0)
+    at /home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367:11716:beg:0x555555b2d1d0
+$10 = (TR::CodeCacheRelocationInfo *) 0x5555564d9ad0
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:369:11752:beg:0x555555b2d1d7
+$11 = (TR::CodeCacheRelocationInfo *) 0x5555564d9ad0
+p reloc->_location
+p reloc->_location
+$12 = (uint8_t *) 0x7ffff5cc4040 "\022"
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:370:11845:beg:0x555555b2d201
+No symbol "reloc_" in current context.
+$13 = (TR::CodeCacheRelocationInfo *) 0x5555564d9ad0
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:372:11933:beg:0x555555b2d228
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:374:12014:beg:0x555555b2d245
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367:11716:beg:0x555555b2d251
+$14 = (TR::CodeCacheRelocationInfo *) 0x5555564cdfc0
+
+Breakpoint 6, TR::ELFGenerator::writeRelaEntriesToFile (this=0x555556229a90, fp=0x55555622ada0)
+    at /home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367:11716:beg:0x555555b2d1d0
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:369:11752:beg:0x555555b2d1d7
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:370:11845:beg:0x555555b2d201
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:372:11933:beg:0x555555b2d228
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:374:12014:beg:0x555555b2d245
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367:11716:beg:0x555555b2d251
+$15 = (TR::CodeCacheRelocationInfo *) 0x5555564ce040
+
+Breakpoint 6, TR::ELFGenerator::writeRelaEntriesToFile (this=0x555556229a90, fp=0x55555622ada0)
+    at /home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367:11716:beg:0x555555b2d1d0
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:369:11752:beg:0x555555b2d1d7
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:370:11845:beg:0x555555b2d201
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:372:11933:beg:0x555555b2d228
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:374:12014:beg:0x555555b2d245
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367:11716:beg:0x555555b2d251
+
+Breakpoint 6, TR::ELFGenerator::writeRelaEntriesToFile (this=0x555556229a90, fp=0x55555622ada0)
+    at /home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367:11716:beg:0x555555b2d1d0
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:369:11752:beg:0x555555b2d1d7
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:370:11845:beg:0x555555b2d201
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:372:11933:beg:0x555555b2d228
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:374:12014:beg:0x555555b2d245
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367:11716:beg:0x555555b2d251
+
+Breakpoint 6, TR::ELFGenerator::writeRelaEntriesToFile (this=0x555556229a90, fp=0x55555622ada0)
+    at /home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367:11716:beg:0x555555b2d1d0
+$16 = (TR::CodeCacheRelocationInfo *) 0x5555564e9b40
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:369:11752:beg:0x555555b2d1d7
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:370:11845:beg:0x555555b2d201
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:372:11933:beg:0x555555b2d228
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:374:12014:beg:0x555555b2d245
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367:11716:beg:0x555555b2d251
+$17 = (TR::CodeCacheRelocationInfo *) 0xe
+$18 = (TR::CodeCacheRelocationInfo **) 0x7fffffffe5f0
+Watchpoint 7: &reloc
+r ~/wasmjit-omr
+r ~/wasmjit-omr
+Starting program: /home/mark/wasmjit-omr/out/gcc/Debug/src/aot/wabtaot ~/wasmjit-omr/i64_arithmetic.wasm
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/usr/lib/libthread_db.so.1".
+
+Breakpoint 1, TR::ELFRelocatableGenerator::ELFRelocatableGenerator (this=0x555556229a90, 
+    rawAllocator=..., codeCache=0x7ffff6cc3fe8)
+    at /home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:41
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:41:1792:beg:0x555555b2c3d1
+Continuing.
+
+Hardware watchpoint 5: *0x555556229b48
+
+Old value = <unreadable>
+New value = 1447926480
+TR::ELFRelocatableGenerator::emitELF (this=0x555556229a90, 
+    filename=0x555556229380 "i64_arithmetic.o", symbols=0x555556529cd0, numSymbols=34, 
+    totalELFSymbolNamesLength=265, relocations=0x5555564d9ad0, numRelocations=4)
+    at /home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:582
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:582:20358:beg:0x555555b2d998
+Num     Type           Disp Enb Address            What
+5       hw watchpoint  keep y                      *0x555556229b48
+	breakpoint already hit 1 time
+$19 = (TR::CodeCacheRelocationInfo *) 0x5555564d9ad0
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:583:20388:beg:0x555555b2d9a5
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:584:20426:beg:0x555555b2d9b2
+Continuing.
+
+Breakpoint 6, TR::ELFGenerator::writeRelaEntriesToFile (this=0x555556229a90, fp=0x55555622ada0)
+    at /home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367:11716:beg:0x555555b2d1d0
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:369:11752:beg:0x555555b2d1d7
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:370:11845:beg:0x555555b2d201
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:372:11933:beg:0x555555b2d228
+$20 = (TR::CodeCacheRelocationInfo *) 0x5555564d9ad0
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:374:12014:beg:0x555555b2d245
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367:11716:beg:0x555555b2d251
+
+Breakpoint 6, TR::ELFGenerator::writeRelaEntriesToFile (this=0x555556229a90, fp=0x55555622ada0)
+    at /home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367:11716:beg:0x555555b2d1d0
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:369:11752:beg:0x555555b2d1d7
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:370:11845:beg:0x555555b2d201
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:372:11933:beg:0x555555b2d228
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:374:12014:beg:0x555555b2d245
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367:11716:beg:0x555555b2d251
+
+Breakpoint 6, TR::ELFGenerator::writeRelaEntriesToFile (this=0x555556229a90, fp=0x55555622ada0)
+    at /home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367:11716:beg:0x555555b2d1d0
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:369:11752:beg:0x555555b2d1d7
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:370:11845:beg:0x555555b2d201
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:372:11933:beg:0x555555b2d228
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:374:12014:beg:0x555555b2d245
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367:11716:beg:0x555555b2d251
+$21 = (TR::CodeCacheRelocationInfo *) 0x5555564ce2c0
+
+Breakpoint 6, TR::ELFGenerator::writeRelaEntriesToFile (this=0x555556229a90, fp=0x55555622ada0)
+    at /home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367:11716:beg:0x555555b2d1d0
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:369:11752:beg:0x555555b2d1d7
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:370:11845:beg:0x555555b2d201
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:372:11933:beg:0x555555b2d228
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:374:12014:beg:0x555555b2d245
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367:11716:beg:0x555555b2d251
+$22 = (TR::CodeCacheRelocationInfo *) 0x5555564e9b40
+
+Breakpoint 6, TR::ELFGenerator::writeRelaEntriesToFile (this=0x555556229a90, fp=0x55555622ada0)
+    at /home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367:11716:beg:0x555555b2d1d0
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:369:11752:beg:0x555555b2d1d7
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:370:11845:beg:0x555555b2d201
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:372:11933:beg:0x555555b2d228
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:374:12014:beg:0x555555b2d245
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367:11716:beg:0x555555b2d251
+$23 = (TR::CodeCacheRelocationInfo *) 0xe
+$24 = (TR::CodeCacheRelocationInfo **) 0x7fffffffe5f0
+Hardware watchpoint 8: *0x7fffffffe5f0
+Hardware watchpoint 9: *0x7fffffffe5f0
+$25 = (TR::CodeCacheRelocationInfo *) 0xe
+$26 = (TR::CodeCacheRelocationInfo **) 0x7fffffffe5f0
+No breakpoints or watchpoints.
+Breakpoint 10 at 0x555555b2d1d0: file /home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp, line 367.
+r ~/wasmjit-omr
+r ~/wasmjit-omr
+r ~/wasmjit-omr/i64_arithmetic.o
+r ~/wasmjit-omr/i64_arithmetic.wasm
+r ~/wasmjit-omr/i64_arithmetic_main.c
+r ~/wasmjit-omr/i64_arithmetic.o
+r ~/wasmjit-omr/i64_arithmetic.wasm
+r ~/wasmjit-omr/i64_arithmetic_main.c
+Starting program: /home/mark/wasmjit-omr/out/gcc/Debug/src/aot/wabtaot ~/wasmjit-omr/i64_arithmetic.wasm
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/usr/lib/libthread_db.so.1".
+
+Breakpoint 10, TR::ELFGenerator::writeRelaEntriesToFile (this=0x555556229a90, fp=0x55555622ada0)
+    at /home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367:11716:beg:0x555555b2d1d0
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:369:11752:beg:0x555555b2d1d7
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:370:11845:beg:0x555555b2d201
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:372:11933:beg:0x555555b2d228
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:374:12014:beg:0x555555b2d245
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367:11716:beg:0x555555b2d251
+
+Breakpoint 10, TR::ELFGenerator::writeRelaEntriesToFile (this=0x555556229a90, fp=0x55555622ada0)
+    at /home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367:11716:beg:0x555555b2d1d0
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:369:11752:beg:0x555555b2d1d7
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:370:11845:beg:0x555555b2d201
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:372:11933:beg:0x555555b2d228
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:374:12014:beg:0x555555b2d245
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367:11716:beg:0x555555b2d251
+
+Breakpoint 10, TR::ELFGenerator::writeRelaEntriesToFile (this=0x555556229a90, fp=0x55555622ada0)
+    at /home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367:11716:beg:0x555555b2d1d0
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:369:11752:beg:0x555555b2d1d7
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:370:11845:beg:0x555555b2d201
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:372:11933:beg:0x555555b2d228
+p reloc->_next
+p reloc->_next
+$27 = (TR::CodeCacheRelocationInfo *) 0x5555564ce2c0
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:374:12014:beg:0x555555b2d245
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367:11716:beg:0x555555b2d251
+
+Breakpoint 10, TR::ELFGenerator::writeRelaEntriesToFile (this=0x555556229a90, fp=0x55555622ada0)
+    at /home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367:11716:beg:0x555555b2d1d0
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:369:11752:beg:0x555555b2d1d7
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:370:11845:beg:0x555555b2d201
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:372:11933:beg:0x555555b2d228
+$28 = (TR::CodeCacheRelocationInfo *) 0x5555564ce2c0
+$29 = (TR::CodeCacheRelocationInfo *) 0x5555564e9b40
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:374:12014:beg:0x555555b2d245
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367:11716:beg:0x555555b2d251
+
+Breakpoint 10, TR::ELFGenerator::writeRelaEntriesToFile (this=0x555556229a90, fp=0x55555622ada0)
+    at /home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367:11716:beg:0x555555b2d1d0
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:369:11752:beg:0x555555b2d1d7
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:370:11845:beg:0x555555b2d201
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:372:11933:beg:0x555555b2d228
+$30 = (TR::CodeCacheRelocationInfo *) 0x5555564e9b40
+$31 = (TR::CodeCacheRelocationInfo *) 0xe
+Hardware watchpoint 11: &reloc->_next
+$32 = (TR::CodeCacheRelocationInfo *) 0xe
+$33 = (TR::CodeCacheRelocationInfo **) 0x5555564e9b50
+Hardware watchpoint 12: *0x5555564e9b50
+No breakpoint number 1.
+No breakpoint number 2.
+No breakpoint number 3.
+No breakpoint number 4.
+No breakpoint number 5.
+No breakpoint number 6.
+No breakpoint number 7.
+No breakpoint number 8.
+No breakpoint number 9.
+r ~/wasmjit-omr
+r ~/wasmjit-omr
+r ~/wasmjit-omr/i64_arithmetic.o
+r ~/wasmjit-omr/i64_arithmetic.wasm
+r ~/wasmjit-omr/i64_arithmetic_main.c
+r ~/wasmjit-omr/i64_arithmetic.o
+r ~/wasmjit-omr/i64_arithmetic.wasm
+r ~/wasmjit-omr/i64_arithmetic_main.c
+Starting program: /home/mark/wasmjit-omr/out/gcc/Debug/src/aot/wabtaot ~/wasmjit-omr/i64_arithmetic.wasm
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/usr/lib/libthread_db.so.1".
+
+Hardware watchpoint 12: *0x5555564e9b50
+
+Old value = <unreadable>
+New value = 0
+0x000055555598c945 in TR::typed_allocator<TR::forward_list_private::ListElement<TR::CFGEdge*>, TR::Region&>::construct (p=0x5555564e9b50, prototype=...)
+    at /home/mark/wasmjit-omr/third_party/omr/compiler/env/TypedAllocator.hpp:127
+/home/mark/wasmjit-omr/third_party/omr/compiler/env/TypedAllocator.hpp:127:4046:beg:0x55555598c945
+#1  0x0000555555a0ee32 in TR::forward_list<TR::CFGEdge*, TR::typed_allocator<TR::CFGEdge*, TR::Region&> >::push_front (this=0x7fffffff6b60, value=@0x7fffffff6bb0: 0x7fffffff6bd0)
+    at /home/mark/wasmjit-omr/third_party/omr/compiler/infra/forward_list.hpp:455
+/home/mark/wasmjit-omr/third_party/omr/compiler/infra/forward_list.hpp:455:15375:beg:0x555555a0ee32
+$34 = (TR::forward_list_private::Link *) 0x0
+Continuing.
+
+Hardware watchpoint 12: *0x5555564e9b50
+
+Old value = 0
+New value = 1448123392
+0x00007ffff6d4440b in _int_free () from /usr/lib/libc.so.6
+#0  0x00007ffff6d4440b in _int_free () from /usr/lib/libc.so.6
+#1  0x000055555593cc2e in OMR::RawAllocator::deallocate (this=0x7fffffffb880, p=0x5555564e9b50)
+    at /home/mark/wasmjit-omr/third_party/omr/compiler/env/RawAllocator.hpp:65
+/home/mark/wasmjit-omr/third_party/omr/compiler/env/RawAllocator.hpp:65:2098:beg:0x55555593cc2e
+#2  0x000055555597537a in OMR::SystemSegmentProvider::release (this=0x7fffffffb870, segment=...)
+    at /home/mark/wasmjit-omr/third_party/omr/compiler/env/SystemSegmentProvider.cpp:63
+/home/mark/wasmjit-omr/third_party/omr/compiler/env/SystemSegmentProvider.cpp:63:2591:beg:0x55555597537a
+#0  0x00007ffff6d4440b in _int_free () from /usr/lib/libc.so.6
+Continuing.
+
+Hardware watchpoint 12: *0x5555564e9b50
+
+Old value = 1448123392
+New value = -150492416
+0x00007ffff6d4587b in _int_malloc () from /usr/lib/libc.so.6
+Continuing.
+
+Hardware watchpoint 12: *0x5555564e9b50
+
+Old value = -150492416
+New value = -12928
+0x000055555598a880 in OMR::CFG::CFG (this=0x5555564e9b50, c=0x7fffffffcd80, m=0x5555564fdbf0)
+    at /home/mark/wasmjit-omr/third_party/omr/compiler/infra/OMRCfg.hpp:124
+/home/mark/wasmjit-omr/third_party/omr/compiler/infra/OMRCfg.hpp:124:4145:beg:0x55555598a880
+Continuing.
+
+Hardware watchpoint 12: *0x5555564e9b50
+
+Old value = -12928
+New value = 1447795200
+0x00007ffff6d4440b in _int_free () from /usr/lib/libc.so.6
+Continuing.
+
+Hardware watchpoint 12: *0x5555564e9b50
+
+Old value = 1447795200
+New value = 1447926496
+0x00007ffff6d42ef5 in malloc_consolidate () from /usr/lib/libc.so.6
+Continuing.
+
+Hardware watchpoint 12: *0x5555564e9b50
+
+Old value = 1447926496
+New value = -150492416
+0x00007ffff6d4587b in _int_malloc () from /usr/lib/libc.so.6
+Continuing.
+
+Hardware watchpoint 12: *0x5555564e9b50
+
+Old value = -150492416
+New value = -12928
+0x000055555598a880 in OMR::CFG::CFG (this=0x5555564e9b50, c=0x7fffffffcd80, m=0x55555646d5b0)
+    at /home/mark/wasmjit-omr/third_party/omr/compiler/infra/OMRCfg.hpp:124
+/home/mark/wasmjit-omr/third_party/omr/compiler/infra/OMRCfg.hpp:124:4145:beg:0x55555598a880
+Continuing.
+
+Hardware watchpoint 12: *0x5555564e9b50
+
+Old value = -12928
+New value = 1448254752
+0x00007ffff6d4440b in _int_free () from /usr/lib/libc.so.6
+Continuing.
+
+Hardware watchpoint 12: *0x5555564e9b50
+
+Old value = 1448254752
+New value = -150492416
+0x00007ffff6d4587b in _int_malloc () from /usr/lib/libc.so.6
+Continuing.
+
+Hardware watchpoint 12: *0x5555564e9b50
+
+Old value = -150492416
+New value = -12928
+0x000055555598a880 in OMR::CFG::CFG (this=0x5555564e9b50, c=0x7fffffffcd80, m=0x5555564bda50)
+    at /home/mark/wasmjit-omr/third_party/omr/compiler/infra/OMRCfg.hpp:124
+/home/mark/wasmjit-omr/third_party/omr/compiler/infra/OMRCfg.hpp:124:4145:beg:0x55555598a880
+Continuing.
+
+Hardware watchpoint 12: *0x5555564e9b50
+
+Old value = -12928
+New value = 1447926496
+0x00007ffff6d4440b in _int_free () from /usr/lib/libc.so.6
+Continuing.
+
+Hardware watchpoint 12: *0x5555564e9b50
+
+Old value = 1447926496
+New value = -150492416
+0x00007ffff6d4587b in _int_malloc () from /usr/lib/libc.so.6
+Continuing.
+
+Hardware watchpoint 12: *0x5555564e9b50
+
+Old value = -150492416
+New value = -12928
+0x000055555598a880 in OMR::CFG::CFG (this=0x5555564e9b50, c=0x7fffffffcd80, m=0x55555646d5b0)
+    at /home/mark/wasmjit-omr/third_party/omr/compiler/infra/OMRCfg.hpp:124
+/home/mark/wasmjit-omr/third_party/omr/compiler/infra/OMRCfg.hpp:124:4145:beg:0x55555598a880
+Continuing.
+
+Hardware watchpoint 12: *0x5555564e9b50
+
+Old value = -12928
+New value = 1448254752
+0x00007ffff6d4440b in _int_free () from /usr/lib/libc.so.6
+Continuing.
+
+Hardware watchpoint 12: *0x5555564e9b50
+
+Old value = 1448254752
+New value = -150492416
+0x00007ffff6d4587b in _int_malloc () from /usr/lib/libc.so.6
+Continuing.
+
+Hardware watchpoint 12: *0x5555564e9b50
+
+Old value = -150492416
+New value = -12928
+0x000055555598a880 in OMR::CFG::CFG (this=0x5555564e9b50, c=0x7fffffffcd80, m=0x5555564bda50)
+    at /home/mark/wasmjit-omr/third_party/omr/compiler/infra/OMRCfg.hpp:124
+/home/mark/wasmjit-omr/third_party/omr/compiler/infra/OMRCfg.hpp:124:4145:beg:0x55555598a880
+Continuing.
+
+Hardware watchpoint 12: *0x5555564e9b50
+
+Old value = -12928
+New value = 1447926496
+0x00007ffff6d4440b in _int_free () from /usr/lib/libc.so.6
+Continuing.
+
+Hardware watchpoint 12: *0x5555564e9b50
+
+Old value = 1447926496
+New value = -150492416
+0x00007ffff6d4587b in _int_malloc () from /usr/lib/libc.so.6
+Continuing.
+
+Hardware watchpoint 12: *0x5555564e9b50
+
+Old value = -150492416
+New value = -12928
+0x000055555598a880 in OMR::CFG::CFG (this=0x5555564e9b50, c=0x7fffffffcd80, m=0x55555646d5b0)
+    at /home/mark/wasmjit-omr/third_party/omr/compiler/infra/OMRCfg.hpp:124
+/home/mark/wasmjit-omr/third_party/omr/compiler/infra/OMRCfg.hpp:124:4145:beg:0x55555598a880
+Continuing.
+
+Hardware watchpoint 12: *0x5555564e9b50
+
+Old value = -12928
+New value = 1448254752
+0x00007ffff6d4440b in _int_free () from /usr/lib/libc.so.6
+Continuing.
+
+Hardware watchpoint 12: *0x5555564e9b50
+
+Old value = 1448254752
+New value = -150492416
+0x00007ffff6d4587b in _int_malloc () from /usr/lib/libc.so.6
+Continuing.
+
+Hardware watchpoint 12: *0x5555564e9b50
+
+Old value = -150492416
+New value = -12928
+0x000055555598a880 in OMR::CFG::CFG (this=0x5555564e9b50, c=0x7fffffffcd80, m=0x5555564bda50)
+    at /home/mark/wasmjit-omr/third_party/omr/compiler/infra/OMRCfg.hpp:124
+/home/mark/wasmjit-omr/third_party/omr/compiler/infra/OMRCfg.hpp:124:4145:beg:0x55555598a880
+Continuing.
+
+Hardware watchpoint 12: *0x5555564e9b50
+
+Old value = -12928
+New value = 1447926496
+0x00007ffff6d4440b in _int_free () from /usr/lib/libc.so.6
+Continuing.
+
+Hardware watchpoint 12: *0x5555564e9b50
+
+Old value = 1447926496
+New value = -150492416
+0x00007ffff6d4587b in _int_malloc () from /usr/lib/libc.so.6
+Continuing.
+
+Hardware watchpoint 12: *0x5555564e9b50
+
+Old value = -150492416
+New value = -12928
+0x000055555598a880 in OMR::CFG::CFG (this=0x5555564e9b50, c=0x7fffffffcd80, m=0x55555646d5b0)
+    at /home/mark/wasmjit-omr/third_party/omr/compiler/infra/OMRCfg.hpp:124
+/home/mark/wasmjit-omr/third_party/omr/compiler/infra/OMRCfg.hpp:124:4145:beg:0x55555598a880
+Continuing.
+
+Hardware watchpoint 12: *0x5555564e9b50
+
+Old value = -12928
+New value = 1448254752
+0x00007ffff6d4440b in _int_free () from /usr/lib/libc.so.6
+Continuing.
+
+Hardware watchpoint 12: *0x5555564e9b50
+
+Old value = 1448254752
+New value = -150492416
+0x00007ffff6d4587b in _int_malloc () from /usr/lib/libc.so.6
+Continuing.
+
+Hardware watchpoint 12: *0x5555564e9b50
+
+Old value = -150492416
+New value = -12928
+0x000055555598a880 in OMR::CFG::CFG (this=0x5555564e9b50, c=0x7fffffffcd80, m=0x5555564bda50)
+    at /home/mark/wasmjit-omr/third_party/omr/compiler/infra/OMRCfg.hpp:124
+/home/mark/wasmjit-omr/third_party/omr/compiler/infra/OMRCfg.hpp:124:4145:beg:0x55555598a880
+Continuing.
+
+Hardware watchpoint 12: *0x5555564e9b50
+
+Old value = -12928
+New value = 1447926496
+0x00007ffff6d4440b in _int_free () from /usr/lib/libc.so.6
+Continuing.
+
+Hardware watchpoint 12: *0x5555564e9b50
+
+Old value = 1447926496
+New value = -150492416
+0x00007ffff6d4587b in _int_malloc () from /usr/lib/libc.so.6
+Will ignore next 9 crossings of breakpoint 12.  Continuing.
+
+Hardware watchpoint 12: *0x5555564e9b50
+
+Old value = -150492416
+New value = -12928
+0x000055555598a880 in OMR::CFG::CFG (this=0x5555564e9b50, c=0x7fffffffcd80, m=0x5555564bda50)
+    at /home/mark/wasmjit-omr/third_party/omr/compiler/infra/OMRCfg.hpp:124
+/home/mark/wasmjit-omr/third_party/omr/compiler/infra/OMRCfg.hpp:124:4145:beg:0x55555598a880
+Continuing.
+
+Hardware watchpoint 12: *0x5555564e9b50
+
+Old value = -12928
+New value = 1447926496
+0x00007ffff6d4440b in _int_free () from /usr/lib/libc.so.6
+Continuing.
+
+Hardware watchpoint 12: *0x5555564e9b50
+
+Old value = 1447926496
+New value = -150492416
+0x00007ffff6d4587b in _int_malloc () from /usr/lib/libc.so.6
+Continuing.
+
+Hardware watchpoint 12: *0x5555564e9b50
+
+Old value = -150492416
+New value = -12928
+0x000055555598a880 in OMR::CFG::CFG (this=0x5555564e9b50, c=0x7fffffffcd80, m=0x55555646d5b0)
+    at /home/mark/wasmjit-omr/third_party/omr/compiler/infra/OMRCfg.hpp:124
+/home/mark/wasmjit-omr/third_party/omr/compiler/infra/OMRCfg.hpp:124:4145:beg:0x55555598a880
+Continuing.
+
+Hardware watchpoint 12: *0x5555564e9b50
+
+Old value = -12928
+New value = 1448254752
+0x00007ffff6d4440b in _int_free () from /usr/lib/libc.so.6
+Continuing.
+
+Hardware watchpoint 12: *0x5555564e9b50
+
+Old value = 1448254752
+New value = -150492416
+0x00007ffff6d4587b in _int_malloc () from /usr/lib/libc.so.6
+Continuing.
+
+Hardware watchpoint 12: *0x5555564e9b50
+
+Old value = -150492416
+New value = -12928
+0x000055555598a880 in OMR::CFG::CFG (this=0x5555564e9b50, c=0x7fffffffcd80, m=0x5555564bda50)
+    at /home/mark/wasmjit-omr/third_party/omr/compiler/infra/OMRCfg.hpp:124
+/home/mark/wasmjit-omr/third_party/omr/compiler/infra/OMRCfg.hpp:124:4145:beg:0x55555598a880
+Continuing.
+
+Hardware watchpoint 12: *0x5555564e9b50
+
+Old value = -12928
+New value = 1447926496
+0x00007ffff6d4440b in _int_free () from /usr/lib/libc.so.6
+Continuing.
+
+Hardware watchpoint 12: *0x5555564e9b50
+
+Old value = 1447926496
+New value = -150492416
+0x00007ffff6d4587b in _int_malloc () from /usr/lib/libc.so.6
+Continuing.
+
+Hardware watchpoint 12: *0x5555564e9b50
+
+Old value = -150492416
+New value = -12928
+0x000055555598a880 in OMR::CFG::CFG (this=0x5555564e9b50, c=0x7fffffffcd80, m=0x55555646d5b0)
+    at /home/mark/wasmjit-omr/third_party/omr/compiler/infra/OMRCfg.hpp:124
+/home/mark/wasmjit-omr/third_party/omr/compiler/infra/OMRCfg.hpp:124:4145:beg:0x55555598a880
+Continuing.
+
+Hardware watchpoint 12: *0x5555564e9b50
+
+Old value = -12928
+New value = 1448254752
+0x00007ffff6d4440b in _int_free () from /usr/lib/libc.so.6
+Continuing.
+
+Hardware watchpoint 12: *0x5555564e9b50
+
+Old value = 1448254752
+New value = -150492416
+0x00007ffff6d4587b in _int_malloc () from /usr/lib/libc.so.6
+Continuing.
+
+Hardware watchpoint 12: *0x5555564e9b50
+
+Old value = -150492416
+New value = -12928
+0x000055555598a880 in OMR::CFG::CFG (this=0x5555564e9b50, c=0x7fffffffcd80, m=0x5555564bda50)
+    at /home/mark/wasmjit-omr/third_party/omr/compiler/infra/OMRCfg.hpp:124
+/home/mark/wasmjit-omr/third_party/omr/compiler/infra/OMRCfg.hpp:124:4145:beg:0x55555598a880
+Continuing.
+
+Hardware watchpoint 12: *0x5555564e9b50
+
+Old value = -12928
+New value = 1447926496
+0x00007ffff6d4440b in _int_free () from /usr/lib/libc.so.6
+Continuing.
+
+Hardware watchpoint 12: *0x5555564e9b50
+
+Old value = 1447926496
+New value = -150492416
+0x00007ffff6d4587b in _int_malloc () from /usr/lib/libc.so.6
+Continuing.
+
+Hardware watchpoint 12: *0x5555564e9b50
+
+Old value = -150492416
+New value = -12928
+0x000055555598a880 in OMR::CFG::CFG (this=0x5555564e9b50, c=0x7fffffffcd80, m=0x55555646d5b0)
+    at /home/mark/wasmjit-omr/third_party/omr/compiler/infra/OMRCfg.hpp:124
+/home/mark/wasmjit-omr/third_party/omr/compiler/infra/OMRCfg.hpp:124:4145:beg:0x55555598a880
+Continuing.
+
+Hardware watchpoint 12: *0x5555564e9b50
+
+Old value = -12928
+New value = 1448254752
+0x00007ffff6d4440b in _int_free () from /usr/lib/libc.so.6
+Will ignore next 29 crossings of breakpoint 12.  Continuing.
+
+Hardware watchpoint 12: *0x5555564e9b50
+
+Old value = -12928
+New value = 1447879360
+0x00007ffff6d4440b in _int_free () from /usr/lib/libc.so.6
+Continuing.
+
+Hardware watchpoint 12: *0x5555564e9b50
+
+Old value = 1447879360
+New value = 1448254752
+0x00007ffff6d42ef5 in malloc_consolidate () from /usr/lib/libc.so.6
+Will ignore next 39 crossings of breakpoint 12.  Continuing.
+
+Program received signal SIGSEGV, Segmentation fault.
+0x0000555555b2d1db in TR::ELFGenerator::writeRelaEntriesToFile (this=0x555556229a90, 
+    fp=0x55555622ada0)
+    at /home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:369
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:369:11752:beg:0x555555b2d1db
+$35 = (TR::CodeCacheRelocationInfo *) 0xe
+Breakpoint 13 at 0x555555b2d1d0: file /home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp, line 367.
+r ~/wasmjit-omr
+r ~/wasmjit-omr
+Starting program: /home/mark/wasmjit-omr/out/gcc/Debug/src/aot/wabtaot ~/wasmjit-omr/i64_arithmetic.wasm
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/usr/lib/libthread_db.so.1".
+
+Hardware watchpoint 12: *0x5555564e9b50
+
+Old value = -150492416
+New value = -12928
+0x000055555598a880 in OMR::CFG::CFG (this=0x5555564e9b50, c=0x7fffffffcd80, m=0x55555646d5b0)
+    at /home/mark/wasmjit-omr/third_party/omr/compiler/infra/OMRCfg.hpp:124
+/home/mark/wasmjit-omr/third_party/omr/compiler/infra/OMRCfg.hpp:124:4145:beg:0x55555598a880
+Continuing.
+
+Breakpoint 13, TR::ELFGenerator::writeRelaEntriesToFile (this=0x555556229a90, fp=0x55555622ada0)
+    at /home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367:11716:beg:0x555555b2d1d0
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:369:11752:beg:0x555555b2d1d7
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:370:11845:beg:0x555555b2d201
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:372:11933:beg:0x555555b2d228
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:374:12014:beg:0x555555b2d245
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367:11716:beg:0x555555b2d251
+
+Breakpoint 13, TR::ELFGenerator::writeRelaEntriesToFile (this=0x555556229a90, fp=0x55555622ada0)
+    at /home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367:11716:beg:0x555555b2d1d0
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:369:11752:beg:0x555555b2d1d7
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:370:11845:beg:0x555555b2d201
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:372:11933:beg:0x555555b2d228
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:374:12014:beg:0x555555b2d245
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367:11716:beg:0x555555b2d251
+
+Breakpoint 13, TR::ELFGenerator::writeRelaEntriesToFile (this=0x555556229a90, fp=0x55555622ada0)
+    at /home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367:11716:beg:0x555555b2d1d0
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:369:11752:beg:0x555555b2d1d7
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:370:11845:beg:0x555555b2d201
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:372:11933:beg:0x555555b2d228
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:374:12014:beg:0x555555b2d245
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367:11716:beg:0x555555b2d251
+
+Breakpoint 13, TR::ELFGenerator::writeRelaEntriesToFile (this=0x555556229a90, fp=0x55555622ada0)
+    at /home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367:11716:beg:0x555555b2d1d0
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:369:11752:beg:0x555555b2d1d7
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:370:11845:beg:0x555555b2d201
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:372:11933:beg:0x555555b2d228
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:374:12014:beg:0x555555b2d245
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367:11716:beg:0x555555b2d251
+
+Breakpoint 13, TR::ELFGenerator::writeRelaEntriesToFile (this=0x555556229a90, fp=0x55555622ada0)
+    at /home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367:11716:beg:0x555555b2d1d0
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:369:11752:beg:0x555555b2d1d7
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:370:11845:beg:0x555555b2d201
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:372:11933:beg:0x555555b2d228
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:374:12014:beg:0x555555b2d245
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367:11716:beg:0x555555b2d251
+
+Breakpoint 13, TR::ELFGenerator::writeRelaEntriesToFile (this=0x555556229a90, fp=0x55555622ada0)
+    at /home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367:11716:beg:0x555555b2d1d0
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:369:11752:beg:0x555555b2d1d7
+
+Program received signal SIGSEGV, Segmentation fault.
+0x0000555555b2d1db in TR::ELFGenerator::writeRelaEntriesToFile (this=0x555556229a90, 
+    fp=0x55555622ada0)
+    at /home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:369
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:369:11752:beg:0x555555b2d1db
+
+Program terminated with signal SIGSEGV, Segmentation fault.
+The program no longer exists.
+The program is not being run.
+r ~/wasmjit-omr
+r ~/wasmjit-omr
+Starting program: /home/mark/wasmjit-omr/out/gcc/Debug/src/aot/wabtaot ~/wasmjit-omr/i64_arithmetic.wasm
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/usr/lib/libthread_db.so.1".
+
+Breakpoint 13, TR::ELFGenerator::writeRelaEntriesToFile (this=0x555556229a90, fp=0x55555622ada0)
+    at /home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367:11716:beg:0x555555b2d1d0
+Continuing.
+
+Breakpoint 13, TR::ELFGenerator::writeRelaEntriesToFile (this=0x555556229a90, fp=0x55555622ada0)
+    at /home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367:11716:beg:0x555555b2d1d0
+Continuing.
+
+Breakpoint 13, TR::ELFGenerator::writeRelaEntriesToFile (this=0x555556229a90, fp=0x55555622ada0)
+    at /home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367:11716:beg:0x555555b2d1d0
+Continuing.
+
+Breakpoint 13, TR::ELFGenerator::writeRelaEntriesToFile (this=0x555556229a90, fp=0x55555622ada0)
+    at /home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367:11716:beg:0x555555b2d1d0
+Continuing.
+
+Breakpoint 13, TR::ELFGenerator::writeRelaEntriesToFile (this=0x555556229a90, fp=0x55555622ada0)
+    at /home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367:11716:beg:0x555555b2d1d0
+$36 = (TR::CodeCacheRelocationInfo *) 0x5555564e9b40
+Continuing.
+
+Breakpoint 13, TR::ELFGenerator::writeRelaEntriesToFile (this=0x555556229a90, fp=0x55555622ada0)
+    at /home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367:11716:beg:0x555555b2d1d0
+$37 = (TR::CodeCacheRelocationInfo *) 0xe
+r ~/wasmjit-omr
+r ~/wasmjit-omr
+Starting program: /home/mark/wasmjit-omr/out/gcc/Debug/src/aot/wabtaot ~/wasmjit-omr/i64_arithmetic.wasm
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/usr/lib/libthread_db.so.1".
+
+Breakpoint 13, TR::ELFGenerator::writeRelaEntriesToFile (this=0x555556229a90, fp=0x55555622ada0)
+    at /home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:367:11716:beg:0x555555b2d1d0
+No symbol "relocations" in current context.
+$38 = {_location = 0x7ffff5cc4040 "\022", _type = 1, _symbol = 1, _next = 0x5555564cdfc0}
+$39 = {_location = 0x7ffff5cc4a31 "o\371\220UUU", _type = 1, _symbol = 29, 
+  _next = 0x5555564ce040}
+$40 = {_location = 0x7ffff5cc4a88 "o\371\220UUU", _type = 1, _symbol = 31, 
+  _next = 0x5555564ce2c0}
+$41 = {_location = 0x7ffff5cc4afc "o\371\220UUU", _type = 1, _symbol = 33, 
+  _next = 0x5555564e9b40}
+$42 = {_location = 0x0, _type = 65553, _symbol = 0, _next = 0xe}

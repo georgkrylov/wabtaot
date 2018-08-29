@@ -7,7 +7,7 @@
   (start $run_add_1_i64)
 
     ;; MARK: create an entry-able function.
-  (func $run_add_1_i64 call $add_1_i64 return)
+  (func $run_add_1_i64 call $add_1_i64 return) ;; func_0
   (func $const_ret (result i64) i64.const 1 return) ;; func_1
   (func $add_1_i64 (result i64) i64.const 1 i64.const 2 i64.add return) ;; func_2
   
@@ -93,22 +93,22 @@
   (func $div_s_1_i64 (result i64) i64.const 1 i64.const 0 i64.div_s return) ;; func_27
   (func $div_s_2_i64 (result i64) i64.const 0 i64.const 0 i64.div_s return) ;; func_28
   (func $div_s_3_i64 (result i64) i64.const 0x8000000000000000 i64.const -1 i64.div_s return)
-  (func $div_s_4_i64 (result i64) i64.const 1 i64.const 1 i64.div_s return)
-  (func $div_s_5_i64 (result i64) i64.const 0 i64.const 1 i64.div_s return)
-  (func $div_s_6_i64 (result i64) i64.const 0 i64.const -1 i64.div_s return)
-  (func $div_s_7_i64 (result i64) i64.const -1 i64.const -1 i64.div_s return)
-  (func $div_s_8_i64 (result i64) i64.const 0x8000000000000000 i64.const 2 i64.div_s return)
-  (func $div_s_9_i64 (result i64) i64.const 0x8000000000000001 i64.const 1000 i64.div_s return)
-  (func $div_s_10_i64 (result i64) i64.const 5 i64.const 2 i64.div_s return)
-  (func $div_s_11_i64 (result i64) i64.const -5 i64.const 2 i64.div_s return)
-  (func $div_s_12_i64 (result i64) i64.const 5 i64.const -2 i64.div_s return)
-  (func $div_s_13_i64 (result i64) i64.const -5 i64.const -2 i64.div_s return)
-  (func $div_s_14_i64 (result i64) i64.const 7 i64.const 3 i64.div_s return)
-  (func $div_s_15_i64 (result i64) i64.const -7 i64.const 3 i64.div_s return)
-  (func $div_s_16_i64 (result i64) i64.const 7 i64.const -3 i64.div_s return)
-  (func $div_s_17_i64 (result i64) i64.const -7 i64.const -3 i64.div_s return)
-  (func $div_s_18_i64 (result i64) i64.const 11 i64.const 5 i64.div_s return)
-  (func $div_s_19_i64 (result i64) i64.const 17 i64.const 7 i64.div_s return)
+  ;; (func $div_s_4_i64 (result i64) i64.const 1 i64.const 1 i64.div_s return)
+  ;; (func $div_s_5_i64 (result i64) i64.const 0 i64.const 1 i64.div_s return)
+  ;; (func $div_s_6_i64 (result i64) i64.const 0 i64.const -1 i64.div_s return)
+  ;; (func $div_s_7_i64 (result i64) i64.const -1 i64.const -1 i64.div_s return)
+  ;; (func $div_s_8_i64 (result i64) i64.const 0x8000000000000000 i64.const 2 i64.div_s return)
+  ;; (func $div_s_9_i64 (result i64) i64.const 0x8000000000000001 i64.const 1000 i64.div_s return)
+  ;; (func $div_s_10_i64 (result i64) i64.const 5 i64.const 2 i64.div_s return)
+  ;; (func $div_s_11_i64 (result i64) i64.const -5 i64.const 2 i64.div_s return)
+  ;; (func $div_s_12_i64 (result i64) i64.const 5 i64.const -2 i64.div_s return)
+  ;; (func $div_s_13_i64 (result i64) i64.const -5 i64.const -2 i64.div_s return)
+  ;; (func $div_s_14_i64 (result i64) i64.const 7 i64.const 3 i64.div_s return)
+  ;; (func $div_s_15_i64 (result i64) i64.const -7 i64.const 3 i64.div_s return)
+  ;; (func $div_s_16_i64 (result i64) i64.const 7 i64.const -3 i64.div_s return)
+  ;; (func $div_s_17_i64 (result i64) i64.const -7 i64.const -3 i64.div_s return)
+  ;; (func $div_s_18_i64 (result i64) i64.const 11 i64.const 5 i64.div_s return)
+  ;; (func $div_s_19_i64 (result i64) i64.const 17 i64.const 7 i64.div_s return)
 
   ;; Rem_s
   ;; (func (export "test_rem_s_1_i64") (result i64) call $rem_s_1_i64)

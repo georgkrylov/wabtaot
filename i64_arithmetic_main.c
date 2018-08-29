@@ -34,8 +34,8 @@ int64_t func_25();
 int64_t func_26();
 
 // Div
-/*
 int64_t func_27();
+/*
 int64_t func_28();
 int64_t func_29();
 int64_t func_30();
@@ -86,5 +86,7 @@ int main() {
   assert(func_25() == 0x0123456789abcdefL *
 	 0xfedcba9876543210L);
   assert(func_26() == 0x7fffffffffffffffL * 0x7fffffffffffffffL);
+
+  func_27(); // should trap
   //  assert(func_27() == 
 }
