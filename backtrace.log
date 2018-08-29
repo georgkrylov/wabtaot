@@ -1,0 +1,35 @@
+r ~/wasmjit-omr
+r ~/wasmjit-omr
+Starting program: /home/mark/wasmjit-omr/out/gcc/Debug/src/aot/wabtaot ~/wasmjit-omr/i64_arithmetic.wasm
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/usr/lib/libthread_db.so.1".
+
+Program received signal SIGSEGV, Segmentation fault.
+0x0000555555b2d1db in TR::ELFGenerator::writeRelaEntriesToFile (this=0x555556229a90, 
+    fp=0x55555622ada0)
+    at /home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:369
+/home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:369:11752:beg:0x555555b2d1db
+#0  0x0000555555b2d1db in TR::ELFGenerator::writeRelaEntriesToFile (this=0x555556229a90, 
+    fp=0x55555622ada0)
+    at /home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:369
+#1  0x0000555555b2cd76 in TR::ELFGenerator::emitELFFile (this=0x555556229a90, 
+    filename=0x555556229380 "i64_arithmetic.o")
+    at /home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:262
+#2  0x0000555555b2da94 in TR::ELFRelocatableGenerator::emitELF (this=0x555556229a90, 
+    filename=0x555556229380 "i64_arithmetic.o", symbols=0x555556529cd0, numSymbols=34, 
+    totalELFSymbolNamesLength=265, relocations=0x5555564d9ad0, numRelocations=4)
+    at /home/mark/wasmjit-omr/third_party/omr/compiler/codegen/ELFGenerator.cpp:592
+#3  0x0000555555ace890 in OMR::CodeCacheManager::destroy (
+    this=0x555556205010 <initializeJitBuilder(TR_RuntimeHelper*, void**, int, char*)::fe+80>)
+    at /home/mark/wasmjit-omr/third_party/omr/compiler/runtime/OMRCodeCacheManager.cpp:205
+#4  0x000055555593cb10 in shutdownJit ()
+    at /home/mark/wasmjit-omr/third_party/omr/jitbuilder/control/Jit.cpp:211
+#5  0x0000555555deffa0 in wabt::jit::JitEnvironment::~JitEnvironment (this=0x7fffffffe8d0, 
+    __in_chrg=<optimized out>) at /home/mark/wasmjit-omr/src/jit/environment.cc:36
+#6  0x000055555590a5a6 in wabt::interp::Environment::~Environment (this=0x7fffffffe7c0, 
+    __in_chrg=<optimized out>) at /home/mark/wasmjit-omr/src/aot/../interp.h:352
+#7  0x0000555555909e09 in main (argc=2, argv=0x7fffffffea88)
+    at /home/mark/wasmjit-omr/src/aot/aot-compiler.cc:104
+Currently logging to "backtrace.log".
+Logs will be appended to the log file.
+Output will be logged and displayed.
