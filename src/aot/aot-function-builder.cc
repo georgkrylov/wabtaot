@@ -503,8 +503,32 @@ TR::IlValue* AOTFunctionBuilder::EmitMemoryPreAccess(TR::IlBuilder* b) { //, con
   return address;
 }
 */
+void AOTFunctionBuilder::returnWithError(TR::IlBuilder* b) {
+  const auto& return_types = env_.GetFuncSignature(fn_->sig_index)->result_types;
+
+  if(return_types.empty()) {
+    b->Return();
+  } else {
+    const auto& return_type = return_types.front();
+
+    switch (return_type) {
+    case Type::I32:
+      return b->Return(b->ConstInt32(-1));
+    case Type::I64:
+      return b->Return(b->ConstInt64(-1));
+    case Type::F32:
+      return b->Return(b->ConstFloat(-1.0f));
+    case Type::F64:
+      return b->Return(b->ConstDouble(-1.0));
+    default:
+      throw std::runtime_error("invalid WASM return type!");      
+    }
+  }
+}
+
 void AOTFunctionBuilder::EmitTrap(TR::IlBuilder* b, interp::Result r) {
   b->Call("trapWith", 1, b->Const(static_cast<int32_t>(r)));
+  returnWithError(b);
 }
 
 /*
@@ -764,7 +788,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
       // note: to work around JitBuilder's lack of support unions as value types,
       // just copy a field that's the size of the entire union
       auto* local_addr = Pick(ReadU32(&pc));
-      Push(b, "i64", b->ConvertTo(Int64, local_addr)); //b->LoadIndirect("Value", "i64", local_addr));
+      Push(b, "i64", local_addr); //b->LoadIndirect("Value", "i64", local_addr));
       break;
     }
 

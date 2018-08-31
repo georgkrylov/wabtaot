@@ -132,6 +132,8 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
   template <typename T>
   TR::IlValue* EmitMemoryPreAccess(TR::IlBuilder* b);
 
+  void returnWithError(TR::IlBuilder*);
+  
   void EmitTrap(TR::IlBuilder* b, interp::Result);
   // void EmitCheckTrap(TR::IlBuilder* b, TR::IlValue* result);
   void EmitTrapIf(TR::IlBuilder* b, TR::IlValue* condition, interp::Result);

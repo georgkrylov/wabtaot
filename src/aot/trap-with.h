@@ -3,6 +3,6 @@
 
 #include <cstdint>
 
-void trapWith(int32_t);
+extern "C" void trapWith(int32_t);
 
 #endif
