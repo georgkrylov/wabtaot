@@ -164,13 +164,13 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFu
                  2,
                  Float,
                  Float);
-  DefineFunction("f64_sqrt", __FILE__, "0",
-                 reinterpret_cast<void*>(static_cast<double (*)(double)>(std::sqrt)),
+  DefineFunction("sqrt", __FILE__, "0",
+                 reinterpret_cast<void*>(static_cast<double (*)(double)>(sqrt)),
                  Double,
                  1,
                  Double);
-  DefineFunction("f64_copysign", __FILE__, "0",
-                 reinterpret_cast<void*>(static_cast<double (*)(double, double)>(std::copysign)),
+  DefineFunction("copysign", __FILE__, "0",
+                 reinterpret_cast<void*>(static_cast<double (*)(double, double)>(copysign)),
                  Double,
                  2,
                  Double,
@@ -217,7 +217,7 @@ void AOTFunctionBuilder::defineFunction(const std::string& name, interp::Defined
   TR::IlType* result_type = fn == fn_ ? returnType_ : functionReturnType(fn);
 
   DefineFunction(name.c_str(), __FILE__, "0",
-		 reinterpret_cast<void*>(18), // this is a magic number that makes trampoline lookup seemingly work.
+		 reinterpret_cast<void*>(18), // this is a magic number that makes trampoline lookup work.
 		 result_type,
 		 types.size(),
 		 static_cast<TR::IlType**>(types.data()));
@@ -262,7 +262,10 @@ bool AOTFunctionBuilder::buildIL() {
  */
 void AOTFunctionBuilder::Push(TR::IlBuilder* b, const char* type, TR::IlValue* value)
 {
-  auto* value_wrapper = b->ConvertTo(valueType_, value);
+  //TODO: should probably compare to valueType_ here, if that's
+  //possible. I'm not sure if a simple pointer comparison will
+  //work. IlTypes* for primitives might not be singleton values.
+  auto* value_wrapper = strcmp(type, "i64") ? b->BitcastTo(valueType_, value) : value;
   stackCount_++;
   stack_->Push(b, value_wrapper);
 }
@@ -278,9 +281,8 @@ void AOTFunctionBuilder::Push(TR::IlBuilder* b, const char* type, TR::IlValue* v
  */
 TR::IlValue* AOTFunctionBuilder::Pop(TR::IlBuilder* b, const char* type) {
   auto* value = stack_->Pop(b);
-
   stackCount_++;
-  return b->ConvertTo(TypeFieldType(type), value);
+  return strcmp("i64", type) ? b->BitcastTo(TypeFieldType(type), value) : value;
 }
 
 /**
@@ -642,8 +644,7 @@ TR::IlValue* AOTFunctionBuilder::popReturnValue(TR::IlBuilder* b) {
   
   if(result_types.empty())
     return nullptr;
-  else {
-    
+  else {    
     return Pop(b, TypeFieldName(result_types.front()));
   }
 }
@@ -805,7 +806,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
       // see note for GetLocal
       //      b->StoreIndirect("Value", "i64", Pick(/*b, */ReadU32(&pc)), b->LoadIndirect("Value", "i64", Pick(/*b, */1)));
       auto* local_addr = Pick(ReadU32(&pc));
-      b->StoreOver(local_addr, b->ConvertTo(Int64, Pick(1)));
+      b->StoreOver(local_addr, Pick(1));
       break;
     }
       
@@ -1557,7 +1558,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
 
     case Opcode::F64Sqrt:
       EmitUnaryOp<double>(b, [&](TR::IlValue* value) {
-        return b->Call("f64_sqrt", 1, value);
+        return b->Call("sqrt", 1, value);
       });
       break;
 
@@ -1587,7 +1588,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
 
     case Opcode::F64Copysign:
       EmitBinaryOp<double>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
-        return b->Call("f64_copysign", 2, lhs, rhs);
+        return b->Call("copysign", 2, lhs, rhs);
       });
       break;
 
