@@ -26,7 +26,7 @@ JitEnvironment::JitEnvironment() {
   if (instance_count_ == 0)
      initializeJitWithOptions("-Xjit:acceptHugeMethods,enableBasicBlockHoisting,"
 			      "omitFramePointer,useILValidator,enableRelocatableELFGeneration,"
-			      "objectFile=f64_arithmetic.o");
+			      "objectFile=get_set_tee_local.o");
   ++instance_count_;
 }
 

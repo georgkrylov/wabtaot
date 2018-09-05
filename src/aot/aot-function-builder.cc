@@ -187,7 +187,8 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFu
     char param[6]; // ie, "p6" is the sixth parameter.
     sprintf(param, "p%d", arg++);
 
-    DefineParameter(param, TypeFieldType(t));
+    param_names.push_back(param);
+    DefineParameter(param_names.back().data(), TypeFieldType(t));
   }
 
   DefineReturnType(returnType_);
@@ -324,7 +325,7 @@ void AOTFunctionBuilder::DropKeep(TR::IlBuilder* b, uint32_t drop_count, uint8_t
  * return &value_stack_[value_stack_top_ - depth];
  */
 TR::IlValue* AOTFunctionBuilder::Pick(Index depth) {
-  return stack_->Pick(depth);
+  return stack_->Pick(depth-1);
 }
 
 template <>
@@ -796,7 +797,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
     case Opcode::SetLocal: {
       // see note for GetLocal
       auto* value = Pop(b, "i64");
-      auto* local_addr = Pick(/*b, */ReadU32(&pc));
+      auto* local_addr = Pick(ReadU32(&pc));
       b->StoreOver(local_addr, value);
       // b->StoreIndirect("Value", "i64", local_addr, value);
       break;
@@ -1881,4 +1882,5 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
 }
 
 }
+
 }
