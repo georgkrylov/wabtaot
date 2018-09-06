@@ -478,6 +478,7 @@ class Environment {
  private:
   friend class Thread;
   friend class wabt::jit::FunctionBuilder;
+  friend class wabt::aot::AOTFunctionBuilder;
   using JITedFunction = wabt::interp::Result (*)();
 
   struct JitMeta {

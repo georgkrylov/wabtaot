@@ -282,7 +282,7 @@ void AOTFunctionBuilder::Push(TR::IlBuilder* b, const char* type, TR::IlValue* v
  */
 TR::IlValue* AOTFunctionBuilder::Pop(TR::IlBuilder* b, const char* type) {
   auto* value = stack_->Pop(b);
-  stackCount_++;
+  stackCount_--;
   return strcmp("i64", type) ? b->BitcastTo(TypeFieldType(type), value) : value;
 }
 
@@ -804,31 +804,31 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
     }
 
     case Opcode::TeeLocal: {
-      // see note for GetLocal
-      //      b->StoreIndirect("Value", "i64", Pick(/*b, */ReadU32(&pc)), b->LoadIndirect("Value", "i64", Pick(/*b, */1)));
       auto* local_addr = Pick(ReadU32(&pc));
       b->StoreOver(local_addr, Pick(1));
       break;
     }
       
     case Opcode::Call: {
-      auto func_index = ReadU32(&pc);
-      auto& builder = aotManager_.getFB(func_index);
+      auto offset = ReadU32(&pc);
+      auto meta_it = env_.jit_meta_.find(offset);
 
-      std::vector<TR::IlValue*> args;
+      if(meta_it != env_.jit_meta_.end()) {
+	auto* fn = meta_it->second.wasm_fn;
+	auto& builder = aotManager_.getFB(fn->offset);
+	
+	std::vector<TR::IlValue*> args;	
 
-      for(const auto& t: env_.GetFuncSignature(builder.fn_->sig_index)->param_types) {
-	args.push_back(Pop(b, TypeFieldName(t)));
+	for(const auto& t: env_.GetFuncSignature(builder.fn_->sig_index)->param_types) {
+	  args.push_back(Pop(b, TypeFieldName(t)));
+	}
+
+	auto* value = b->Call(builder.fn_name_.c_str(), args.size(), args.data());
+	pushReturnValue(builder, b, value);
+      } else {
+	throw std::runtime_error("Call: function not found!");
       }
-
-      auto* value = b->Call(builder.fn_name_.c_str(), args.size(), args.data());
-      pushReturnValue(builder, b, value);
-      // stack_->Push(this, value);
-
-      // Don't pass the pc since a trap in a called function should not update the thread's pc
-      //MARK: also, omit the argument for a pc, since, y'know, this is an AOT builder..
-      //EmitCheckTrap(b, b->Load("result"));//, nullptr);
-
+	
       break;
     }
 
@@ -1805,7 +1805,16 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
 //      break;
 
     case Opcode::InterpAlloca: {
-      throw std::runtime_error("AOTFunctionBuilder: interpreted alloca not supported");
+      // no interpreter, but... still have to increment program counter,
+      // still have to push values to the stack.
+      auto count = ReadU32(&pc);
+
+      for(Index i = 0; i < count; ++i) {
+	Push(b, "i64", b->ConstInt64(0));
+      }
+      
+      break;
+      
       /*
       auto pInt32 = typeDictionary()->PointerTo(Int32);
       auto* stack_top_addr = b->ConstAddress(&thread_->value_stack_top_);
@@ -1829,8 +1838,9 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
       set_zero->              IndexAt(pValueType_, stack_base_addr,
       set_zero->                      Load("i")),
       set_zero->              ConstInt64(0));
-      */
+
       break;
+      */
     }
 
     case Opcode::InterpBrUnless: {
