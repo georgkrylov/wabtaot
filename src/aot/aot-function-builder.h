@@ -180,7 +180,8 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
   
   TR::IlType* returnType_;
   
-  std::vector<std::string> param_names;
+  std::vector<std::string> param_names_;
+  std::vector<TR::IlType*> param_types_;
   
   bool Emit(TR::BytecodeBuilder* b, const uint8_t* istream, const uint8_t* pc);
 };

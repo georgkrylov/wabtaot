@@ -187,8 +187,12 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFu
     char param[6]; // ie, "p6" is the sixth parameter.
     sprintf(param, "p%d", arg++);
 
-    param_names.push_back(param);
-    DefineParameter(param_names.back().data(), TypeFieldType(t));
+    param_names_.push_back(param);
+    TR::IlType* tt = TypeFieldType(t);
+    
+    DefineParameter(param_names_.back().data(), tt);
+    
+    param_types_.push_back(tt);
   }
 
   DefineReturnType(returnType_);
@@ -209,19 +213,14 @@ void AOTFunctionBuilder::defineFunction(const std::string& name, interp::Defined
 {
   if(fn == fn_) return;
 
-  std::vector<TR::IlType*> types;
-
-  for(auto t: env_.GetFuncSignature(fn->sig_index)->param_types) {
-    types.push_back(TypeFieldType(t));
-  }
-
   TR::IlType* result_type = fn == fn_ ? returnType_ : functionReturnType(fn);
-
+  auto& builder_fn = aotManager_.getFB(fn->offset);
+  
   DefineFunction(name.c_str(), __FILE__, "0",
 		 reinterpret_cast<void*>(18), // this is a magic number that makes trampoline lookup work.
 		 result_type,
-		 types.size(),
-		 static_cast<TR::IlType**>(types.data()));
+		 builder_fn.param_types_.size(),
+		 static_cast<TR::IlType**>(builder_fn.param_types_.data()));
 }
 
 bool AOTFunctionBuilder::buildIL() {
@@ -823,7 +822,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
 	  args.push_back(Pop(b, TypeFieldName(t)));
 	}
 
-	auto* value = b->Call(builder.fn_name_.c_str(), args.size(), args.data());
+ 	auto* value = b->Call(builder.fn_name_.c_str(), args.size(), args.data());
 	pushReturnValue(builder, b, value);
       } else {
 	throw std::runtime_error("Call: function not found!");

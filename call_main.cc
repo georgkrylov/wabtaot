@@ -9,6 +9,15 @@ extern "C" int func_0();
 extern "C" int func_1();
 extern "C" int64_t func_2();
 extern "C" int64_t func_3();
+extern "C" float func_4();
+extern "C" float func_5();
+extern "C" double func_6();
+extern "C" double func_7();
+extern "C" int func_8(int);
+extern "C" int func_9(int);
+extern "C" int64_t func_11(int64_t);
+extern "C" float func_13(float);
+extern "C" double func_15(double);
 /*
 extern "C" double func_0();
 extern "C" double func_1();
@@ -142,4 +151,22 @@ int main() {
   assert(func_1() == 3);
   assert(func_2() == 3L);
   assert(func_3() == 3L);
+  assert(func_4() == 3.0f);
+  assert(func_5() == 3.0f);
+  assert(func_6() == 3.0);
+  assert(func_7() == 3.0);
+  assert(func_8(35) == 35);
+  assert(func_8(-35) == -35);
+  assert(func_8(101231) == 101231);
+  assert(func_9(35) == 35);
+  assert(func_9(-35) == -35);
+  assert(func_9(101231) == 101231);
+  assert(func_11(35L) == 35L);
+  assert(func_11(2342L) == 2342L);
+  assert(func_11(0xFFFFFFFFFFFFFFFFL) ==
+	 0xFFFFFFFFFFFFFFFFL);
+  assert(func_13(-0.02f) == -0.02f);
+  assert(func_13(3.1415926f) == 3.1415926f);
+  assert(func_13(-3.1415926f) == -3.1415926f);
+  assert(func_15(-3.1415926f) == -3.1415926f);
 }

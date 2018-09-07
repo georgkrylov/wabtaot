@@ -9,8 +9,8 @@
     end
     i32.const 1)
 
-  (func (export "test_brif_always_true") (result i32)
-    call $brif_always_true)
+;;  (func (export "test_brif_always_true") (result i32)
+;;    call $brif_always_true)
 
   (func $brif_always_false (result i32)
     block $exit
@@ -21,8 +21,8 @@
     end
     i32.const 1)
 
-  (func (export "test_brif_always_false") (result i32)
-    call $brif_always_false)
+;;  (func (export "test_brif_always_false") (result i32)
+;;    call $brif_always_false)
 
   (func $brif_with_arg (param i32) (result i32)
     block $exit
@@ -33,13 +33,13 @@
     end
     i32.const 1)
 
-  (func (export "test_brif_with_arg_0") (result i32)
-    i32.const 0
-    call $brif_with_arg)
+;;  (func (export "test_brif_with_arg_0") (result i32)
+;;    i32.const 0
+;;    call $brif_with_arg)
 
-  (func (export "test_brif_with_arg_1") (result i32)
-    i32.const 1
-    call $brif_with_arg)
+;;  (func (export "test_brif_with_arg_1") (result i32)
+;;    i32.const 1
+;;    call $brif_with_arg)
 
   (func $if_always_true (result i32)
     i32.const 1
@@ -49,8 +49,8 @@
     end
     i32.const 0)
 
-  (func (export "test_if_always_true") (result i32)
-    call $if_always_true)
+;;  (func (export "test_if_always_true") (result i32)
+;;    call $if_always_true)
 
   (func $if_always_false (result i32)
     i32.const 0
@@ -60,8 +60,8 @@
     end
     i32.const 0)
 
-  (func (export "test_if_always_false") (result i32)
-    call $if_always_false)
+;;  (func (export "test_if_always_false") (result i32)
+;;    call $if_always_false)
 
   (func $if_with_arg (param i32) (result i32)
     get_local 0
@@ -71,13 +71,13 @@
     end
     i32.const 0)
 
-  (func (export "test_if_with_arg_0") (result i32)
-    i32.const 0
-    call $if_with_arg)
+;;  (func (export "test_if_with_arg_0") (result i32)
+;;    i32.const 0
+;;    call $if_with_arg)
 
-  (func (export "test_if_with_arg_1") (result i32)
-    i32.const 1
-    call $if_with_arg)
+;;  (func (export "test_if_with_arg_1") (result i32)
+;;    i32.const 1
+;;    call $if_with_arg)
 )
 (;; STDOUT ;;;
 test_brif_always_true() => i32:1
