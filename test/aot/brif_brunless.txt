@@ -24,6 +24,7 @@
 ;;  (func (export "test_brif_always_false") (result i32)
 ;;    call $brif_always_false)
 
+  ;; int func_2(int)
   (func $brif_with_arg (param i32) (result i32)
     block $exit
       get_local 0
@@ -36,7 +37,7 @@
 ;;  (func (export "test_brif_with_arg_0") (result i32)
 ;;    i32.const 0
 ;;    call $brif_with_arg)
-
+;;
 ;;  (func (export "test_brif_with_arg_1") (result i32)
 ;;    i32.const 1
 ;;    call $brif_with_arg)
@@ -74,7 +75,7 @@
 ;;  (func (export "test_if_with_arg_0") (result i32)
 ;;    i32.const 0
 ;;    call $if_with_arg)
-
+;;
 ;;  (func (export "test_if_with_arg_1") (result i32)
 ;;    i32.const 1
 ;;    call $if_with_arg)

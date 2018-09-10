@@ -17,9 +17,9 @@ Coverage in terms of op codes, I mean.
 * TODO Unreachable: No. EmitTrap needs implementing. 
 * DONE I32Const, I64Const, F32Const, F64Const: yep, we understand all these already.
 * TODO GetGlobal, SetGlobal: Not implemented yet!
-* TODO (sort of) GetLocal: sort of. We ConvertTo rather than LoadIndirect now.
-* TODO SetLocal: sort of. Changed it to use StoreOver. Test this!
-* TODO TeeLocal: again, StoreOver. Test.
+* DONE GetLocal.
+* DONE SetLocal. 
+* DONE TeeLocal.
 * DONE Call: Yep, we've been using it. I think.
 * TODO CallIndirect: nothing!
 * TODO InterpCallHost: I don't know the exact semantics involved, but it seems we're doing the right thing here.
