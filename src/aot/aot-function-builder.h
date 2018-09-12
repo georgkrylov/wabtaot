@@ -34,7 +34,7 @@ namespace aot {
 using namespace wabt::interp;
   
 class AOTManager;
-  
+ 
 class AOTFunctionBuilder : public TR::MethodBuilder {
  public:
   AOTFunctionBuilder(interp::Thread*, interp::DefinedFunc*, std::string&&,
@@ -182,6 +182,19 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
   
   std::vector<std::string> param_names_;
   std::vector<TR::IlType*> param_types_;
+
+  struct PreviousCompilerState {
+    TR::BytecodeBuilder* b;
+    TR::VirtualMachineOperandStack* stack;
+    const uint8_t* pc;
+    uint32_t stack_count;
+
+    PreviousCompilerState(TR::BytecodeBuilder* b, TR::VirtualMachineOperandStack* stack,
+			  const uint8_t* pc, uint32_t stack_count)
+     : b(b), stack(stack), pc(pc), stack_count(stack_count) {}
+  };
+
+  std::vector<PreviousCompilerState> stackOfStacks_;
   
   bool Emit(TR::BytecodeBuilder* b, const uint8_t* istream, const uint8_t* pc);
 };

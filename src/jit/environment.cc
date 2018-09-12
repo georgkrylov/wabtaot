@@ -26,7 +26,8 @@ JitEnvironment::JitEnvironment() {
   if (instance_count_ == 0)
      initializeJitWithOptions("-Xjit:acceptHugeMethods,enableBasicBlockHoisting,"
 			      "omitFramePointer,useILValidator,enableRelocatableELFGeneration,"
-			      "objectFile=call.o");
+			      "traceIlGen,traceFull,log=trtrace.log,"
+			      "objectFile=brif_brunless.o");
   ++instance_count_;
 }
 

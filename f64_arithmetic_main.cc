@@ -3,7 +3,6 @@
 #include <stdint.h>
 #include <math.h>
 
-
 extern "C" double f64_sqrt(double);
 
 extern "C" double func_0();

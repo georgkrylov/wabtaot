@@ -241,11 +241,28 @@ bool AOTFunctionBuilder::buildIL() {
 
   int32_t next_index;
 
-  while ((next_index = GetNextBytecodeFromWorklist()) != -1) {
-    auto& work_item = workItems_[next_index];
+  for(;;) {
+    if ((next_index = GetNextBytecodeFromWorklist()) != -1) {
+      auto& work_item = workItems_[next_index];
 
-    if (!Emit(work_item.builder, istream, work_item.pc))
-      return false;
+      if (!Emit(work_item.builder, istream, work_item.pc))
+	return false;
+    } else if(!stackOfStacks_.empty()) {
+      auto prev_state = stackOfStacks_.back();
+      stackOfStacks_.pop_back();
+
+      int32_t next_index = static_cast<int32_t>(workItems_.size());
+      
+      workItems_.emplace_back(OrphanBytecodeBuilder(next_index,
+						    const_cast<char*>(ReadOpcodeAt(prev_state.pc).GetName())),
+			      prev_state.pc);
+      
+      prev_state.b->AddFallThroughBuilder(workItems_[next_index].builder);
+      stack_ = prev_state.stack;
+      stackCount_ = prev_state.stack_count;
+    } else {
+      break;
+    }
   }
 
   return true;
@@ -301,19 +318,17 @@ TR::IlValue* AOTFunctionBuilder::Pop(TR::IlBuilder* b, const char* type) {
  */
 void AOTFunctionBuilder::DropKeep(TR::IlBuilder* b, uint32_t drop_count, uint8_t keep_count) {
   TR_ASSERT(keep_count <= 1, "Invalid keep count");
-
+  TR_ASSERT(stackCount_ >= drop_count + keep_count, "Invalid drop count");  
+  
   if(keep_count == 1) {
-    if(drop_count > 0 && stackCount_ >= drop_count - 1) {
       auto* top = stack_->Pop(b);
-      stack_->Drop(b, drop_count - 1);
-      stack_->Push(b, top);
-
-      stackCount_ -= drop_count - 1;
-    }
-  } else if(stackCount_ >= drop_count) {
+      stack_->Drop(b, drop_count);
+      stack_->Push(b, top);            
+  } else {
     stack_->Drop(b, drop_count);
-    stackCount_ -= drop_count;
   }
+
+  stackCount_ -= drop_count;
 }
 
 /**
@@ -476,7 +491,7 @@ void AOTFunctionBuilder::EmitIntRemainder(TR::IlBuilder* b) {//, const uint8_t* 
     return return_value;
   });
 }
-  /*
+/*
 template <typename T>
 TR::IlValue* AOTFunctionBuilder::EmitMemoryPreAccess(TR::IlBuilder* b) { //, const uint8_t** pc) {
   throw std::runtime_error("AOTFunctionBuilder: EmitMemoryPreAccess not supported!");
@@ -484,11 +499,6 @@ TR::IlValue* AOTFunctionBuilder::EmitMemoryPreAccess(TR::IlBuilder* b) { //, con
   auto th_addr = b->ConstAddress(thread_);
   auto mem_id = b->ConstInt32(ReadU32(pc));
   auto offset = b->ConstInt64(static_cast<uint64_t>(ReadU32(pc)));
-
-  // TODO: I don't know how to handle memories. Maybe throw an exception?
-  // Or figure out how to heap allocate in JitBuilder and do it later. But
-  // for now.. probably throw an exception. More complexity than I'd like to
-  // deal with right now.
 
   auto address = b->Call("MemoryTranslationHelper",
                          4,
@@ -505,6 +515,7 @@ TR::IlValue* AOTFunctionBuilder::EmitMemoryPreAccess(TR::IlBuilder* b) { //, con
   return address;
 }
 */
+
 void AOTFunctionBuilder::returnWithError(TR::IlBuilder* b) {
   const auto& return_types = env_.GetFuncSignature(fn_->sig_index)->result_types;
 
@@ -748,7 +759,8 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
 
     case Opcode::GetGlobal: {
       throw std::runtime_error("AOTFunctionBuilder: get_global not supported");
-      /* interp::Global* g = thread_->env()->GetGlobal(ReadU32(&pc));
+      /*
+      interp::Global* g = thread_->env()->GetGlobal(ReadU32(&pc));
 
       // The type of value stored in a global will never change, so we're safe
       // to use the current type of the global.
@@ -762,13 +774,12 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
         // With immutable globals, we can just substitute their actual value as
         // a constant at compile-time.
         Push(b, type_field, Const(b, &g->typed_value));//, pc);
-      }*/
-
+      }
+      */
       break;
     }
 
     case Opcode::SetGlobal: {
-      //TODO: add support for this
       throw std::runtime_error("AOTFunctionBuilder: set_global not supported");
       /*
       interp::Global* g = thread_->env()->GetGlobal(ReadU32(&pc));
@@ -780,7 +791,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
       // TODO(thomasbc): Can the address of a Global change at runtime?
       auto* addr = b->Const(&g->typed_value.value);
 
-      b->StoreIndirect("Value", type_field, addr, Pop(b, type_field));
+      b->StoreIndirect("Value", type_field, addr, Pop(b, type_field));      
       */
       break;
     }
@@ -1859,7 +1870,11 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
                                 target);
         b->IfCmpEqualZero(&workItems_[next_index].builder, condition);
       }
-      break;
+      
+      TR::VirtualMachineOperandStack* prev_stack = new TR::VirtualMachineOperandStack(stack_);
+      stackOfStacks_.emplace_back(b, prev_stack, pc, stackCount_);
+      
+      return true;
     }
 
     case Opcode::Drop:
@@ -1883,7 +1898,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
   int32_t next_index = static_cast<int32_t>(workItems_.size());
 
   workItems_.emplace_back(OrphanBytecodeBuilder(next_index,
-                                                const_cast<char*>(ReadOpcodeAt(pc).GetName())),
+						const_cast<char*>(ReadOpcodeAt(pc).GetName())),
                           pc);
   b->AddFallThroughBuilder(workItems_[next_index].builder);
 
