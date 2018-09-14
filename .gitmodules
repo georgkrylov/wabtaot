@@ -9,4 +9,4 @@
 	url = https://github.com/dabeaz/ply
 [submodule "third_party/omr"]
 	path = third_party/omr
-	url = https://bitbucket.org/mthom/omr
+	url = https://bitbucket.org/wasmjitomraot/omr
