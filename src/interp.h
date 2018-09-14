@@ -372,6 +372,7 @@ class Environment {
   void SetIstream(std::unique_ptr<OutputBuffer> istream) {
     istream_ = std::move(istream);
   }
+  
   std::unique_ptr<OutputBuffer> ReleaseIstream() { return std::move(istream_); }
 
   Index GetFuncSignatureCount() const { return sigs_.size(); }

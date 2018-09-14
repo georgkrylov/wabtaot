@@ -284,7 +284,7 @@ void FunctionBuilder::Push(TR::IlBuilder* b, const char* type, TR::IlValue* valu
                  stack_top,
   b->            Const(static_cast<int32_t>(thread_->value_stack_.size()))),
   b->        Const(static_cast<Result_t>(interp::Result::TrapValueStackExhausted)),
-             pc);
+	     pc);
 
   b->StoreIndirect("Value", type,
   b->              IndexAt(pValueType_,

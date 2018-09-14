@@ -146,6 +146,8 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
   template <typename ToType, typename FromType>
   void EmitUnsignedTruncation(TR::IlBuilder* b);
 
+  TR::IlValue* accessMemory(TR::IlBuilder* b, const uint8_t*);
+  
   template <typename>
   TR::IlValue* CalculateShiftAmount(TR::IlBuilder* b, TR::IlValue* amount);
 
@@ -174,6 +176,7 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
   
   TR::IlType* const valueType_;
   TR::IlType* const pValueType_;
+  TR::IlType* const ppValueType_;
 
   TR::VirtualMachineOperandStack* stack_;
   uint32_t stackCount_ = 0;
@@ -201,8 +204,6 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
   
 class AOTManager {
  public:
-  AOTManager(std::size_t n) {}
-  
   void push_back_FB(uint32_t offset, std::unique_ptr<AOTFunctionBuilder>&& b,
 		    std::unique_ptr<AOTTypeDictionary>&& t)
   {
@@ -221,7 +222,8 @@ class AOTManager {
     for(auto& builder_kv: func_index_) {
       for(auto& inner_kv: func_index_) {
 	auto& builder_fn = builder_kv.second.first;
-	inner_kv.second.first->defineFunction(builder_fn->getName(), builder_fn->getFn());
+	inner_kv.second.first->defineFunction(builder_fn->getName(),
+					      builder_fn->getFn());
       }
     }
   }

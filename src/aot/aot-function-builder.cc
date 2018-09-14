@@ -145,14 +145,13 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFu
     env_(env),
     aotManager_(aotManager),
     valueType_(Int64),
-    pValueType_(types_->PointerTo(Int64))
+    pValueType_(types_->PointerTo(Int64)),
+    ppValueType_(types_->PointerTo(pValueType_))
 {
   DefineLine(__LINE__);
   DefineFile(__FILE__);
   DefineName(fn_name_.c_str());
-
-  returnType_ = functionReturnType(fn_);
-
+  
   DefineFunction("f32_sqrt", __FILE__, "0",
                  reinterpret_cast<void*>(static_cast<float (*)(float)>(std::sqrt)),
                  Float,
@@ -180,9 +179,26 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFu
 		 NoType,
 		 1,
 		 Int32);
-  
-  int arg = 0;
 
+  returnType_ = functionReturnType(fn_);
+  
+  auto memories_size = env_.GetMemoryCount();  
+  auto param_count = env_.GetFuncSignature(fn_->sig_index)->param_types.size();
+  
+  if(memories_size > 0) {
+    // reserve to prevent a reallocation if the vector grows, and its
+    // data area is too small, causing the data within to be relocated
+    // (relocations are not made known to the MethodBuilder)
+    param_names_.reserve(param_count + 1);
+    param_names_.push_back(std::string("memories"));
+    
+    DefineParameter(param_names_.back().data(), ppValueType_);
+  } else {
+    param_names_.reserve(param_count);
+  }
+
+  int arg = 0;
+  
   for(const auto& t: env_.GetFuncSignature(fn_->sig_index)->param_types) {
     char param[6]; // ie, "p6" is the sixth parameter.
     sprintf(param, "p%d", arg++);
@@ -190,8 +206,7 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFu
     param_names_.push_back(param);
     TR::IlType* tt = TypeFieldType(t);
     
-    DefineParameter(param_names_.back().data(), tt);
-    
+    DefineParameter(param_names_.back().data(), tt);    
     param_types_.push_back(tt);
   }
 
@@ -491,6 +506,18 @@ void AOTFunctionBuilder::EmitIntRemainder(TR::IlBuilder* b) {//, const uint8_t* 
     return return_value;
   });
 }
+
+TR::IlValue* AOTFunctionBuilder::accessMemory(TR::IlBuilder* b, const uint8_t* pc)
+{
+  auto mem_id = b->ConstInt32(ReadU32(&pc));
+  auto offset = b->ConstInt64(static_cast<uint64_t>(ReadU32(&pc)));
+  auto memory = b->IndexAt(ppValueType_, Load("memories"), mem_id);
+
+  auto address = b->Add(b->UnsignedConvertTo(Int64, Pop(b, "i32")), offset);
+  
+  return b->IndexAt(pValueType_, LoadAt(ppValueType_, memory), address);
+}
+
 /*
 template <typename T>
 TR::IlValue* AOTFunctionBuilder::EmitMemoryPreAccess(TR::IlBuilder* b) { //, const uint8_t** pc) {
@@ -829,6 +856,10 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
 	
 	std::vector<TR::IlValue*> args;	
 
+	if(env_.GetMemoryCount() > 0) {
+	  args.push_back(b->Load("memories"));
+	}
+	
 	for(const auto& t: env_.GetFuncSignature(builder.fn_->sig_index)->param_types) {
 	  args.push_back(Pop(b, TypeFieldName(t)));
 	}
@@ -1013,13 +1044,9 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
     }
 
     case Opcode::I32Load: {
-      throw std::runtime_error("linear memory access not supported");
-      /*
-      auto* addr = EmitMemoryPreAccess<int32_t>(b, &pc);
-      Push(b,
-           "i32",
-      b->  LoadAt(typeDictionary()->PointerTo(Int32), addr));
-      */
+      auto* addr = accessMemory(b, pc); // comes out as i64.
+      Push(b, "i64", b->LoadAt(pValueType_, addr));
+      
       break;
     }
 

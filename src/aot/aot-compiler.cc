@@ -57,10 +57,11 @@ wabt::Result compileAOT(interp::Environment& env, DefinedModule* module)
 {
   using namespace wabt::aot;
 
-  auto func_count = env.GetFuncCount();
-
   interp::Thread thread(&env);
-  AOTManager aotManager(func_count);
+  
+  auto func_count = env.GetFuncCount();
+  
+  AOTManager aotManager;
 
   for(Index i = 0; i < func_count; ++i) {
     if(auto* fn = cast<wabt::interp::DefinedFunc>(env.GetFunc(i))) {
