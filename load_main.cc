@@ -2,28 +2,38 @@
 #include <stdint.h>
 #include <stdio.h>
 
+union double_to_int64 {    
+  int64_t i;
+  double d;
+  
+  double_to_int64(float f) {
+    d = f;
+  }
+
+  double_to_int64(double d_) {
+    d = d_;
+  }
+};
+
+int64_t convertToInt(float f) {
+  double_to_int64 u(f);
+  return u.i;
+}
+
+int64_t convertToInt(double d) {
+  double_to_int64 u(d);
+  return u.i;
+}
+
 extern "C" int func_0(int64_t**, int);
 extern "C" int func_1(int64_t**, int);
 extern "C" int64_t func_2(int64_t**, int);
 extern "C" int64_t func_3(int64_t**, int);
 extern "C" float func_4(int64_t**, int);
 extern "C" float func_5(int64_t**, int);
+extern "C" double func_6(int64_t **, int);
+extern "C" double func_7(int64_t **, int);
 
-union float_to_int64 {    
-  int64_t i;
-  struct { float f; int32_t _padding; } inner;
-
-  float_to_int64() {
-    i = 0;
-  }
-};
-
-int64_t convertToInt(float f) {
-  float_to_int64 u;
-  u.inner.f = f;
-  return u.i;
-}
-  
 int main()
 {
   int64_t inner_A1[] = { 1L };
@@ -34,8 +44,21 @@ int main()
   int64_t inner_F9[] = { convertToInt(1.0f),
 			 convertToInt(2.2f),
 			 convertToInt(3.2f),
-			 convertToInt(3.1415926f) };
+			 convertToInt(3.1415926f),
+			 convertToInt(-3.0f),
+			 convertToInt(-1101.1f) };
   int64_t* F9[] = { inner_F9 };
+
+  int64_t inner_D9[] = { convertToInt(1.0),
+			 convertToInt(2.2),
+			 convertToInt(3.2),
+			 convertToInt(3.1415926),
+			 convertToInt(-3.0),
+			 convertToInt(-1101.1),
+			 convertToInt(0.0),
+			 convertToInt(0.0),
+			 convertToInt(-1.12) };
+  int64_t* D9[] = { inner_D9 };
   
   assert(func_0(A1, 0) == 1);
   
@@ -66,7 +89,23 @@ int main()
   assert(func_2(A9, 8) == 9L);
 
   assert(func_3(A9, 0) == 9L);
+  
+  assert(func_4(F9, 0) == 1.0f);
+  assert(func_4(F9, 1) == 2.2f);
+  assert(func_4(F9, 2) == 3.2f);
+  assert(func_4(F9, 3) == 3.1415926f);
+  assert(func_4(F9, 4) == -3.0f);
+  assert(func_4(F9, 5) == -1101.1f);
 
-  printf("func_4(F9, 0) = %f", func_4(F9, 0));
-  //assert(func_4(F9, 0) == 1.0f);
+  assert(func_5(F9, 0) == -3.0f);
+  assert(func_5(F9, 1) == -1101.1f);
+
+  assert(func_6(D9, 0) == 1.0);
+  assert(func_6(D9, 1) == 2.2);
+  assert(func_6(D9, 2) == 3.2);
+  assert(func_6(D9, 3) == 3.1415926);
+  assert(func_6(D9, 4) == -3.0);
+  assert(func_6(D9, 5) == -1101.1);
+  
+  assert(func_7(D9, 0) == -1.12);
 }

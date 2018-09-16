@@ -34,61 +34,6 @@
   (func $f64_load_off (param i32) (result f64)
     get_local 0
     f64.load offset=8)
-;;
-;;  (func (export "test_f64_load_1") (result f64)
-;;    i32.const 0
-;;    f64.const -4.5
-;;    f64.store
-;;    i32.const 0
-;;    call $f64_load)
-;;
-;;  (func (export "test_f64_load_2") (result f64)
-;;    i32.const 0xfff8
-;;    f64.const -4.5
-;;    f64.store
-;;    i32.const 0xfff8
-;;    call $f64_load)
-;;
-;;  (func (export "test_f64_load_3") (result f64)
-;;    i32.const 8
-;;    f64.const 4.5
-;;    f64.store
-;;    i32.const 0
-;;    call $f64_load_off)
-;;
-;;  (func (export "test_f64_load_4") (result f64)
-;;    i32.const 0xfff8
-;;    f64.const 4.5
-;;    f64.store
-;;    i32.const 0xfff0
-;;    call $f64_load_off)
-;;
-;;  (func (export "test_f64_load_5") (result f64)
-;;    i32.const 3
-;;    f64.const -inf
-;;    f64.store
-;;    i32.const 3
-;;    call $f64_load)
-;;
-;;  (func (export "test_f64_load_6") (result f64)
-;;    i32.const 0x10000
-;;    call $f64_load)
-;;
-;;  (func (export "test_f64_load_7") (result f64)
-;;    i32.const 0xfff9
-;;    call $f64_load)
-;;
-;;  (func (export "test_f64_load_8") (result f64)
-;;    i32.const 0xfff1
-;;    call $f64_load_off)
-;;
-;;  (func (export "test_f64_load_9") (result f64)
-;;    i32.const 0xffffffff
-;;    call $f64_load)
-;;
-;;  (func (export "test_f64_load_10") (result f64)
-;;    i32.const 0xffffffff
-;;    call $f64_load_off)
 )
 (;; STDOUT ;;;
 test_i32_load_1() => i32:4278255360
@@ -296,3 +241,58 @@ test_f64_load_10() => error: out of bounds memory access
 ;;  (func (export "test_f32_load_10") (result f32)
 ;;    i32.const 0xffffffff
 ;;    call $f32_load_off)
+
+;;  (func (export "test_f64_load_1") (result f64)
+;;    i32.const 0
+;;    f64.const -4.5
+;;    f64.store
+;;    i32.const 0
+;;    call $f64_load)
+;;
+;;  (func (export "test_f64_load_2") (result f64)
+;;    i32.const 0xfff8
+;;    f64.const -4.5
+;;    f64.store
+;;    i32.const 0xfff8
+;;    call $f64_load)
+;;
+;;  (func (export "test_f64_load_3") (result f64)
+;;    i32.const 8
+;;    f64.const 4.5
+;;    f64.store
+;;    i32.const 0
+;;    call $f64_load_off)
+;;
+;;  (func (export "test_f64_load_4") (result f64)
+;;    i32.const 0xfff8
+;;    f64.const 4.5
+;;    f64.store
+;;    i32.const 0xfff0
+;;    call $f64_load_off)
+;;
+;;  (func (export "test_f64_load_5") (result f64)
+;;    i32.const 3
+;;    f64.const -inf
+;;    f64.store
+;;    i32.const 3
+;;    call $f64_load)
+;;
+;;  (func (export "test_f64_load_6") (result f64)
+;;    i32.const 0x10000
+;;    call $f64_load)
+;;
+;;  (func (export "test_f64_load_7") (result f64)
+;;    i32.const 0xfff9
+;;    call $f64_load)
+;;
+;;  (func (export "test_f64_load_8") (result f64)
+;;    i32.const 0xfff1
+;;    call $f64_load_off)
+;;
+;;  (func (export "test_f64_load_9") (result f64)
+;;    i32.const 0xffffffff
+;;    call $f64_load)
+;;
+;;  (func (export "test_f64_load_10") (result f64)
+;;    i32.const 0xffffffff
+;;    call $f64_load_off)
