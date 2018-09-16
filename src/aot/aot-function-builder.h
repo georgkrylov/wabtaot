@@ -146,7 +146,7 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
   template <typename ToType, typename FromType>
   void EmitUnsignedTruncation(TR::IlBuilder* b);
 
-  TR::IlValue* accessMemory(TR::IlBuilder* b, const uint8_t*);
+  TR::IlValue* readMemory(TR::IlBuilder* b, const uint8_t**);
   
   template <typename>
   TR::IlValue* CalculateShiftAmount(TR::IlBuilder* b, TR::IlValue* amount);

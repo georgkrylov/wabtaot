@@ -151,7 +151,7 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFu
   DefineLine(__LINE__);
   DefineFile(__FILE__);
   DefineName(fn_name_.c_str());
-  
+
   DefineFunction("f32_sqrt", __FILE__, "0",
                  reinterpret_cast<void*>(static_cast<float (*)(float)>(std::sqrt)),
                  Float,
@@ -181,32 +181,32 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFu
 		 Int32);
 
   returnType_ = functionReturnType(fn_);
-  
-  auto memories_size = env_.GetMemoryCount();  
+
+  auto memories_size = env_.GetMemoryCount();
   auto param_count = env_.GetFuncSignature(fn_->sig_index)->param_types.size();
-  
+
   if(memories_size > 0) {
     // reserve to prevent a reallocation if the vector grows, and its
     // data area is too small, causing the data within to be relocated
     // (relocations are not made known to the MethodBuilder)
     param_names_.reserve(param_count + 1);
     param_names_.push_back(std::string("memories"));
-    
+
     DefineParameter(param_names_.back().data(), ppValueType_);
   } else {
     param_names_.reserve(param_count);
   }
 
   int arg = 0;
-  
+
   for(const auto& t: env_.GetFuncSignature(fn_->sig_index)->param_types) {
     char param[6]; // ie, "p6" is the sixth parameter.
     sprintf(param, "p%d", arg++);
 
     param_names_.push_back(param);
     TR::IlType* tt = TypeFieldType(t);
-    
-    DefineParameter(param_names_.back().data(), tt);    
+
+    DefineParameter(param_names_.back().data(), tt);
     param_types_.push_back(tt);
   }
 
@@ -230,7 +230,7 @@ void AOTFunctionBuilder::defineFunction(const std::string& name, interp::Defined
 
   TR::IlType* result_type = fn == fn_ ? returnType_ : functionReturnType(fn);
   auto& builder_fn = aotManager_.getFB(fn->offset);
-  
+
   DefineFunction(name.c_str(), __FILE__, "0",
 		 reinterpret_cast<void*>(18), // this is a magic number that makes trampoline lookup work.
 		 result_type,
@@ -267,11 +267,11 @@ bool AOTFunctionBuilder::buildIL() {
       stackOfStacks_.pop_back();
 
       int32_t next_index = static_cast<int32_t>(workItems_.size());
-      
+
       workItems_.emplace_back(OrphanBytecodeBuilder(next_index,
 						    const_cast<char*>(ReadOpcodeAt(prev_state.pc).GetName())),
 			      prev_state.pc);
-      
+
       prev_state.b->AddFallThroughBuilder(workItems_[next_index].builder);
       stack_ = prev_state.stack;
       stackCount_ = prev_state.stack_count;
@@ -333,12 +333,12 @@ TR::IlValue* AOTFunctionBuilder::Pop(TR::IlBuilder* b, const char* type) {
  */
 void AOTFunctionBuilder::DropKeep(TR::IlBuilder* b, uint32_t drop_count, uint8_t keep_count) {
   TR_ASSERT(keep_count <= 1, "Invalid keep count");
-  TR_ASSERT(stackCount_ >= drop_count + keep_count, "Invalid drop count");  
-  
+  TR_ASSERT(stackCount_ >= drop_count + keep_count, "Invalid drop count");
+
   if(keep_count == 1) {
       auto* top = stack_->Pop(b);
       stack_->Drop(b, drop_count);
-      stack_->Push(b, top);            
+      stack_->Push(b, top);
   } else {
     stack_->Drop(b, drop_count);
   }
@@ -507,15 +507,15 @@ void AOTFunctionBuilder::EmitIntRemainder(TR::IlBuilder* b) {//, const uint8_t* 
   });
 }
 
-TR::IlValue* AOTFunctionBuilder::accessMemory(TR::IlBuilder* b, const uint8_t* pc)
+TR::IlValue* AOTFunctionBuilder::readMemory(TR::IlBuilder* b, const uint8_t** pc)
 {
-  auto mem_id = b->ConstInt32(ReadU32(&pc));
-  auto offset = b->ConstInt64(static_cast<uint64_t>(ReadU32(&pc)));
-  auto memory = b->IndexAt(ppValueType_, Load("memories"), mem_id);
-
-  auto address = b->Add(b->UnsignedConvertTo(Int64, Pop(b, "i32")), offset);
+  auto mem_id = b->ConstInt64(static_cast<uint64_t>(ReadU32(pc)));
+  auto memory = b->IndexAt(ppValueType_, b->Load("memories"), mem_id);
+  auto offset = b->ConstInt64(static_cast<uint64_t>(ReadU32(pc)));  
   
-  return b->IndexAt(pValueType_, LoadAt(ppValueType_, memory), address);
+  auto address = b->Add(Pop(b, "i64"), offset);
+
+  return b->IndexAt(pValueType_, b->LoadAt(ppValueType_, memory), address);
 }
 
 /*
@@ -561,7 +561,7 @@ void AOTFunctionBuilder::returnWithError(TR::IlBuilder* b) {
     case Type::F64:
       return b->Return(b->ConstDouble(-1.0));
     default:
-      throw std::runtime_error("invalid WASM return type!");      
+      throw std::runtime_error("invalid WASM return type!");
     }
   }
 }
@@ -679,10 +679,10 @@ void AOTFunctionBuilder::EmitUnsignedTruncation(TR::IlBuilder* b) { // , const u
 // return a struct of type (fn_name_ + "_return_type").
 TR::IlValue* AOTFunctionBuilder::popReturnValue(TR::IlBuilder* b) {
   const auto& result_types = env_.GetFuncSignature(fn_->sig_index)->result_types;
-  
+
   if(result_types.empty())
     return nullptr;
-  else {    
+  else {
     return Pop(b, TypeFieldName(result_types.front()));
   }
 }
@@ -694,7 +694,7 @@ void AOTFunctionBuilder::pushReturnValue(AOTFunctionBuilder& builder, TR::IlBuil
 
   if(result_types.empty())
     return;
-  else {    
+  else {
     Push(b, TypeFieldName(result_types.front()), returnValue);
   }
 }
@@ -818,7 +818,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
       // TODO(thomasbc): Can the address of a Global change at runtime?
       auto* addr = b->Const(&g->typed_value.value);
 
-      b->StoreIndirect("Value", type_field, addr, Pop(b, type_field));      
+      b->StoreIndirect("Value", type_field, addr, Pop(b, type_field));
       */
       break;
     }
@@ -845,7 +845,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
       b->StoreOver(local_addr, Pick(1));
       break;
     }
-      
+
     case Opcode::Call: {
       auto offset = ReadU32(&pc);
       auto meta_it = env_.jit_meta_.find(offset);
@@ -853,13 +853,13 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
       if(meta_it != env_.jit_meta_.end()) {
 	auto* fn = meta_it->second.wasm_fn;
 	auto& builder = aotManager_.getFB(fn->offset);
-	
-	std::vector<TR::IlValue*> args;	
+
+	std::vector<TR::IlValue*> args;
 
 	if(env_.GetMemoryCount() > 0) {
 	  args.push_back(b->Load("memories"));
 	}
-	
+
 	for(const auto& t: env_.GetFuncSignature(builder.fn_->sig_index)->param_types) {
 	  args.push_back(Pop(b, TypeFieldName(t)));
 	}
@@ -869,7 +869,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
       } else {
 	throw std::runtime_error("Call: function not found!");
       }
-	
+
       break;
     }
 
@@ -1044,45 +1044,30 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
     }
 
     case Opcode::I32Load: {
-      auto* addr = accessMemory(b, pc); // comes out as i64.
+      auto* addr = readMemory(b, &pc); // comes out as i64.
       Push(b, "i64", b->LoadAt(pValueType_, addr));
-      
+
       break;
     }
 
     case Opcode::I64Load: {
-      throw std::runtime_error("linear memory access not supported");
-            /*
-      auto* addr = EmitMemoryPreAccess<int64_t>(b, &pc);
+      auto* addr = readMemory(b, &pc); // comes out as i64.
+      Push(b, "i64", b->LoadAt(pValueType_, addr));
 
-      Push(b,
-           "i64",
-      b->  LoadAt(typeDictionary()->PointerTo(Int64), addr));
-	   //           pc);
-      */
       break;
     }
 
     case Opcode::F32Load: {
-      throw std::runtime_error("linear memory access not supported");
-      /*
-      auto* addr = EmitMemoryPreAccess<float>(b, &pc);
-      Push(b,
-           "f32",
-      b->  LoadAt(typeDictionary()->PointerTo(Float), addr));
-      */
+      auto* addr = readMemory(b, &pc); // comes out as i64.
+      Push(b, "i64", b->LoadAt(pValueType_, addr));
+
       break;
     }
 
     case Opcode::F64Load: {
-      throw std::runtime_error("linear memory access not supported");
-      /*
-      auto* addr = EmitMemoryPreAccess<double>(b, &pc);
-      Push(b,
-           "f64",
-      b->  LoadAt(typeDictionary()->PointerTo(Double), addr),
-           pc);
-      */
+      auto* addr = readMemory(b, &pc); // comes out as i64.
+      Push(b, "i64", b->LoadAt(pValueType_, addr));
+
       break;
     }
 
@@ -1849,9 +1834,9 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
       for(Index i = 0; i < count; ++i) {
 	Push(b, "i64", b->ConstInt64(0));
       }
-      
+
       break;
-      
+
       /*
       auto pInt32 = typeDictionary()->PointerTo(Int32);
       auto* stack_top_addr = b->ConstAddress(&thread_->value_stack_top_);
@@ -1897,10 +1882,10 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
                                 target);
         b->IfCmpEqualZero(&workItems_[next_index].builder, condition);
       }
-      
+
       TR::VirtualMachineOperandStack* prev_stack = new TR::VirtualMachineOperandStack(stack_);
       stackOfStacks_.emplace_back(b, prev_stack, pc, stackCount_);
-      
+
       return true;
     }
 
