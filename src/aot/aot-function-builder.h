@@ -85,7 +85,8 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
    * from `Thread::Pick()` and users must take this into account.
    */
   TR::IlValue* Pick(Index depth);
-
+  uint32_t pickLocalOffset();
+  
   void defineFunction(const std::string&, interp::DefinedFunc*);
 
   interp::DefinedFunc* getFn() {
@@ -180,6 +181,7 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
 
   TR::VirtualMachineOperandStack* stack_;
   uint32_t stackCount_ = 0;
+  uint32_t localsCount_ = 0;
   
   TR::IlType* returnType_;
   

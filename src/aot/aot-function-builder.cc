@@ -190,7 +190,7 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFu
     // data area is too small, causing the data within to be relocated
     // (relocations are not made known to the MethodBuilder)
     param_names_.reserve(param_count + 1);
-    param_names_.push_back(std::string("memories"));
+    param_names_.push_back("memories");
 
     DefineParameter(param_names_.back().data(), ppValueType_);
   } else {
@@ -511,8 +511,8 @@ TR::IlValue* AOTFunctionBuilder::readMemory(TR::IlBuilder* b, const uint8_t** pc
 {
   auto mem_id = b->ConstInt64(static_cast<uint64_t>(ReadU32(pc)));
   auto memory = b->IndexAt(ppValueType_, b->Load("memories"), mem_id);
-  auto offset = b->ConstInt64(static_cast<uint64_t>(ReadU32(pc)));  
-  
+  auto offset = b->ConstInt64(static_cast<uint64_t>(ReadU32(pc)));
+
   auto address = b->Add(Pop(b, "i64"), offset);
 
   return b->IndexAt(pValueType_, b->LoadAt(ppValueType_, memory), address);
@@ -828,6 +828,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
       // just copy a field that's the size of the entire union
       auto* local_addr = Pick(ReadU32(&pc));
       Push(b, "i64", local_addr); //b->LoadIndirect("Value", "i64", local_addr));
+      
       break;
     }
 
@@ -1043,27 +1044,9 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
       break;
     }
 
-    case Opcode::I32Load: {
-      auto* addr = readMemory(b, &pc); // comes out as i64.
-      Push(b, "i64", b->LoadAt(pValueType_, addr));
-
-      break;
-    }
-
-    case Opcode::I64Load: {
-      auto* addr = readMemory(b, &pc); // comes out as i64.
-      Push(b, "i64", b->LoadAt(pValueType_, addr));
-
-      break;
-    }
-
-    case Opcode::F32Load: {
-      auto* addr = readMemory(b, &pc); // comes out as i64.
-      Push(b, "i64", b->LoadAt(pValueType_, addr));
-
-      break;
-    }
-
+    case Opcode::I32Load:
+    case Opcode::I64Load:
+    case Opcode::F32Load:
     case Opcode::F64Load: {
       auto* addr = readMemory(b, &pc); // comes out as i64.
       Push(b, "i64", b->LoadAt(pValueType_, addr));
@@ -1116,39 +1099,12 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
       break;
     }
 
-    case Opcode::I32Store: {
-      throw std::runtime_error("linear memory access not supported");
-      /*
-      auto value = Pop(b, "i32");
-      b->StoreAt(EmitMemoryPreAccess<int32_t>(b, &pc), value);
-      */
-      break;
-    }
-
-    case Opcode::I64Store: {
-      throw std::runtime_error("linear memory access not supported");
-      /*
-      auto value = Pop(b, "i64");
-      b->StoreAt(EmitMemoryPreAccess<int64_t>(b, &pc), value);
-      */
-      break;
-    }
-
-    case Opcode::F32Store: {
-      throw std::runtime_error("linear memory access not supported");
-      /*
-      auto value = Pop(b, "f32");
-      b->StoreAt(EmitMemoryPreAccess<float>(b, &pc), value);
-      */
-      break;
-    }
-
+    case Opcode::I32Store:
+    case Opcode::I64Store:
+    case Opcode::F32Store:
     case Opcode::F64Store: {
-      throw std::runtime_error("linear memory access not supported");
-      /*
-      auto value = Pop(b, "f64");
-      b->StoreAt(EmitMemoryPreAccess<double>(b, &pc), value);
-      */
+      auto* value = Pop(b, "i64");
+      b->StoreAt(readMemory(b, &pc), value);
       break;
     }
 
@@ -1827,12 +1783,11 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
 //      break;
 
     case Opcode::InterpAlloca: {
-      // no interpreter, but... still have to increment program counter,
-      // still have to push values to the stack.
       auto count = ReadU32(&pc);
 
       for(Index i = 0; i < count; ++i) {
 	Push(b, "i64", b->ConstInt64(0));
+	localsCount_++;
       }
 
       break;
