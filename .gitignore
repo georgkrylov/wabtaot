@@ -4,3 +4,4 @@
 /emscripten
 *.pyc
 *.user
+/compiledUnits
