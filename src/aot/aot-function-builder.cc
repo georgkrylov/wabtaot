@@ -214,14 +214,20 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFu
 }
 
 void AOTFunctionBuilder::pushParams() {
-  int arg = 0;
+  int arg = env_.GetMemoryCount() > 0;
+  
+  for(const auto& t: env_.GetFuncSignature(fn_->sig_index)->param_types) {
+    Push(this, TypeFieldName(t), Load(param_names_[arg++].data()));
+  }
 
+  /*
   for(const auto& t: env_.GetFuncSignature(fn_->sig_index)->param_types) {
     char param[6]; // ie, "p6" is the sixth parameter.
     sprintf(param, "p%d", arg++);
 
     Push(this, TypeFieldName(t), Load(param));
   }
+  */
 }
 
 void AOTFunctionBuilder::defineFunction(const std::string& name, interp::DefinedFunc* fn)
