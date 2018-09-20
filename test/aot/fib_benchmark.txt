@@ -1,0 +1,37 @@
+(module
+ (memory 1)
+
+ (func $fib_rec (param i32) (local i32)
+   i32.const 0
+   i64.const 0
+   i64.store
+   i32.const 1
+   i64.const 1
+   i64.store
+   i32.const 2
+   set_local 1
+   block $exit
+   loop $loop
+     get_local 1           ;; <2>
+     get_local 0           ;; <2, p0>
+     get_local 1           ;; <2, p0, 2>
+     i32.eq
+     br_if $exit           ;; <2>
+     get_local 1           ;; <2, 2>
+     i32.const 1           ;; <2, 2, 1>              ;; compute N-1, load FIB (N-1)     
+     i32.sub               ;; <2, 1>
+     i64.load              ;; <2, 1>
+     get_local 1           ;; <2, 1, 2>
+     i32.const 2           ;; <2, 1, 2, 2>           ;; compute N-2, load FIB (N-2)     
+     i32.sub               ;; <2, 1, 0>
+     i64.load              ;; <2, 1, 0>
+     i64.add               ;; <2, 1>              ;; compute N, FIB (N)
+     i64.store             ;; <>
+     get_local 1           ;; <2>
+     i32.const 1           ;; <2, 1>
+     i32.add               ;; <3>
+     set_local 1           ;; <>
+     br $loop
+   end
+   end)
+ )
