@@ -222,14 +222,20 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFu
 }
 
 void AOTFunctionBuilder::pushParams() {
-  int arg = 0;
+  int arg = env_.GetMemoryCount() > 0;
+  
+  for(const auto& t: env_.GetFuncSignature(fn_->sig_index)->param_types) {
+    Push(this, TypeFieldName(t), Load(param_names_[arg++].data()));
+  }
 
+  /*
   for(const auto& t: env_.GetFuncSignature(fn_->sig_index)->param_types) {
     char param[6]; // ie, "p6" is the sixth parameter.
     sprintf(param, "p%d", arg++);
 
     Push(this, TypeFieldName(t), Load(param));
   }
+  */
 }
 
 void AOTFunctionBuilder::defineFunction(const std::string& name, interp::DefinedFunc* fn)
@@ -515,7 +521,7 @@ void AOTFunctionBuilder::EmitIntRemainder(TR::IlBuilder* b) {//, const uint8_t* 
   });
 }
 
-TR::IlValue* AOTFunctionBuilder::readMemory(TR::IlBuilder* b, const uint8_t** pc)
+TR::IlValue* AOTFunctionBuilder::calculateMemoryIndex(TR::IlBuilder* b, const uint8_t** pc)
 {
   auto mem_id = b->ConstInt64(static_cast<uint64_t>(ReadU32(pc)));
   auto memory = b->IndexAt(ppValueType_, b->Load("memories"), mem_id);
@@ -1067,7 +1073,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
     case Opcode::I64Load:
     case Opcode::F32Load:
     case Opcode::F64Load: {
-      auto* addr = readMemory(b, &pc); // comes out as i64.
+      auto* addr = calculateMemoryIndex(b, &pc); // comes out as i64.
       Push(b, "i64", b->LoadAt(pValueType_, addr));
 
       break;
@@ -1123,7 +1129,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
     case Opcode::F32Store:
     case Opcode::F64Store: {
       auto* value = Pop(b, "i64");
-      b->StoreAt(readMemory(b, &pc), value);
+      b->StoreAt(calculateMemoryIndex(b, &pc), value);
       break;
     }
 

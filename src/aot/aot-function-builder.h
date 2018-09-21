@@ -149,6 +149,7 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
 
   TR::IlValue* readMemory(TR::IlBuilder* b, const uint8_t**);
   TR::IlValue* readGlobal(TR::IlBuilder* b, const uint8_t**);
+  TR::IlValue* calculateMemoryIndex(TR::IlBuilder* b, const uint8_t**);
   
   template <typename>
   TR::IlValue* CalculateShiftAmount(TR::IlBuilder* b, TR::IlValue* amount);
