@@ -183,6 +183,7 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFu
   returnType_ = functionReturnType(fn_);
 
   auto memories_size = env_.GetMemoryCount();
+  auto globals_size = env_.GetGlobalCount();
   auto param_count = env_.GetFuncSignature(fn_->sig_index)->param_types.size();
 
   if(memories_size > 0) {
@@ -193,7 +194,14 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFu
     param_names_.push_back("memories");
 
     DefineParameter(param_names_.back().data(), ppValueType_);
-  } else {
+  }
+  if(globals_size>0) {
+    param_names_.reserve(param_count +1);
+    param_names_.push_back("globals");
+
+    DefineParameter(param_names_.back().data(), ppValueType_);
+  }
+  if(globals_size<=0 && memories_size<=0) {
     param_names_.reserve(param_count);
   }
 
@@ -518,6 +526,14 @@ TR::IlValue* AOTFunctionBuilder::readMemory(TR::IlBuilder* b, const uint8_t** pc
   return b->IndexAt(pValueType_, b->LoadAt(ppValueType_, memory), address);
 }
 
+TR::IlValue* AOTFunctionBuilder::readGlobal(TR::IlBuilder* b, const uint8_t** pc)
+{
+  auto glob_id = b->ConstInt64(static_cast<uint64_t>(ReadU32(pc)));
+  auto global = b->IndexAt(ppValueType_, b->Load("globals"), glob_id);
+
+  return b->IndexAt(pValueType_, b->LoadAt(ppValueType_, global), b->ConstInt64(0));
+}
+
 /*
 template <typename T>
 TR::IlValue* AOTFunctionBuilder::EmitMemoryPreAccess(TR::IlBuilder* b) { //, const uint8_t** pc) {
@@ -785,7 +801,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
     }
 
     case Opcode::GetGlobal: {
-      throw std::runtime_error("AOTFunctionBuilder: get_global not supported");
+      //throw std::runtime_error("AOTFunctionBuilder: get_global not supported");
       /*
       interp::Global* g = thread_->env()->GetGlobal(ReadU32(&pc));
 
@@ -803,6 +819,9 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
         Push(b, type_field, Const(b, &g->typed_value));//, pc);
       }
       */
+      auto* addr = readGlobal(b, &pc); // comes out as i64.
+      Push(b, "i64", b->LoadAt(pValueType_, addr));
+
       break;
     }
 
