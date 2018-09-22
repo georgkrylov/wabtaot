@@ -27,7 +27,7 @@ JitEnvironment::JitEnvironment() {
      initializeJitWithOptions("-Xjit:acceptHugeMethods,enableBasicBlockHoisting,"
 			      "omitFramePointer,useILValidator,enableRelocatableELFGeneration,"
 			      "traceIlGen,traceFull,log=trtrace.log,"
-			      "objectFile=store.o");
+			      "objectFile=tempmod.o");
   ++instance_count_;
 }
 
