@@ -842,7 +842,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
     case Opcode::SetGlobal: {
       auto* address = calculateGlobalIndex(b, &pc); 
       //TODO FIX ONLY TYPE, SHOULD BE MORE TYPES
-      auto* value = Pop(b, "i32");
+      auto* value = Pop(b, "i64");
   	  b->StoreAt(address, value);
       /*
       interp::Global* g = thread_->env()->GetGlobal(ReadU32(&pc));
