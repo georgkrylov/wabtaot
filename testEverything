@@ -1,0 +1,16 @@
+#!/bin/bash
+FILES=$(ls|grep main.cc)
+PREFIX="./test/aot/"
+TESTRESULTSFOLDER="./compiledUnits/testResults"
+if [ ! -d $TESTRESULTSFOLDER ]; then
+	mkdir $TESTRESULTSFOLDER
+fi
+for  testFile in $FILES
+do
+	wabtFileName="${testFile%_main*}"
+	wabtFile=$PREFIX$wabtFileName.txt
+	errFileName=$TESTRESULTSFOLDER/$wabtFileName.err
+	if [ -f $wabtFile ]; then
+		compileRecent $wabtFile &> $errFileName
+	fi
+done

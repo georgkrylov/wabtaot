@@ -1,0 +1,61 @@
+#!/bin/bash
+if [ "$#" -lt 1 ]; then
+	echo "Please provide file name to compile as first argument to the script "
+	echo "or type ./compile.sh -help for available options"
+	exit
+elif [ "$1" = "-help" ]; then
+	echo "Script is supposed to create a folder called compiledUnits and put properly named compiled wasm and object files there"
+	echo "The first time you launch the script it will change object name for jit to neutral tempobj and recompile related files"
+	echo "Usage:"
+	echo "Please provide file name to compile as first argument to the script "
+	echo "Requirements"
+	echo "Script requires to be placed in the root of wasmjit directory"
+	echo "It requires _main.c file to be placed in the wasmjit root directory as well"
+ 
+	exit
+elif [ "$#" -ne 1 ] ; then
+	echo "type -help to learn available options"
+	exit
+fi
+l="$1"
+name="${l##*/}"
+name2="${name%.*}"
+if [ ! -d "./compiledUnits" ]; then
+mkdir ./compiledUnits
+fi
+wDir=$(pwd)/compiledUnits
+mFile=$wDir/$name2.wasm
+oFile=$wDir/$name2.o
+#compile to webassembly
+if [ -f $mFile ]; then
+rm $oFile
+fi
+
+./bin/wat2wasm $1 -o $mFile
+
+#check if the objectFile name matches the universal placeholder
+grep 'objectFile=tempmod.o' ./src/jit/environment.cc > tempOcCountFile.txt
+#if not, then change and recompile
+if [ ! -s tempOcCountFile.txt ]; then
+sed -i 's/objectFile=.*"/objectFile=tempmod.o"/' ./src/jit/environment.cc
+make gcc-debug
+fi
+#remove temporary file
+rm tempOcCountFile.txt
+
+if [ -f $oFile ]; then
+rm ./compiledUnits/$oFile
+fi
+
+#compile to object file and move to compiled units folder
+./out/gcc/Debug/src/aot/wabtaot $mFile
+
+mv tempmod.o $oFile
+#link object file, c file and trap object file and move them to compiled units folder
+sFile="${name2}_main.cc"
+
+
+g++ -g $oFile ./out/gcc/Debug/src/aot/CMakeFiles/wabtaot.dir/trap-with.cc.o \
+ $sFile -o $name2
+mv $name2 ./compiledUnits/$name2
+./compiledUnits/$name2
