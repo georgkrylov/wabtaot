@@ -19,6 +19,7 @@
 
 #include "src/common.h"
 #include "src/interp.h"
+#include "ilgen/MethodBuilder.hpp"
 
 namespace wabt {
 namespace jit {
@@ -27,6 +28,11 @@ using JITedFunction = interp::Result (*)();
 
 wabt::Result compileAOT(interp::Thread*, interp::Environment&);
 JITedFunction compile(interp::Thread* thread, interp::DefinedFunc*);
+TR::IlType* TypeFieldType(const char* t);
+TR::IlType* TypeFieldType(Type t);
+TR::IlType* functionReturnType(interp::DefinedFunc* fn,interp::Environment& env);
+JITedFunction loadCompiled(interp::Thread* thread, interp::DefinedFunc* fn,
+			   interp::Environment& env);
 
 }
 }

@@ -19,6 +19,9 @@
 #include "wabtjit.h"
 #include "type-dictionary.h"
 #include "function-builder.h"
+#include "ilgen/ThunkBuilder.hpp"
+#include "ilgen/MethodBuilder.hpp"
+#include "infra/Assert.hpp"
 
 #include "Jit.hpp"
 
@@ -29,12 +32,76 @@ JITedFunction compile(interp::Thread* thread, interp::DefinedFunc* fn) {
   TypeDictionary types;
   FunctionBuilder builder(thread, fn, &types);
   uint8_t* function = nullptr;
-
+  
   if (compileMethodBuilder(&builder, &function) == 0) {
     return reinterpret_cast<JITedFunction>(function);
   } else {
     return nullptr;
   }
+}
+
+JITedFunction loadCompiled(interp::Thread* thread, interp::DefinedFunc* fn,
+			   interp::Environment& env) {
+  TypeDictionary types;
+  unsigned int numCalleeParams = env.GetFuncSignature(fn->sig_index)->param_types.size();
+  TR::IlType** tv = new TR::IlType*[numCalleeParams];
+  for(int i=0;i<numCalleeParams;i++) {
+    tv[i] = TypeFieldType(env.GetFuncSignature(fn->sig_index)->param_types[i]);
+  }
+  TR::ThunkBuilder builder(&types,fn->dbg_name_.c_str(),functionReturnType(fn,env),
+		       numCalleeParams,tv);
+		       
+  uint8_t* function = nullptr;
+  
+  if (compileMethodBuilder(&builder, &function) == 0) {
+    return reinterpret_cast<JITedFunction>(function);
+  } else {
+    return nullptr;
+  }
+}
+
+TR::IlType* functionReturnType(interp::DefinedFunc* fn,interp::Environment& env)
+{
+    const auto& result_types = env.GetFuncSignature(fn->sig_index)->result_types;
+
+    if(result_types.empty()) {
+      return 0;
+    } else {
+      return TypeFieldType(result_types.front());
+    }
+}
+
+TR::IlType* TypeFieldType(Type t) {
+  TypeDictionary types_;
+  switch (t) {
+    case Type::I32:
+      return types_.toIlType<int32_t>();
+    case Type::I64:
+      return types_.toIlType<int64_t>();
+    case Type::F32:
+      return types_.toIlType<float>();
+    case Type::F64:
+      return types_.toIlType<double>();
+    default:
+      TR_ASSERT_FATAL(false, "Invalid primitive type");
+      return nullptr;
+  }
+}
+
+TR::IlType* TypeFieldType(const char* t) {
+  TypeDictionary types_;
+  if(strcmp(t, "i32") == 0) {
+      return types_.toIlType<int32_t>();
+  } else if(strcmp(t, "i64") == 0) {
+      return types_.toIlType<int64_t>();
+  } else if(strcmp(t, "f32") == 0) {
+      return types_.toIlType<float>();
+  } else if(strcmp(t, "f64") == 0) {
+      return types_.toIlType<double>();
+  }
+
+  TR_ASSERT_FATAL(false, "Invalid primitive type");
+  return nullptr;
 }
 
 }

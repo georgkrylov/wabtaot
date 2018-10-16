@@ -50,6 +50,7 @@ static Stream* s_trace_stream;
 static bool s_run_all_exports;
 static bool s_host_print;
 static bool s_disable_jit;
+static bool s_load_from_dlib;
 static bool s_trap_on_failed_comp;
 static bool s_no_stack_trace;
 static uint32_t s_jit_threshold = 1;
@@ -116,6 +117,9 @@ static void ParseOptions(int argc, char** argv) {
   parser.AddOption("disable-jit",
                    "Prevent just in time compilation",
                    []() { s_disable_jit = true; });
+  parser.AddOption("load-from-dlib",
+		   "Use dynamic library containing precompiled functions",
+		   []() { s_load_from_dlib = true; });
   parser.AddOption("trap-on-failed-comp",
                    "Trap if a JIT compilation fails",
                    []() { s_trap_on_failed_comp = true; });
@@ -253,6 +257,10 @@ static void InitEnvironment(Environment* env) {
   }
   if (s_trap_on_failed_comp) {
     env->trap_on_failed_comp = true;
+  }
+  if (s_load_from_dlib) {
+    env->enable_load_from_dlib = true;
+    env->LoadDLib("tempmod.so");
   }
 
   env->jit_threshold = s_jit_threshold;

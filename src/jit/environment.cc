@@ -34,7 +34,7 @@ JitEnvironment::JitEnvironment() {
 JitEnvironment::~JitEnvironment() {
   --instance_count_;
   if (instance_count_ == 0)
-      shutdownJit();
+      shutdownJit(offsets);
 }
 
 }

@@ -18,6 +18,8 @@
 #define WABT_INTERP_H_
 
 #include <stdint.h>
+#include <elf.h>
+#include <stdio.h>
 
 #include <functional>
 #include <memory>
@@ -29,6 +31,7 @@
 #include "src/common.h"
 #include "src/opcode.h"
 #include "src/stream.h"
+#include "ilgen/ThunkBuilder.hpp"
 
 namespace wabt {
 
@@ -41,6 +44,74 @@ class AOTFunctionBuilder;
 }
 
 namespace interp {
+  
+class ELFLoader
+{
+public:
+  ELFLoader(char *elfFileName);
+
+  ~ELFLoader();
+  void *getTextSection();
+  Elf64_Sym *getSymbolTable();
+  unsigned int *getCustomSection();
+  void printHeader();
+  void printSymbolTable();
+  
+protected:
+  typedef Elf64_Ehdr ELFEHeader;
+  typedef Elf64_Shdr ELFSectionHeader;
+  typedef Elf64_Phdr ELFProgramHeader;
+  typedef Elf64_Addr ELFAddress;
+  typedef Elf64_Sym  ELFSymbol;
+  typedef Elf64_Rela ELFRela;
+  typedef Elf64_Off  ELFOffset;
+#define ELF_ST_INFO(bind, type) ELF64_ST_INFO(bind,type)
+#define ELF_ST_VISIBILITY(visibility) ELF64_ST_VISIBILITY(visibility)
+#define ELF_R_INFO(bind, type) ELF64_R_INFO(bind, type)
+#define ELFClass ELFCLASS64;
+#define BIT(x,n) (((x)>>(n))&1)
+
+  char       *_elfFileName;
+  FILE       *_elfFile;
+  ELFEHeader *_header;
+  
+  ELFSectionHeader *_zeroSection;
+  char              _zeroSectionName[1];
+  ELFSectionHeader *_textSection;
+  char              _textSectionName[6];
+  ELFSectionHeader *_relaSection;
+  char              _relaSectionName[11];
+  ELFSectionHeader *_dynSymSection;
+  char              _dynSymSectionName[8];
+  ELFSectionHeader *_shStrTabSection;
+  char              _shStrTabSectionName[10];
+  ELFSectionHeader *_dynStrSection;
+  char              _dynStrSectionName[8];
+  ELFSectionHeader *_customSection;
+  char              _customSectionName[8];
+
+  void *_text;
+  Elf64_Sym *_symtab;
+  char *_dynstr;
+  Elf64_Rela *_rela;
+  unsigned int *_custom;
+
+  void initialize();
+  void loadTextSection();
+  void loadSymTab();
+  void loadDynStr();
+  void loadRela();
+  void loadCustom();
+  char *typeString(ELFSectionHeader *);
+  char *flagString(ELFSectionHeader *);
+  char *symTypeString(Elf64_Sym);
+  char *symBindString(Elf64_Sym);
+  char *symVisString(Elf64_Sym);
+  char *symNdxString(Elf64_Sym);
+  char *symNameString(Elf64_Sym);
+  
+}; //class ELFLoader
+
 
 #define FOREACH_INTERP_RESULT(V)                                            \
   V(Ok, "ok")                                                               \
@@ -364,9 +435,12 @@ class Environment {
 
   bool enable_jit = true;
   bool trap_on_failed_comp = false;
+  bool enable_load_from_dlib = false;
   uint32_t jit_threshold = 1;
+  TR::ThunkBuilder *thbu;
 
   Environment();
+  ~Environment();
 
   OutputBuffer& istream() { return *istream_; }
   void SetIstream(std::unique_ptr<OutputBuffer> istream) {
@@ -475,6 +549,7 @@ class Environment {
 
   void Disassemble(Stream* stream, IstreamOffset from, IstreamOffset to);
   void DisassembleModule(Stream* stream, Module*);
+  void LoadDLib(char *filename);
 
  private:
   friend class Thread;
@@ -489,7 +564,12 @@ class Environment {
     bool tried_jit = false;
     JITedFunction jit_fn = nullptr;
 
-    JitMeta(DefinedFunc* wasm_fn) : wasm_fn(wasm_fn) {}
+    JitMeta(DefinedFunc* wasm_fn) : wasm_fn(wasm_fn) {
+      wasm_fn->dbg_name_= "func_" + std::to_string(numOfFunction);
+      numOfFunction++;
+    }
+    private:
+    static int numOfFunction;
   };
 
   bool TryJit(Thread* t, IstreamOffset offset, JITedFunction* fn);
@@ -506,6 +586,7 @@ class Environment {
 
   jit::JitEnvironment jit_env_;
   std::unordered_map<IstreamOffset, JitMeta> jit_meta_;
+  ELFLoader *elfLoader;
 };
 
 class Thread {

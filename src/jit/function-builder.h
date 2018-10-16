@@ -21,6 +21,7 @@
 #include "ilgen/BytecodeBuilder.hpp"
 #include "ilgen/MethodBuilder.hpp"
 #include "ilgen/VirtualMachineOperandStack.hpp"
+#include "ilgen/ThunkBuilder.hpp"
 
 #include "src/interp.h"
 
@@ -139,6 +140,14 @@ class FunctionBuilder : public TR::MethodBuilder {
   bool Emit(TR::BytecodeBuilder* b, const uint8_t* istream, const uint8_t* pc);
 };
 
+class FunctionThunkBuilder : public TR::ThunkBuilder {
+  public:
+  FunctionThunkBuilder(TR::TypeDictionary *types, const char *name, 
+			  TR::IlType *returnType,uint32_t numCalleeParams, 
+			  TR::IlType **calleeParamTypes) : TR::ThunkBuilder(types, name, returnType, numCalleeParams, calleeParamTypes)
+            { }
+  virtual bool buildIL();
+};
 }
 }
 

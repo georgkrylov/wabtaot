@@ -24,6 +24,7 @@
 #include <cmath>
 #include <limits>
 #include <type_traits>
+#include <dlfcn.h>
 
 namespace wabt {
 
@@ -1737,6 +1738,13 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
   b->AddFallThroughBuilder(workItems_[next_index].builder);
 
   return true;
+}
+
+bool FunctionThunkBuilder::buildIL() {
+  /*void *handle = dlopen("/hdd/wasmjit-omr/tempmod.so",RTLD_LAZY);
+  const void *funct = dlsym(handle,"func_2");
+  Store("target",ConstAddress(funct));*/
+  return ThunkBuilder::buildIL();
 }
 
 }
