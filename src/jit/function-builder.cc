@@ -1741,9 +1741,9 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
 }
 
 bool FunctionThunkBuilder::buildIL() {
-  /*void *handle = dlopen("/hdd/wasmjit-omr/tempmod.so",RTLD_LAZY);
-  const void *funct = dlsym(handle,"func_2");
-  Store("target",ConstAddress(funct));*/
+  void *handle = dlopen("/hdd/wasmjit-omr/tempmod1.so",RTLD_LAZY);
+  const void *funct = dlsym(handle,fn_name.c_str());
+  Store("target",ConstAddress(funct));
   return ThunkBuilder::buildIL();
 }
 

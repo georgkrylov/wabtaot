@@ -48,7 +48,7 @@ JITedFunction loadCompiled(interp::Thread* thread, interp::DefinedFunc* fn,
   for(int i=0;i<numCalleeParams;i++) {
     tv[i] = TypeFieldType(env.GetFuncSignature(fn->sig_index)->param_types[i]);
   }
-  TR::ThunkBuilder builder(&types,fn->dbg_name_.c_str(),functionReturnType(fn,env),
+  FunctionThunkBuilder builder(&types,fn->dbg_name_.c_str(),functionReturnType(fn,env),
 		       numCalleeParams,tv);
 		       
   uint8_t* function = nullptr;

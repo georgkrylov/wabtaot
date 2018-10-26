@@ -1230,7 +1230,6 @@ bool Environment::TryJit(Thread* t, IstreamOffset offset, Environment::JITedFunc
         return false;
       }
     }
-
     *fn = meta->jit_fn;
     return trap_on_failed_comp || *fn;
   } else {
@@ -1409,7 +1408,12 @@ Result Thread::Run(int num_instructions) {
           CHECK_TRAP(PushCall(pc));
 
           if(env_->enable_load_from_dlib) {
-	    jit_fn();
+	    /*uint64_t (*func)(Value *,uint32_t *) = reinterpret_cast<uint64_t(*)(Value *,uint32_t *)>(jit_fn);
+	    auto result = func(value_stack_.data(),&value_stack_top_);
+	    Push<uint64_t>(result);*/
+	    void(*func)(Value *,uint32_t *) = reinterpret_cast<void(*)(Value *,uint32_t *)>(jit_fn);
+	    func(value_stack_.data(),&value_stack_top_);
+	    //jit_fn();
 	  } else {
 	    auto result = jit_fn();
 	    if (result != Result::Ok) {

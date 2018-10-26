@@ -26,6 +26,16 @@ namespace aot {
 class AOTTypeDictionary : public wabt::jit::TypeDictionary {
  public:
   AOTTypeDictionary();
+  
+  TR::IlType *stackElementPtr;
+  //TR::IlType *instruction;
+  //TR::IlType *instructionPtr;
+
+  //TR::IlType *operandStack;
+  //TR::IlType *operandStackPtr;
+  //TR::IlType *executionContext;
+  //TR::IlType *executionContextPtr;
+  TR::IlType *stackTop;
 };
 
 }
