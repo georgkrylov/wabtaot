@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TYPEDICTIONARY_HPP
-#define TYPEDICTIONARY_HPP
+#ifndef TYPEDICTIONARY1_HPP
+#define TYPEDICTIONARY1_HPP
 
 #include "ilgen/TypeDictionary.hpp"
 
@@ -31,4 +31,4 @@ class TypeDictionary : public TR::TypeDictionary {
 }
 }
 
-#endif // TYPEDICTIONARY_HPP
+#endif // TYPEDICTIONARY1_HPP

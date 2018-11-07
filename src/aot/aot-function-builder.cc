@@ -188,7 +188,7 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFu
   auto memories_size = env_.GetMemoryCount();
   auto globals_size = env_.GetGlobalCount();
   auto param_count = env_.GetFuncSignature(fn_->sig_index)->param_types.size();
-  int total_size = param_count+2; //2 is added for stackPointer and stack top
+  int total_size = param_count+1; //2 is added for stackPointer and stack top
 
   if (memories_size > 0)
   		total_size++;
@@ -197,10 +197,15 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFu
   param_names_.reserve(total_size);
 
   param_names_.push_back("stack");
-  DefineParameter(param_names_.back().data(), types->stackElementPtr);
+  DefineParameter(param_names_.back().data(), types->operandStackPtr);
 
-  param_names_.push_back("stackTop");
-  DefineParameter(param_names_.back().data(), types->stackTop);
+  //DefineLocal("stackTop",types->stackElementPtr);
+
+ //param_names_.push_back("stack");
+  //DefineParameter(param_names_.back().data(), types->stackElementPtr);
+
+  //param_names_.push_back("stackTop");
+ // DefineParameter(param_names_.back().data(), types->stackElementPtr);
 
   if(memories_size > 0) {
     // reserve to prevent a reallocation if the vector grows, and its
@@ -216,7 +221,7 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFu
 
   int arg = 0;
 
-  for(const auto& t: env_.GetFuncSignature(fn_->sig_index)->param_types) {
+  /*for(const auto& t: env_.GetFuncSignature(fn_->sig_index)->param_types) {
     char param[6]; // ie, "p6" is the sixth parameter.
     sprintf(param, "p%d", arg++);
 
@@ -225,7 +230,7 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFu
 
     DefineParameter(param_names_.back().data(), tt);
     param_types_.push_back(tt);
-  }
+    }*/
 
   DefineReturnType(returnType_);
 }
@@ -234,7 +239,7 @@ void AOTFunctionBuilder::pushParams() {
   
   auto memories_size = env_.GetMemoryCount();
   auto globals_size = env_.GetGlobalCount();
-  int arg = 2;
+  int arg = 1;
   if (memories_size > 0)
   		arg++;
   if (globals_size > 0)
@@ -269,14 +274,20 @@ void AOTFunctionBuilder::defineFunction(const std::string& name, interp::Defined
 }
 
 bool AOTFunctionBuilder::buildIL() {
-  setVMState(new State(this,*types_));
+  TR::IlValue *stackTop = 
+    StructFieldInstanceAddress("AOTOperandStack","top_",Load("stack"));
+  Store("stackTop",stackTop);
+  setVMState(new AState(this,*types_));
+
+  TR::IlValue *stackBase = IndexAt(types_->stackElementPtr,stackTop,
+				   ConstInt32(-env_.GetFuncSignature(fn_->sig_index)->param_types.size()));
+  Store("stackBase",stackBase);
 
   // expects a non-NULL Compilation object to exist, so must be
   // constructed here, at compile time
-  stack_ = Load("stack");
-  stackCount_ = Load("stackTop");
 
-  pushParams();
+  //pushParams();
+  
 
   const uint8_t* istream = thread_->GetIstream();
 
@@ -329,12 +340,13 @@ void AOTFunctionBuilder::Push(TR::IlBuilder* b, const char* type,
   //TODO: should probably compare to valueType_ here, if that's
   //possible. I'm not sure if a simple pointer comparison will
   //work. IlTypes* for primitives might not be singleton values.
-  auto* value_wrapper = strcmp(type, "i64") ? b->BitcastTo(valueType_, value) : value;
+  //auto* value_wrapper = strcmp(type, "i64") ? b->BitcastTo(valueType_, value) : value;
+  auto* value_wrapper = value;
   //b->StoreOver(stackCount_,b->Add(stackCount_,b->Const(1))); because of Pop
  // auto nextElement = b->IndexAt(types_->stackElement,stack_,stackCount);
  // b->StoreAt(nextElement,value_wrapper);
  // stack_->Push(b, value_wrapper);
-  dynamic_cast<State *>(b->vmState())->pushValue(b,value_wrapper);
+  dynamic_cast<AState *>(b->vmState())->pushValue(b,value_wrapper);
 }
 
 /**
@@ -349,9 +361,10 @@ void AOTFunctionBuilder::Push(TR::IlBuilder* b, const char* type,
 TR::IlValue* AOTFunctionBuilder::Pop(TR::IlBuilder* b, const char* type) {
   //auto* value = stack_->Pop(b);
   //stackCount_--;
-  auto *value = dynamic_cast<State *>(b->vmState())->popValue(b);
+  auto *value = dynamic_cast<AState *>(b->vmState())->popValue(b);
   //b->StoreOver(stackCount_,b->Sub(stackCount_,b->Const(1))); triggers badilop segfault after a while for some reason
   return strcmp("i64", type) ? b->BitcastTo(TypeFieldType(type), value) : value;
+  return value;
 }
 
 /**
@@ -391,7 +404,13 @@ void AOTFunctionBuilder::DropKeep(TR::IlBuilder* b, uint32_t drop_count, uint8_t
  * return &value_stack_[value_stack_top_ - depth];
  */
 TR::IlValue* AOTFunctionBuilder::Pick(Index depth) {
-  return dynamic_cast<State *>(vmState())->pickValue(depth);
+  //return dynamic_cast<State *>(vmState())->pickValue(depth);
+  //TR::IlValue *args = b->Load("stackBase");
+  //TR::IlValue *address = b->IndexAt(types_->stackElementPtr,args,b->ConstInt32(depth));  
+  TR::IlValue *stackBase = IndexAt(types_->stackElementPtr,Load("stackTop"),
+				   ConstInt32(-env_.GetFuncSignature(fn_->sig_index)->param_types.size()));
+  TR::IlValue *result = LoadAt(types_->stackElementPtr,stackBase);
+  return result;
 }
 
 template <>
@@ -489,8 +508,8 @@ TR::IlValue* AOTFunctionBuilder::Const(TR::IlBuilder* b, const interp::TypedValu
 
 template <typename T, typename TResult, typename TOpHandler>
 void AOTFunctionBuilder::EmitBinaryOp(TR::IlBuilder* b, TOpHandler h) {
-  auto* rhs = Pop(b, TypeFieldName<T>());
-  auto* lhs = Pop(b, TypeFieldName<T>());
+  auto* rhs = Pop(b,TypeFieldName<T>());
+  auto* lhs = Pop(b,TypeFieldName<T>());
 
   Push(b, TypeFieldName<TResult>(), h(lhs, rhs)); //, pc);
 }
@@ -790,10 +809,10 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
     // transformed into a BrUnless. So, there's no need to handle it.
 
     case Opcode::Return: {
-      //auto* value = popReturnValue(b); // of type fn_name + "_return_type"
+      auto* value = popReturnValue(b); // of type fn_name + "_return_type"
       //auto* value = Pop(b, TypeFieldName(result_type.front()));
-      auto value = nullptr;
-      b->vmState()->Commit(b);
+      //auto value = nullptr;
+      //b->vmState()->Commit(b);
       if(value == nullptr) {
 	b->Return();	
       } else {

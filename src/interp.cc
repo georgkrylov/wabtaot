@@ -31,6 +31,7 @@
 #include "src/cast.h"
 #include "src/stream.h"
 #include "ilgen/IlBuilder.hpp"
+#include "aot/aot-state.h"
 #include <dlfcn.h>
 
 #include "src/jit/wabtjit.h"
@@ -1408,12 +1409,18 @@ Result Thread::Run(int num_instructions) {
           CHECK_TRAP(PushCall(pc));
 
           if(env_->enable_load_from_dlib) {
-	    /*uint64_t (*func)(Value *,uint32_t *) = reinterpret_cast<uint64_t(*)(Value *,uint32_t *)>(jit_fn);
-	    auto result = func(value_stack_.data(),&value_stack_top_);
-	    Push<uint64_t>(result);*/
-	    void(*func)(Value *,uint32_t *) = reinterpret_cast<void(*)(Value *,uint32_t *)>(jit_fn);
-	    func(value_stack_.data(),&value_stack_top_);
+	    //uint64_t (*func)(aot::OperandStack) = reinterpret_cast<uint64_t(*)(aot::OperandStack)>(jit_fn);
+	    //auto point = &value_stack_top_;
+	    aot::OperandStack os{value_stack_.data()+value_stack_top_,value_stack_.data()};
+	    void *handle = dlopen("/hdd/wasmjit-omr/tempmod1.so",RTLD_LAZY);
+	    const void *funct = dlsym(handle,"func_1");
+	    uint64_t (*func)(aot::OperandStack*,Value) = reinterpret_cast<uint64_t(*)(aot::OperandStack*,Value)>(funct);
+	    auto f = func(&os,value_stack_.data()[value_stack_top_-1]);
+	    //Push<uint32_t>(result);
+	    /* void(*func)(Value *,uint32_t *) = reinterpret_cast<void(*)(Value *,uint32_t *)>(jit_fn);
+	       func(value_stack_.data(),&value_stack_top_);*/
 	    //jit_fn();
+	    int a = 15;
 	  } else {
 	    auto result = jit_fn();
 	    if (result != Result::Ok) {

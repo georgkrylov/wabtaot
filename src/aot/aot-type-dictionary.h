@@ -31,11 +31,11 @@ class AOTTypeDictionary : public wabt::jit::TypeDictionary {
   //TR::IlType *instruction;
   //TR::IlType *instructionPtr;
 
-  //TR::IlType *operandStack;
-  //TR::IlType *operandStackPtr;
+  TR::IlType *operandStack;
+  TR::IlType *operandStackPtr;
   //TR::IlType *executionContext;
   //TR::IlType *executionContextPtr;
-  TR::IlType *stackTop;
+  //TR::IlType *stackTop;
 };
 
 }

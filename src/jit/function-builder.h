@@ -141,13 +141,35 @@ class FunctionBuilder : public TR::MethodBuilder {
   bool Emit(TR::BytecodeBuilder* b, const uint8_t* istream, const uint8_t* pc);
 };
 
-class FunctionThunkBuilder : public TR::ThunkBuilder {
+class Worker : public TR::MethodBuilder {
+public:
+  Worker(TypeDictionary *types):TR::MethodBuilder(dynamic_cast<TR::TypeDictionary*>(types)),types_(types){}
+  TR::ThunkBuilder createOMRTB(interp::DefinedFunc* fn,interp::Environment& env);
+  TR::IlType* TypeFieldType(const char* t);
+  TR::IlType* TypeFieldType(Type t);
+  TR::IlType* functionReturnType(interp::DefinedFunc* fn, interp::Environment& env);
+private:
+  TypeDictionary *types_;
+};
+
+class FTBHelper {
+public:
+  FTBHelper():wrk(new Worker(new TypeDictionary())){}
+  TR::ThunkBuilder tb(interp::DefinedFunc* fn,interp::Environment& env) {
+    return wrk->createOMRTB(fn,env);
+  }
+private:
+  Worker *wrk;
+};
+
+class FunctionThunkBuilder : public FTBHelper, public TR::ThunkBuilder {
   public:
-  FunctionThunkBuilder(TR::TypeDictionary *types, const char *name, 
-			  TR::IlType *returnType,uint32_t numCalleeParams, 
-		       TR::IlType **calleeParamTypes) : TR::ThunkBuilder(types, name, returnType, numCalleeParams, calleeParamTypes), fn_name(name)
-            { }
+  FunctionThunkBuilder(interp::DefinedFunc* fn,interp::Environment& env)
+    : TR::ThunkBuilder(tb(fn,env)),fn_name(fn->dbg_name_)
+    {
+    }
   virtual bool buildIL();
+  
   std::string fn_name;
 };
 }
