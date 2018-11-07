@@ -4,7 +4,7 @@
 
 // Add
 extern "C" int64_t func_2();
-/*extern "C" int64_t func_3();
+extern "C" int64_t func_3();
 extern "C" int64_t func_4();
 extern "C" int64_t func_5();
 extern "C" int64_t func_6();
@@ -72,16 +72,16 @@ extern "C" int64_t func_61();
 extern "C" int64_t func_62();
 extern "C" int64_t func_63();
 extern "C" int64_t func_64();
-extern "C" int64_t func_65();*/
+extern "C" int64_t func_65();
 
 int main() {
   int64_t result = func_2();
-/*  int64_t result_3 = func_3();
-  int64_t result_4 = func_4();*/
+  int64_t result_3 = func_3();
+  int64_t result_4 = func_4();
 
   assert(func_2() == 3);
 
-/*  assert(func_3() == 1);
+  assert(func_3() == 1);
 
   assert(func_4() == -2);
 
@@ -156,5 +156,5 @@ int main() {
   assert(func_62() == 1);
   assert(func_63() == -1);
   assert(func_64() == 1);
-  assert(func_65() == 3);*/
+  assert(func_65() == 3);
 }

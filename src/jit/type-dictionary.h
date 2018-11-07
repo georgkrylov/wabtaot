@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TYPEDICTIONARY1_HPP
-#define TYPEDICTIONARY1_HPP
+#ifndef TYPEDICTIONARY_HPP
+#define TYPEDICTIONARY_HPP
 
 #include "ilgen/TypeDictionary.hpp"
 
@@ -25,10 +25,9 @@ namespace jit {
 class TypeDictionary : public TR::TypeDictionary {
  public:
   TypeDictionary();
-  TR::IlType *stackElement;
 };
 
 }
 }
 
-#endif // TYPEDICTIONARY1_HPP
+#endif // TYPEDICTIONARY_HPP

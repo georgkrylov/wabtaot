@@ -1741,67 +1741,10 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
 }
 
 bool FunctionThunkBuilder::buildIL() {
-  void *handle = dlopen("/hdd/wasmjit-omr/tempmod1.so",RTLD_LAZY);
-  const void *funct = dlsym(handle,fn_name.c_str());
-  Store("target",ConstAddress(funct));
+  /*void *handle = dlopen("/hdd/wasmjit-omr/tempmod.so",RTLD_LAZY);
+  const void *funct = dlsym(handle,"func_2");
+  Store("target",ConstAddress(funct));*/
   return ThunkBuilder::buildIL();
-}
-
-TR::IlType* Worker::functionReturnType(interp::DefinedFunc* fn,
-						     interp::Environment& env)
-{
-  const auto& result_types = env.GetFuncSignature(fn->sig_index)->result_types;
-
-  if(result_types.empty()) {
-    return NoType;
-  } else {
-    return TypeFieldType(result_types.front());
-  }
-}
-
-TR::IlType* Worker::TypeFieldType(Type t) {
-  TypeDictionary types_;
-  switch (t) {
-    case Type::I32:
-      return types_.toIlType<int32_t>();
-    case Type::I64:
-      return types_.toIlType<int64_t>();
-    case Type::F32:
-      return types_.toIlType<float>();
-    case Type::F64:
-      return types_.toIlType<double>();
-    default:
-      TR_ASSERT_FATAL(false, "Invalid primitive type");
-      return nullptr;
-  }
-}
-
-TR::IlType* Worker::TypeFieldType(const char* t) {
-  TypeDictionary types_;
-  if(strcmp(t, "i32") == 0) {
-      return types_.toIlType<int32_t>();
-  } else if(strcmp(t, "i64") == 0) {
-      return types_.toIlType<int64_t>();
-  } else if(strcmp(t, "f32") == 0) {
-      return types_.toIlType<float>();
-  } else if(strcmp(t, "f64") == 0) {
-      return types_.toIlType<double>();
-  }
-
-  TR_ASSERT_FATAL(false, "Invalid primitive type");
-  return nullptr;
-}
-
-TR::ThunkBuilder Worker::createOMRTB(interp::DefinedFunc* fn,interp::Environment& env)
-{
-  
-  unsigned int numCalleeParams = env.GetFuncSignature(fn->sig_index)->param_types.size();
-  TR::IlType** tv = new TR::IlType*[numCalleeParams];
-  for(int i=0;i<numCalleeParams;i++) {
-     tv[i] = TypeFieldType(env.GetFuncSignature(fn->sig_index)->param_types[i]);
-  }
-  return TR::ThunkBuilder(types_, fn->dbg_name_.c_str(), functionReturnType(fn,env), 
-			numCalleeParams, tv);
 }
 
 }

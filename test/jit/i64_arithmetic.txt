@@ -7,7 +7,7 @@
   (start $run_add_1_i64)
 
     ;; MARK: create an entry-able function.
-  (func $run_add_1_i64 call $const_ret return) ;; func_0
+  (func $run_add_1_i64 call $add_1_i64 return) ;; func_0
   (func $const_ret (result i64) i64.const 1 return) ;; func_1
   (func $add_1_i64 (result i64) i64.const 1 i64.const 2 i64.add return) ;; func_2
   

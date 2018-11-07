@@ -16,14 +16,11 @@
 
 #include "aot-function-builder.h"
 #include "aot-type-dictionary.h"
-#include "aot-state.h"
 #include "trap-with.h"
 #include "src/cast.h"
 #include "src/interp.h"
 #include "infra/Assert.hpp"
 #include "ilgen/VirtualMachineState.hpp"
-#include "ilgen/VirtualMachineRegister.hpp"
-#include "ilgen/VirtualMachineOperandStack.hpp"
 
 #include <cmath>
 #include <limits>
@@ -188,24 +185,13 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFu
   auto memories_size = env_.GetMemoryCount();
   auto globals_size = env_.GetGlobalCount();
   auto param_count = env_.GetFuncSignature(fn_->sig_index)->param_types.size();
-  int total_size = param_count+1; //2 is added for stackPointer and stack top
+  int total_size = param_count;
 
   if (memories_size > 0)
   		total_size++;
   if (globals_size > 0)
   		total_size++;
   param_names_.reserve(total_size);
-
-  param_names_.push_back("stack");
-  DefineParameter(param_names_.back().data(), types->operandStackPtr);
-
-  //DefineLocal("stackTop",types->stackElementPtr);
-
- //param_names_.push_back("stack");
-  //DefineParameter(param_names_.back().data(), types->stackElementPtr);
-
-  //param_names_.push_back("stackTop");
- // DefineParameter(param_names_.back().data(), types->stackElementPtr);
 
   if(memories_size > 0) {
     // reserve to prevent a reallocation if the vector grows, and its
@@ -221,7 +207,7 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFu
 
   int arg = 0;
 
-  /*for(const auto& t: env_.GetFuncSignature(fn_->sig_index)->param_types) {
+  for(const auto& t: env_.GetFuncSignature(fn_->sig_index)->param_types) {
     char param[6]; // ie, "p6" is the sixth parameter.
     sprintf(param, "p%d", arg++);
 
@@ -230,7 +216,7 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFu
 
     DefineParameter(param_names_.back().data(), tt);
     param_types_.push_back(tt);
-    }*/
+  }
 
   DefineReturnType(returnType_);
 }
@@ -239,7 +225,7 @@ void AOTFunctionBuilder::pushParams() {
   
   auto memories_size = env_.GetMemoryCount();
   auto globals_size = env_.GetGlobalCount();
-  int arg = 1;
+  int arg = 0;
   if (memories_size > 0)
   		arg++;
   if (globals_size > 0)
@@ -274,20 +260,13 @@ void AOTFunctionBuilder::defineFunction(const std::string& name, interp::Defined
 }
 
 bool AOTFunctionBuilder::buildIL() {
-  TR::IlValue *stackTop = 
-    StructFieldInstanceAddress("AOTOperandStack","top_",Load("stack"));
-  Store("stackTop",stackTop);
-  setVMState(new AState(this,*types_));
-
-  TR::IlValue *stackBase = IndexAt(types_->stackElementPtr,stackTop,
-				   ConstInt32(-env_.GetFuncSignature(fn_->sig_index)->param_types.size()));
-  Store("stackBase",stackBase);
+  setVMState(new TR::VirtualMachineState());
 
   // expects a non-NULL Compilation object to exist, so must be
   // constructed here, at compile time
+  stack_ = new TR::VirtualMachineOperandStack(this, 64, valueType_, nullptr);
 
-  //pushParams();
-  
+  pushParams();
 
   const uint8_t* istream = thread_->GetIstream();
 
@@ -304,7 +283,7 @@ bool AOTFunctionBuilder::buildIL() {
 
       if (!Emit(work_item.builder, istream, work_item.pc))
 	return false;
-      /* } else if(!stackOfStacks_.empty()) {
+    } else if(!stackOfStacks_.empty()) {
       auto prev_state = stackOfStacks_.back();
       stackOfStacks_.pop_back();
 
@@ -316,7 +295,7 @@ bool AOTFunctionBuilder::buildIL() {
 
       prev_state.b->AddFallThroughBuilder(workItems_[next_index].builder);
       stack_ = prev_state.stack;
-      stackCount_ = prev_state.stack_count;*/
+      stackCount_ = prev_state.stack_count;
     } else {
       break;
     }
@@ -334,19 +313,14 @@ bool AOTFunctionBuilder::buildIL() {
  * stack_base_addr[stack_top] = value;
  * *stack_top_addr = stack_top + 1;
  */
-void AOTFunctionBuilder::Push(TR::IlBuilder* b, const char* type, 
-			      TR::IlValue* value)
+void AOTFunctionBuilder::Push(TR::IlBuilder* b, const char* type, TR::IlValue* value)
 {
   //TODO: should probably compare to valueType_ here, if that's
   //possible. I'm not sure if a simple pointer comparison will
   //work. IlTypes* for primitives might not be singleton values.
-  //auto* value_wrapper = strcmp(type, "i64") ? b->BitcastTo(valueType_, value) : value;
-  auto* value_wrapper = value;
-  //b->StoreOver(stackCount_,b->Add(stackCount_,b->Const(1))); because of Pop
- // auto nextElement = b->IndexAt(types_->stackElement,stack_,stackCount);
- // b->StoreAt(nextElement,value_wrapper);
- // stack_->Push(b, value_wrapper);
-  dynamic_cast<AState *>(b->vmState())->pushValue(b,value_wrapper);
+  auto* value_wrapper = strcmp(type, "i64") ? b->BitcastTo(valueType_, value) : value;
+  stackCount_++;
+  stack_->Push(b, value_wrapper);
 }
 
 /**
@@ -359,12 +333,9 @@ void AOTFunctionBuilder::Push(TR::IlBuilder* b, const char* type,
  * return stack_base_addr[new_stack_top];
  */
 TR::IlValue* AOTFunctionBuilder::Pop(TR::IlBuilder* b, const char* type) {
-  //auto* value = stack_->Pop(b);
-  //stackCount_--;
-  auto *value = dynamic_cast<AState *>(b->vmState())->popValue(b);
-  //b->StoreOver(stackCount_,b->Sub(stackCount_,b->Const(1))); triggers badilop segfault after a while for some reason
+  auto* value = stack_->Pop(b);
+  stackCount_--;
   return strcmp("i64", type) ? b->BitcastTo(TypeFieldType(type), value) : value;
-  return value;
 }
 
 /**
@@ -386,11 +357,11 @@ void AOTFunctionBuilder::DropKeep(TR::IlBuilder* b, uint32_t drop_count, uint8_t
   TR_ASSERT(stackCount_ >= drop_count + keep_count, "Invalid drop count");
 
   if(keep_count == 1) {
-      auto* top = Pop(b,"i64");
-      for (uint32_t i = 0; i < drop_count; i++) Pop(b,"i64");
-      Push(b,"i64", top);
+      auto* top = stack_->Pop(b);
+      stack_->Drop(b, drop_count);
+      stack_->Push(b, top);
   } else {
-    for (uint32_t i = 0; i < drop_count; i++) Pop(b,"i64");
+    stack_->Drop(b, drop_count);
   }
 
   stackCount_ -= drop_count;
@@ -404,13 +375,7 @@ void AOTFunctionBuilder::DropKeep(TR::IlBuilder* b, uint32_t drop_count, uint8_t
  * return &value_stack_[value_stack_top_ - depth];
  */
 TR::IlValue* AOTFunctionBuilder::Pick(Index depth) {
-  //return dynamic_cast<State *>(vmState())->pickValue(depth);
-  //TR::IlValue *args = b->Load("stackBase");
-  //TR::IlValue *address = b->IndexAt(types_->stackElementPtr,args,b->ConstInt32(depth));  
-  TR::IlValue *stackBase = IndexAt(types_->stackElementPtr,Load("stackTop"),
-				   ConstInt32(-env_.GetFuncSignature(fn_->sig_index)->param_types.size()));
-  TR::IlValue *result = LoadAt(types_->stackElementPtr,stackBase);
-  return result;
+  return stack_->Pick(depth-1);
 }
 
 template <>
@@ -508,8 +473,8 @@ TR::IlValue* AOTFunctionBuilder::Const(TR::IlBuilder* b, const interp::TypedValu
 
 template <typename T, typename TResult, typename TOpHandler>
 void AOTFunctionBuilder::EmitBinaryOp(TR::IlBuilder* b, TOpHandler h) {
-  auto* rhs = Pop(b,TypeFieldName<T>());
-  auto* lhs = Pop(b,TypeFieldName<T>());
+  auto* rhs = Pop(b, TypeFieldName<T>());
+  auto* lhs = Pop(b, TypeFieldName<T>());
 
   Push(b, TypeFieldName<TResult>(), h(lhs, rhs)); //, pc);
 }
@@ -811,14 +776,13 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
     case Opcode::Return: {
       auto* value = popReturnValue(b); // of type fn_name + "_return_type"
       //auto* value = Pop(b, TypeFieldName(result_type.front()));
-      //auto value = nullptr;
-      //b->vmState()->Commit(b);
+
       if(value == nullptr) {
-	b->Return();	
+	b->Return();
       } else {
         b->Return(value);
       }
-      
+
       return true;
     }
 
@@ -1893,7 +1857,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
     }
 
     case Opcode::InterpBrUnless: {
-/*      auto target = &istream[ReadU32(&pc)];
+      auto target = &istream[ReadU32(&pc)];
       auto condition = Pop(b, "i32");
       auto it = std::find_if(workItems_.begin(), workItems_.end(),
 			     [&](const BytecodeWorkItem& b) {
@@ -1910,8 +1874,8 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
         b->IfCmpEqualZero(&workItems_[next_index].builder, condition);
       }
 
-      TR::VirtualMachineOperandStack* prev_stack = new TR::VirtualMachineOperandStack(dynamic_cast<State *>(vmState())->stack_);
-      stackOfStacks_.emplace_back(b, prev_stack, pc, stackCount_);*/
+      TR::VirtualMachineOperandStack* prev_stack = new TR::VirtualMachineOperandStack(stack_);
+      stackOfStacks_.emplace_back(b, prev_stack, pc, stackCount_);
 
       return true;
     }

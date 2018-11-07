@@ -556,7 +556,6 @@ class Environment {
   friend class wabt::jit::FunctionBuilder;
   friend class wabt::aot::AOTFunctionBuilder;
   using JITedFunction = wabt::interp::Result (*)();
-  using AOTedFunction = uint64_t (*)();
 
   struct JitMeta {
     DefinedFunc* wasm_fn;

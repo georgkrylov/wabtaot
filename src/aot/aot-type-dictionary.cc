@@ -16,16 +16,7 @@
 
 #include "aot-type-dictionary.h"
 #include "src/interp.h"
-#include "aot-state.h"
 
 wabt::aot::AOTTypeDictionary::AOTTypeDictionary() : wabt::jit::TypeDictionary()
 {
-  stackElementPtr = PointerTo(stackElement);
-  //stackTop = PointerTo(PointerTo(TR::Int32));
-  auto os = "AOTOperandStack";
-  operandStack = DefineStruct(os);
-  DefineField(os,"top_",PointerTo(stackElementPtr),offsetof(OperandStack,top_));
-  DefineField(os,"stack_",stackElementPtr,offsetof(OperandStack,stack_));
-  CloseStruct(os);
-  operandStackPtr = PointerTo(operandStack);
 }
