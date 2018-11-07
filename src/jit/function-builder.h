@@ -26,6 +26,7 @@
 #include "src/interp.h"
 
 #include <type_traits>
+#include <string>
 
 namespace wabt {
 namespace jit {
@@ -144,9 +145,10 @@ class FunctionThunkBuilder : public TR::ThunkBuilder {
   public:
   FunctionThunkBuilder(TR::TypeDictionary *types, const char *name, 
 			  TR::IlType *returnType,uint32_t numCalleeParams, 
-			  TR::IlType **calleeParamTypes) : TR::ThunkBuilder(types, name, returnType, numCalleeParams, calleeParamTypes)
+		       TR::IlType **calleeParamTypes) : TR::ThunkBuilder(types, name, returnType, numCalleeParams, calleeParamTypes), fn_name(name)
             { }
   virtual bool buildIL();
+  std::string fn_name;
 };
 }
 }

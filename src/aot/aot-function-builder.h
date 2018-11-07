@@ -180,8 +180,8 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
   TR::IlType* const pValueType_;
   TR::IlType* const ppValueType_;
 
-  TR::VirtualMachineOperandStack* stack_;
-  uint32_t stackCount_ = 0;
+  TR::IlValue* stack_;
+  TR::IlValue* stackCount_;
   uint32_t localsCount_ = 0;
   
   TR::IlType* returnType_;

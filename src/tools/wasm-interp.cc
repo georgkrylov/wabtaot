@@ -260,7 +260,7 @@ static void InitEnvironment(Environment* env) {
   }
   if (s_load_from_dlib) {
     env->enable_load_from_dlib = true;
-    env->LoadDLib("tempmod.so");
+    env->LoadDLib("tempmod1.so");
   }
 
   env->jit_threshold = s_jit_threshold;

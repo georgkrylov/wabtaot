@@ -25,6 +25,7 @@ namespace jit {
 class TypeDictionary : public TR::TypeDictionary {
  public:
   TypeDictionary();
+  TR::IlType *stackElement;
 };
 
 }
