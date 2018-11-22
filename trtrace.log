@@ -5,51 +5,74 @@
 =======>51:/hdd/w:func_1
 <ilgen
 	method="51:/hdd/w:func_1">
-   <request> {( 0x7fffffffcd30 )} </request>
+   <request> {( 0x7fffffffd280 )} </request>
 Inside injectIL()
-original entry 0x555556251600
-original exit 0x555556251500
-	Entry = 0x555556251600
-	Exit  = 0x555556251500
-IlBuilder[ 0x7fffffffd0c0 ]::0 is ConstAddress 0x7ffff4a80214
-IlBuilder[ 0x7fffffffd0c0 ]::Store target 0 (583) gets 0
-IlBuilder[ 0x7fffffffd0c0 ]::Load target into 1 from symref 583
-IlBuilder[ 0x7fffffffd0c0 ]::ComputedCall thunkCallee
-IlBuilder[ 0x7fffffffd0c0 ]::Return 2
+original entry 0x55555624f0b0
+original exit 0x55555624efb0
+	Entry = 0x55555624f0b0
+	Exit  = 0x55555624efb0
+IlBuilder[ 0x7fffffffd630 ]::0 is ConstAddress 0x7ffff4a80754
+IlBuilder[ 0x7fffffffd630 ]::Store target 0 (583) gets 0
+IlBuilder[ 0x7fffffffd630 ]::Load target into 1 from symref 583
+IlBuilder[ 0x7fffffffd630 ]::2 is ConstInt32 0
+IlBuilder[ 0x7fffffffd630 ]::Load args into 3 from symref 584
+IlBuilder[ 0x7fffffffd630 ]::4 is IndexAt(LInt64;) base 3 index 2
+IlBuilder[ 0x7fffffffd630 ]::5 is LoadAt type 7 address 4
+IlBuilder[ 0x7fffffffd630 ]::6 is ConvertTo(LThread;) 5
+IlBuilder[ 0x7fffffffd630 ]::ComputedCall thunkCallee
+IlBuilder[ 0x7fffffffd630 ]::Return 7
 buildIL() returned 1
-[ 0x7fffffffd0c0 ] TR::MethodBuilder::connectTrees entry
-[ 0x7fffffffd0c0 ] TR::MethodBuilder::connectTrees total blocks -1
-[ 0x7fffffffd0c0 ] TR::IlBuilder::connectTrees():
-[ 0x7fffffffd0c0 ] TR::MethodBuilder::countBlocks 0 at entry
-[ 0x7fffffffd0c0 ] TR::IlBuilder::countBlocks 0 at entry
-[ 0x7fffffffd0c0 ] TR::IlBuilder::countBlocks 1
-[ 0x7fffffffd0c0 ] TR::MethodBuilder::countBlocks 1 before worklist
-[ 0x7fffffffd0c0 ] Total 1 blocks
-[ 0x7fffffffd0c0 ] Allocated _blocks 0x555556251cd0
-[ 0x7fffffffd0c0 ] Connecting trees one entry at a time:
-[ 0x7fffffffd0c0 ] currentBlock = 0
-[ 0x7fffffffd0c0 ] lastTree = (nil)
-[ 0x7fffffffd0c0 ] Block entry 0x555556251760 becomes block B0
-[ 0x7fffffffd0c0 ] Block 0x555556251760
-n1n       BBStart <block_2>                                                                   [0x5555562333b0] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=0
-n4n       treetop                                                                             [0x555556233470] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
-n3n         aconst 0x7ffff4a80214                                                             [0x555556233430] bci=[-1,0,-] rc=2 vc=0 vn=- li=- udi=- nc=0
-n5n       astore  target<parm 0 L>[#583  Parm] [flags 0x40010107 0x0 ]                        [0x5555562334b0] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
-n3n         ==>aconst 0x7ffff4a80214
-n7n       treetop                                                                             [0x555556233530] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
-n6n         aload  target<parm 0 L>[#583  Parm] [flags 0x40010107 0x0 ]                       [0x5555562334f0] bci=[-1,0,-] rc=2 vc=0 vn=- li=- udi=- nc=0
-n9n       treetop                                                                             [0x5555562335b0] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
-n8n         lcalli  /hdd/wasmjit-omr/third_party/omr/compiler/ilgen/OMRThunkBuilder.cpp:59:thunkCallee[#585  computed-static Method] [flags 0x500 0x0 ]  [0x555556233570] bci=[-1,0,-] rc=3 vc=0 vn=- li=- udi=- nc=1
+[ 0x7fffffffd630 ] TR::MethodBuilder::connectTrees entry
+[ 0x7fffffffd630 ] TR::MethodBuilder::connectTrees total blocks -1
+[ 0x7fffffffd630 ] TR::IlBuilder::connectTrees():
+[ 0x7fffffffd630 ] TR::MethodBuilder::countBlocks 0 at entry
+[ 0x7fffffffd630 ] TR::IlBuilder::countBlocks 0 at entry
+[ 0x7fffffffd630 ] TR::IlBuilder::countBlocks 1
+[ 0x7fffffffd630 ] TR::MethodBuilder::countBlocks 1 before worklist
+[ 0x7fffffffd630 ] Total 1 blocks
+[ 0x7fffffffd630 ] Allocated _blocks 0x55555624fb60
+[ 0x7fffffffd630 ] Connecting trees one entry at a time:
+[ 0x7fffffffd630 ] currentBlock = 0
+[ 0x7fffffffd630 ] lastTree = (nil)
+[ 0x7fffffffd630 ] Block entry 0x55555624f210 becomes block B0
+[ 0x7fffffffd630 ] Block 0x55555624f210
+n1n       BBStart <block_2>                                                                   [0x555556230e20] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=0
+n4n       treetop                                                                             [0x555556230ee0] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
+n3n         aconst 0x7ffff4a80754                                                             [0x555556230ea0] bci=[-1,0,-] rc=2 vc=0 vn=- li=- udi=- nc=0
+n5n       astore  target<parm 0 L>[#583  Parm] [flags 0x40010107 0x0 ]                        [0x555556230f20] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
+n3n         ==>aconst 0x7ffff4a80754
+n7n       treetop                                                                             [0x555556230fa0] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
+n6n         aload  target<parm 0 L>[#583  Parm] [flags 0x40010107 0x0 ]                       [0x555556230f60] bci=[-1,0,-] rc=2 vc=0 vn=- li=- udi=- nc=0
+n9n       treetop                                                                             [0x555556231020] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
+n8n         iconst 0                                                                          [0x555556230fe0] bci=[-1,0,-] rc=2 vc=0 vn=- li=- udi=- nc=0
+n11n      treetop                                                                             [0x5555562310a0] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
+n10n        aload  args<parm 1 LInt64;>[#584  Parm] [flags 0x40010107 0x0 ]                   [0x555556231060] bci=[-1,0,-] rc=2 vc=0 vn=- li=- udi=- nc=0
+n16n      treetop                                                                             [0x5555562311e0] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
+n15n        aladd                                                                             [0x5555562311a0] bci=[-1,0,-] rc=2 vc=0 vn=- li=- udi=- nc=2
+n10n          ==>aload
+n14n          lmul                                                                            [0x555556231160] bci=[-1,0,-] rc=1 vc=0 vn=- li=- udi=- nc=2
+n12n            i2l                                                                           [0x5555562310e0] bci=[-1,0,-] rc=1 vc=0 vn=- li=- udi=- nc=1
+n8n               ==>iconst 0
+n13n            lconst 8                                                                      [0x555556231120] bci=[-1,0,-] rc=1 vc=0 vn=- li=- udi=- nc=0
+n18n      treetop                                                                             [0x555556231260] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
+n17n        lloadi  <array-shadow>[#474  Shadow] [flags 0x80000604 0x0 ]                      [0x555556231220] bci=[-1,0,-] rc=2 vc=0 vn=- li=- udi=- nc=1
+n15n          ==>aladd
+n20n      treetop                                                                             [0x5555562312e0] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
+n19n        l2a                                                                               [0x5555562312a0] bci=[-1,0,-] rc=2 vc=0 vn=- li=- udi=- nc=1
+n17n          ==>lloadi
+n22n      treetop                                                                             [0x555556231360] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
+n21n        icalli  /hdd/wasmjit-omr/third_party/omr/compiler/ilgen/OMRThunkBuilder.cpp:59:thunkCallee[#586  computed-static Method] [flags 0x500 0x0 ]  [0x555556231320] bci=[-1,0,-] rc=3 vc=0 vn=- li=- udi=- nc=2
 n6n           ==>aload
-n10n      treetop                                                                             [0x5555562335f0] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
-n8n         ==>lcalli
-n11n      lreturn                                                                             [0x555556233630] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
-n8n         ==>lcalli
-n2n       BBEnd </block_2>                                                                    [0x5555562333f0] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=0
-[ 0x7fffffffd0c0 ] First tree is 0x555556251728 [ node 0x5555562333b0 ]
-[ 0x7fffffffd0c0 ] Last tree will be 0x555556251748 [ node 0x5555562333f0 ]
-[ 0x7fffffffd0c0 ] last tree 0x555556251748 [ node 0x5555562333f0 ]
-[ 0x7fffffffd0c0 ] blocks[0] exit tree is 0x555556251748
+n19n          ==>l2a
+n23n      treetop                                                                             [0x5555562313a0] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
+n21n        ==>icalli
+n24n      ireturn                                                                             [0x5555562313e0] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
+n21n        ==>icalli
+n2n       BBEnd </block_2>                                                                    [0x555556230e60] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=0
+[ 0x7fffffffd630 ] First tree is 0x55555624f1d8 [ node 0x555556230e20 ]
+[ 0x7fffffffd630 ] Last tree will be 0x55555624f1f8 [ node 0x555556230e60 ]
+[ 0x7fffffffd630 ] last tree 0x55555624f1f8 [ node 0x555556230e60 ]
+[ 0x7fffffffd630 ] blocks[0] exit tree is 0x55555624f1f8
 <trees
 	title="after connectTrees"
 	method="51:/hdd/w:func_1"
@@ -58,21 +81,39 @@ n2n       BBEnd </block_2>                                                      
 after connectTrees: for 51:/hdd/w:func_1
 
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-n1n       BBStart <block_2>                                                                   [0x5555562333b0] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=0
-n4n       treetop                                                                             [0x555556233470] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
-n3n         aconst 0x7ffff4a80214                                                             [0x555556233430] bci=[-1,0,-] rc=2 vc=0 vn=- li=- udi=- nc=0
-n5n       astore  target<parm 0 L>[#583  Parm] [flags 0x40010107 0x0 ]                        [0x5555562334b0] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
-n3n         ==>aconst 0x7ffff4a80214
-n7n       treetop                                                                             [0x555556233530] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
-n6n         aload  target<parm 0 L>[#583  Parm] [flags 0x40010107 0x0 ]                       [0x5555562334f0] bci=[-1,0,-] rc=2 vc=0 vn=- li=- udi=- nc=0
-n9n       treetop                                                                             [0x5555562335b0] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
-n8n         lcalli  /hdd/wasmjit-omr/third_party/omr/compiler/ilgen/OMRThunkBuilder.cpp:59:thunkCallee[#585  computed-static Method] [flags 0x500 0x0 ]  [0x555556233570] bci=[-1,0,-] rc=3 vc=0 vn=- li=- udi=- nc=1
+n1n       BBStart <block_2>                                                                   [0x555556230e20] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=0
+n4n       treetop                                                                             [0x555556230ee0] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
+n3n         aconst 0x7ffff4a80754                                                             [0x555556230ea0] bci=[-1,0,-] rc=2 vc=0 vn=- li=- udi=- nc=0
+n5n       astore  target<parm 0 L>[#583  Parm] [flags 0x40010107 0x0 ]                        [0x555556230f20] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
+n3n         ==>aconst 0x7ffff4a80754
+n7n       treetop                                                                             [0x555556230fa0] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
+n6n         aload  target<parm 0 L>[#583  Parm] [flags 0x40010107 0x0 ]                       [0x555556230f60] bci=[-1,0,-] rc=2 vc=0 vn=- li=- udi=- nc=0
+n9n       treetop                                                                             [0x555556231020] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
+n8n         iconst 0                                                                          [0x555556230fe0] bci=[-1,0,-] rc=2 vc=0 vn=- li=- udi=- nc=0
+n11n      treetop                                                                             [0x5555562310a0] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
+n10n        aload  args<parm 1 LInt64;>[#584  Parm] [flags 0x40010107 0x0 ]                   [0x555556231060] bci=[-1,0,-] rc=2 vc=0 vn=- li=- udi=- nc=0
+n16n      treetop                                                                             [0x5555562311e0] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
+n15n        aladd                                                                             [0x5555562311a0] bci=[-1,0,-] rc=2 vc=0 vn=- li=- udi=- nc=2
+n10n          ==>aload
+n14n          lmul                                                                            [0x555556231160] bci=[-1,0,-] rc=1 vc=0 vn=- li=- udi=- nc=2
+n12n            i2l                                                                           [0x5555562310e0] bci=[-1,0,-] rc=1 vc=0 vn=- li=- udi=- nc=1
+n8n               ==>iconst 0
+n13n            lconst 8                                                                      [0x555556231120] bci=[-1,0,-] rc=1 vc=0 vn=- li=- udi=- nc=0
+n18n      treetop                                                                             [0x555556231260] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
+n17n        lloadi  <array-shadow>[#474  Shadow] [flags 0x80000604 0x0 ]                      [0x555556231220] bci=[-1,0,-] rc=2 vc=0 vn=- li=- udi=- nc=1
+n15n          ==>aladd
+n20n      treetop                                                                             [0x5555562312e0] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
+n19n        l2a                                                                               [0x5555562312a0] bci=[-1,0,-] rc=2 vc=0 vn=- li=- udi=- nc=1
+n17n          ==>lloadi
+n22n      treetop                                                                             [0x555556231360] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
+n21n        icalli  /hdd/wasmjit-omr/third_party/omr/compiler/ilgen/OMRThunkBuilder.cpp:59:thunkCallee[#586  computed-static Method] [flags 0x500 0x0 ]  [0x555556231320] bci=[-1,0,-] rc=3 vc=0 vn=- li=- udi=- nc=2
 n6n           ==>aload
-n10n      treetop                                                                             [0x5555562335f0] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
-n8n         ==>lcalli
-n11n      lreturn                                                                             [0x555556233630] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
-n8n         ==>lcalli
-n2n       BBEnd </block_2>                                                                    [0x5555562333f0] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=0
+n19n          ==>l2a
+n23n      treetop                                                                             [0x5555562313a0] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
+n21n        ==>icalli
+n24n      ireturn                                                                             [0x5555562313e0] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
+n21n        ==>icalli
+n2n       BBEnd </block_2>                                                                    [0x555556230e60] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=0
 
 index:       node global index
 bci=[x,y,z]: byte-code-info [callee-index, bytecode-index, line-number]
@@ -87,25 +128,27 @@ flg:         node flags
 
 Symbol References (incremental):
 --------------------------------
-#583:  target<parm 0 L>[ Parm] [flags 0x40010107 0x0 ] [0x555556234590] (Address)
-#584:  args<parm 1 LInt64;>[ Parm] [flags 0x107 0x0 ] [0x555556234740] (Address)
-#585:  /hdd/wasmjit-omr/third_party/omr/compiler/ilgen/OMRThunkBuilder.cpp:59:thunkCallee[ computed-static Method] [flags 0x500 0x0 ] [0x5555562519a0] (NoType)
+#474:  <array-shadow>[ Shadow] [flags 0x80000604 0x0 ] [0x55555624f540] (Int64)
+#583:  target<parm 0 L>[ Parm] [flags 0x40010107 0x0 ] [0x555556232000] (Address)
+#584:  args<parm 1 LInt64;>[ Parm] [flags 0x40010107 0x0 ] [0x5555562321b0] (Address)
+#585:  Parm  0<'this' parm LThread;>[ Parm] [flags 0x107 0x0 ] [0x55555624f850] (Address)
+#586:  /hdd/wasmjit-omr/third_party/omr/compiler/ilgen/OMRThunkBuilder.cpp:59:thunkCallee[ computed-static Method] [flags 0x500 0x0 ] [0x55555624f690] (NoType)
 
-Number of nodes = 11, symRefCount = 586
+Number of nodes = 24, symRefCount = 587
 </trees>
 
 <cfg>
-         0 [0x555556251600] entry
+         0 [0x55555624f0b0] entry
                  in        = []
                  out       = [2(0) ]
                  exception in  = []
                  exception out = []
-         1 [0x555556251500] exit
+         1 [0x55555624efb0] exit
                  in        = [2(0) ]
                  out       = []
                  exception in  = []
                  exception out = []
-         2 [0x555556251760] BBStart at 0x5555562333b0
+         2 [0x55555624f210] BBStart at 0x555556230e20
                  in        = [0(0) ]
                  out       = [1(0) ]
                  exception in  = []
@@ -120,21 +163,39 @@ Number of nodes = 11, symRefCount = 586
 after removing unreachable blocks: for 51:/hdd/w:func_1
 
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-n1n       BBStart <block_2>                                                                   [0x5555562333b0] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=0
-n4n       treetop                                                                             [0x555556233470] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
-n3n         aconst 0x7ffff4a80214                                                             [0x555556233430] bci=[-1,0,-] rc=2 vc=0 vn=- li=- udi=- nc=0
-n5n       astore  target<parm 0 L>[#583  Parm] [flags 0x40010107 0x0 ]                        [0x5555562334b0] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
-n3n         ==>aconst 0x7ffff4a80214
-n7n       treetop                                                                             [0x555556233530] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
-n6n         aload  target<parm 0 L>[#583  Parm] [flags 0x40010107 0x0 ]                       [0x5555562334f0] bci=[-1,0,-] rc=2 vc=0 vn=- li=- udi=- nc=0
-n9n       treetop                                                                             [0x5555562335b0] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
-n8n         lcalli  /hdd/wasmjit-omr/third_party/omr/compiler/ilgen/OMRThunkBuilder.cpp:59:thunkCallee[#585  computed-static Method] [flags 0x500 0x0 ]  [0x555556233570] bci=[-1,0,-] rc=3 vc=0 vn=- li=- udi=- nc=1
+n1n       BBStart <block_2>                                                                   [0x555556230e20] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=0
+n4n       treetop                                                                             [0x555556230ee0] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
+n3n         aconst 0x7ffff4a80754                                                             [0x555556230ea0] bci=[-1,0,-] rc=2 vc=0 vn=- li=- udi=- nc=0
+n5n       astore  target<parm 0 L>[#583  Parm] [flags 0x40010107 0x0 ]                        [0x555556230f20] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
+n3n         ==>aconst 0x7ffff4a80754
+n7n       treetop                                                                             [0x555556230fa0] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
+n6n         aload  target<parm 0 L>[#583  Parm] [flags 0x40010107 0x0 ]                       [0x555556230f60] bci=[-1,0,-] rc=2 vc=0 vn=- li=- udi=- nc=0
+n9n       treetop                                                                             [0x555556231020] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
+n8n         iconst 0                                                                          [0x555556230fe0] bci=[-1,0,-] rc=2 vc=0 vn=- li=- udi=- nc=0
+n11n      treetop                                                                             [0x5555562310a0] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
+n10n        aload  args<parm 1 LInt64;>[#584  Parm] [flags 0x40010107 0x0 ]                   [0x555556231060] bci=[-1,0,-] rc=2 vc=0 vn=- li=- udi=- nc=0
+n16n      treetop                                                                             [0x5555562311e0] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
+n15n        aladd                                                                             [0x5555562311a0] bci=[-1,0,-] rc=2 vc=0 vn=- li=- udi=- nc=2
+n10n          ==>aload
+n14n          lmul                                                                            [0x555556231160] bci=[-1,0,-] rc=1 vc=0 vn=- li=- udi=- nc=2
+n12n            i2l                                                                           [0x5555562310e0] bci=[-1,0,-] rc=1 vc=0 vn=- li=- udi=- nc=1
+n8n               ==>iconst 0
+n13n            lconst 8                                                                      [0x555556231120] bci=[-1,0,-] rc=1 vc=0 vn=- li=- udi=- nc=0
+n18n      treetop                                                                             [0x555556231260] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
+n17n        lloadi  <array-shadow>[#474  Shadow] [flags 0x80000604 0x0 ]                      [0x555556231220] bci=[-1,0,-] rc=2 vc=0 vn=- li=- udi=- nc=1
+n15n          ==>aladd
+n20n      treetop                                                                             [0x5555562312e0] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
+n19n        l2a                                                                               [0x5555562312a0] bci=[-1,0,-] rc=2 vc=0 vn=- li=- udi=- nc=1
+n17n          ==>lloadi
+n22n      treetop                                                                             [0x555556231360] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
+n21n        icalli  /hdd/wasmjit-omr/third_party/omr/compiler/ilgen/OMRThunkBuilder.cpp:59:thunkCallee[#586  computed-static Method] [flags 0x500 0x0 ]  [0x555556231320] bci=[-1,0,-] rc=3 vc=0 vn=- li=- udi=- nc=2
 n6n           ==>aload
-n10n      treetop                                                                             [0x5555562335f0] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
-n8n         ==>lcalli
-n11n      lreturn                                                                             [0x555556233630] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
-n8n         ==>lcalli
-n2n       BBEnd </block_2>                                                                    [0x5555562333f0] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=0
+n19n          ==>l2a
+n23n      treetop                                                                             [0x5555562313a0] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
+n21n        ==>icalli
+n24n      ireturn                                                                             [0x5555562313e0] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
+n21n        ==>icalli
+n2n       BBEnd </block_2>                                                                    [0x555556230e60] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=0
 
 index:       node global index
 bci=[x,y,z]: byte-code-info [callee-index, bytecode-index, line-number]
@@ -147,21 +208,21 @@ nc:          number of children
 addr:        address size in bytes
 flg:         node flags
 
-Number of nodes = 11, symRefCount = 586
+Number of nodes = 24, symRefCount = 587
 </trees>
 
 <cfg>
-         0 [0x555556251600] entry
+         0 [0x55555624f0b0] entry
                  in        = []
                  out       = [2(0) ]
                  exception in  = []
                  exception out = []
-         1 [0x555556251500] exit
+         1 [0x55555624efb0] exit
                  in        = [2(0) ]
                  out       = []
                  exception in  = []
                  exception out = []
-         2 [0x555556251760] BBStart at 0x5555562333b0
+         2 [0x55555624f210] BBStart at 0x555556230e20
                  in        = [0(0) ]
                  out       = [1(0) ]
                  exception in  = []
@@ -177,21 +238,39 @@ genIL() returned 1
 Pre IlGenOpt Trees: for 51:/hdd/w:func_1
 
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-n1n       BBStart <block_2>                                                                   [0x5555562333b0] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=0
-n4n       treetop                                                                             [0x555556233470] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
-n3n         aconst 0x7ffff4a80214                                                             [0x555556233430] bci=[-1,0,-] rc=2 vc=0 vn=- li=- udi=- nc=0
-n5n       astore  target<parm 0 L>[#583  Parm] [flags 0x40010107 0x0 ]                        [0x5555562334b0] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
-n3n         ==>aconst 0x7ffff4a80214
-n7n       treetop                                                                             [0x555556233530] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
-n6n         aload  target<parm 0 L>[#583  Parm] [flags 0x40010107 0x0 ]                       [0x5555562334f0] bci=[-1,0,-] rc=2 vc=0 vn=- li=- udi=- nc=0
-n9n       treetop                                                                             [0x5555562335b0] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
-n8n         lcalli  /hdd/wasmjit-omr/third_party/omr/compiler/ilgen/OMRThunkBuilder.cpp:59:thunkCallee[#585  computed-static Method] [flags 0x500 0x0 ]  [0x555556233570] bci=[-1,0,-] rc=3 vc=0 vn=- li=- udi=- nc=1
+n1n       BBStart <block_2>                                                                   [0x555556230e20] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=0
+n4n       treetop                                                                             [0x555556230ee0] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
+n3n         aconst 0x7ffff4a80754                                                             [0x555556230ea0] bci=[-1,0,-] rc=2 vc=0 vn=- li=- udi=- nc=0
+n5n       astore  target<parm 0 L>[#583  Parm] [flags 0x40010107 0x0 ]                        [0x555556230f20] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
+n3n         ==>aconst 0x7ffff4a80754
+n7n       treetop                                                                             [0x555556230fa0] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
+n6n         aload  target<parm 0 L>[#583  Parm] [flags 0x40010107 0x0 ]                       [0x555556230f60] bci=[-1,0,-] rc=2 vc=0 vn=- li=- udi=- nc=0
+n9n       treetop                                                                             [0x555556231020] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
+n8n         iconst 0                                                                          [0x555556230fe0] bci=[-1,0,-] rc=2 vc=0 vn=- li=- udi=- nc=0
+n11n      treetop                                                                             [0x5555562310a0] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
+n10n        aload  args<parm 1 LInt64;>[#584  Parm] [flags 0x40010107 0x0 ]                   [0x555556231060] bci=[-1,0,-] rc=2 vc=0 vn=- li=- udi=- nc=0
+n16n      treetop                                                                             [0x5555562311e0] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
+n15n        aladd                                                                             [0x5555562311a0] bci=[-1,0,-] rc=2 vc=0 vn=- li=- udi=- nc=2
+n10n          ==>aload
+n14n          lmul                                                                            [0x555556231160] bci=[-1,0,-] rc=1 vc=0 vn=- li=- udi=- nc=2
+n12n            i2l                                                                           [0x5555562310e0] bci=[-1,0,-] rc=1 vc=0 vn=- li=- udi=- nc=1
+n8n               ==>iconst 0
+n13n            lconst 8                                                                      [0x555556231120] bci=[-1,0,-] rc=1 vc=0 vn=- li=- udi=- nc=0
+n18n      treetop                                                                             [0x555556231260] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
+n17n        lloadi  <array-shadow>[#474  Shadow] [flags 0x80000604 0x0 ]                      [0x555556231220] bci=[-1,0,-] rc=2 vc=0 vn=- li=- udi=- nc=1
+n15n          ==>aladd
+n20n      treetop                                                                             [0x5555562312e0] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
+n19n        l2a                                                                               [0x5555562312a0] bci=[-1,0,-] rc=2 vc=0 vn=- li=- udi=- nc=1
+n17n          ==>lloadi
+n22n      treetop                                                                             [0x555556231360] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
+n21n        icalli  /hdd/wasmjit-omr/third_party/omr/compiler/ilgen/OMRThunkBuilder.cpp:59:thunkCallee[#586  computed-static Method] [flags 0x500 0x0 ]  [0x555556231320] bci=[-1,0,-] rc=3 vc=0 vn=- li=- udi=- nc=2
 n6n           ==>aload
-n10n      treetop                                                                             [0x5555562335f0] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
-n8n         ==>lcalli
-n11n      lreturn                                                                             [0x555556233630] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
-n8n         ==>lcalli
-n2n       BBEnd </block_2>                                                                    [0x5555562333f0] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=0
+n19n          ==>l2a
+n23n      treetop                                                                             [0x5555562313a0] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
+n21n        ==>icalli
+n24n      ireturn                                                                             [0x5555562313e0] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
+n21n        ==>icalli
+n2n       BBEnd </block_2>                                                                    [0x555556230e60] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=0
 
 index:       node global index
 bci=[x,y,z]: byte-code-info [callee-index, bytecode-index, line-number]
@@ -204,21 +283,21 @@ nc:          number of children
 addr:        address size in bytes
 flg:         node flags
 
-Number of nodes = 11, symRefCount = 586
+Number of nodes = 24, symRefCount = 587
 </trees>
 
 <cfg>
-         0 [0x555556251600] entry
+         0 [0x55555624f0b0] entry
                  in        = []
                  out       = [2(0) ]
                  exception in  = []
                  exception out = []
-         1 [0x555556251500] exit
+         1 [0x55555624efb0] exit
                  in        = [2(0) ]
                  out       = []
                  exception in  = []
                  exception out = []
-         2 [0x555556251760] BBStart at 0x5555562333b0
+         2 [0x55555624f210] BBStart at 0x555556230e20
                  in        = [0(0) ]
                  out       = [1(0) ]
                  exception in  = []
@@ -238,21 +317,39 @@ Number of nodes = 11, symRefCount = 586
 Initial Trees: for 51:/hdd/w:func_1
 
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-n1n       BBStart <block_2>                                                                   [0x5555562333b0] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=0
-n4n       treetop                                                                             [0x555556233470] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
-n3n         aconst 0x7ffff4a80214                                                             [0x555556233430] bci=[-1,0,-] rc=2 vc=0 vn=- li=- udi=- nc=0
-n5n       astore  target<parm 0 L>[#583  Parm] [flags 0x40010107 0x0 ]                        [0x5555562334b0] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
-n3n         ==>aconst 0x7ffff4a80214
-n7n       treetop                                                                             [0x555556233530] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
-n6n         aload  target<parm 0 L>[#583  Parm] [flags 0x40010107 0x0 ]                       [0x5555562334f0] bci=[-1,0,-] rc=2 vc=0 vn=- li=- udi=- nc=0
-n9n       treetop                                                                             [0x5555562335b0] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
-n8n         lcalli  /hdd/wasmjit-omr/third_party/omr/compiler/ilgen/OMRThunkBuilder.cpp:59:thunkCallee[#585  computed-static Method] [flags 0x500 0x0 ]  [0x555556233570] bci=[-1,0,-] rc=3 vc=0 vn=- li=- udi=- nc=1
+n1n       BBStart <block_2>                                                                   [0x555556230e20] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=0
+n4n       treetop                                                                             [0x555556230ee0] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
+n3n         aconst 0x7ffff4a80754                                                             [0x555556230ea0] bci=[-1,0,-] rc=2 vc=0 vn=- li=- udi=- nc=0
+n5n       astore  target<parm 0 L>[#583  Parm] [flags 0x40010107 0x0 ]                        [0x555556230f20] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
+n3n         ==>aconst 0x7ffff4a80754
+n7n       treetop                                                                             [0x555556230fa0] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
+n6n         aload  target<parm 0 L>[#583  Parm] [flags 0x40010107 0x0 ]                       [0x555556230f60] bci=[-1,0,-] rc=2 vc=0 vn=- li=- udi=- nc=0
+n9n       treetop                                                                             [0x555556231020] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
+n8n         iconst 0                                                                          [0x555556230fe0] bci=[-1,0,-] rc=2 vc=0 vn=- li=- udi=- nc=0
+n11n      treetop                                                                             [0x5555562310a0] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
+n10n        aload  args<parm 1 LInt64;>[#584  Parm] [flags 0x40010107 0x0 ]                   [0x555556231060] bci=[-1,0,-] rc=2 vc=0 vn=- li=- udi=- nc=0
+n16n      treetop                                                                             [0x5555562311e0] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
+n15n        aladd                                                                             [0x5555562311a0] bci=[-1,0,-] rc=2 vc=0 vn=- li=- udi=- nc=2
+n10n          ==>aload
+n14n          lmul                                                                            [0x555556231160] bci=[-1,0,-] rc=1 vc=0 vn=- li=- udi=- nc=2
+n12n            i2l                                                                           [0x5555562310e0] bci=[-1,0,-] rc=1 vc=0 vn=- li=- udi=- nc=1
+n8n               ==>iconst 0
+n13n            lconst 8                                                                      [0x555556231120] bci=[-1,0,-] rc=1 vc=0 vn=- li=- udi=- nc=0
+n18n      treetop                                                                             [0x555556231260] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
+n17n        lloadi  <array-shadow>[#474  Shadow] [flags 0x80000604 0x0 ]                      [0x555556231220] bci=[-1,0,-] rc=2 vc=0 vn=- li=- udi=- nc=1
+n15n          ==>aladd
+n20n      treetop                                                                             [0x5555562312e0] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
+n19n        l2a                                                                               [0x5555562312a0] bci=[-1,0,-] rc=2 vc=0 vn=- li=- udi=- nc=1
+n17n          ==>lloadi
+n22n      treetop                                                                             [0x555556231360] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
+n21n        icalli  /hdd/wasmjit-omr/third_party/omr/compiler/ilgen/OMRThunkBuilder.cpp:59:thunkCallee[#586  computed-static Method] [flags 0x500 0x0 ]  [0x555556231320] bci=[-1,0,-] rc=3 vc=0 vn=- li=- udi=- nc=2
 n6n           ==>aload
-n10n      treetop                                                                             [0x5555562335f0] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
-n8n         ==>lcalli
-n11n      lreturn                                                                             [0x555556233630] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
-n8n         ==>lcalli
-n2n       BBEnd </block_2>                                                                    [0x5555562333f0] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=0
+n19n          ==>l2a
+n23n      treetop                                                                             [0x5555562313a0] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
+n21n        ==>icalli
+n24n      ireturn                                                                             [0x5555562313e0] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
+n21n        ==>icalli
+n2n       BBEnd </block_2>                                                                    [0x555556230e60] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=0
 
 index:       node global index
 bci=[x,y,z]: byte-code-info [callee-index, bytecode-index, line-number]
@@ -265,21 +362,21 @@ nc:          number of children
 addr:        address size in bytes
 flg:         node flags
 
-Number of nodes = 11, symRefCount = 586
+Number of nodes = 24, symRefCount = 587
 </trees>
 
 <cfg>
-         0 [0x555556251600] entry
+         0 [0x55555624f0b0] entry
                  in        = []
                  out       = [2(0) ]
                  exception in  = []
                  exception out = []
-         1 [0x555556251500] exit
+         1 [0x55555624efb0] exit
                  in        = [2(0) ]
                  out       = []
                  exception in  = []
                  exception out = []
-         2 [0x555556251760] BBStart at 0x5555562333b0
+         2 [0x55555624f210] BBStart at 0x555556230e20
                  in        = [0(0) ]
                  out       = [1(0) ]
                  exception in  = []
@@ -294,9 +391,14 @@ This method is warm
 <optimization id=1 name=deadTreesElimination method=51:/hdd/w:func_1>
 Performing 1: deadTreesElimination
             (Building alias info)
-[     1] O^O DEAD TREES ELIMINATION: Remove trivial dead tree: 0x5555562335f0
-[     2] O^O DEAD TREES ELIMINATION: Remove tree : [0x555556233470] ([0x555556233430] = aconst)
-[     3] O^O DEAD TREES ELIMINATION: Remove tree : [0x555556233530] ([0x5555562334f0] = aload)
+[     1] O^O DEAD TREES ELIMINATION: Remove trivial dead tree: 0x5555562313a0
+[     2] O^O DEAD TREES ELIMINATION: Remove tree : [0x555556230ee0] ([0x555556230ea0] = aconst)
+[     3] O^O DEAD TREES ELIMINATION: Remove tree : [0x555556230fa0] ([0x555556230f60] = aload)
+[     4] O^O DEAD TREES ELIMINATION: Remove tree : [0x555556231020] ([0x555556230fe0] = iconst)
+[     5] O^O DEAD TREES ELIMINATION: Remove tree : [0x5555562310a0] ([0x555556231060] = aload)
+[     6] O^O DEAD TREES ELIMINATION: Remove tree : [0x5555562311e0] ([0x5555562311a0] = aladd)
+[     7] O^O DEAD TREES ELIMINATION: Remove tree : [0x555556231260] ([0x555556231220] = lloadi)
+[     8] O^O DEAD TREES ELIMINATION: Remove tree : [0x5555562312e0] ([0x5555562312a0] = l2a)
 <trees
 	title="Trees after deadTreesElimination"
 	method="51:/hdd/w:func_1"
@@ -305,15 +407,23 @@ Performing 1: deadTreesElimination
 Trees after deadTreesElimination: for 51:/hdd/w:func_1
 
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-n1n       BBStart <block_2>                                                                   [0x5555562333b0] bci=[-1,0,-] rc=0 vc=4 vn=- li=-1 udi=- nc=0
-n5n       astore  target<parm 0 L>[#583  Parm] [flags 0x40010107 0x0 ]                        [0x5555562334b0] bci=[-1,0,-] rc=0 vc=4 vn=- li=-1 udi=- nc=1
-n3n         aconst 0x7ffff4a80214                                                             [0x555556233430] bci=[-1,0,-] rc=1 vc=4 vn=- li=- udi=- nc=0
-n9n       treetop                                                                             [0x5555562335b0] bci=[-1,0,-] rc=0 vc=4 vn=- li=-1 udi=- nc=1
-n8n         lcalli  /hdd/wasmjit-omr/third_party/omr/compiler/ilgen/OMRThunkBuilder.cpp:59:thunkCallee[#585  computed-static Method] [flags 0x500 0x0 ]  [0x555556233570] bci=[-1,0,-] rc=2 vc=4 vn=- li=- udi=- nc=1
-n6n           aload  target<parm 0 L>[#583  Parm] [flags 0x40010107 0x0 ]                     [0x5555562334f0] bci=[-1,0,-] rc=1 vc=4 vn=- li=- udi=- nc=0
-n11n      lreturn                                                                             [0x555556233630] bci=[-1,0,-] rc=0 vc=4 vn=- li=-1 udi=- nc=1
-n8n         ==>lcalli
-n2n       BBEnd </block_2>                                                                    [0x5555562333f0] bci=[-1,0,-] rc=0 vc=4 vn=- li=-1 udi=- nc=0
+n1n       BBStart <block_2>                                                                   [0x555556230e20] bci=[-1,0,-] rc=0 vc=4 vn=- li=-1 udi=- nc=0
+n5n       astore  target<parm 0 L>[#583  Parm] [flags 0x40010107 0x0 ]                        [0x555556230f20] bci=[-1,0,-] rc=0 vc=4 vn=- li=-1 udi=- nc=1
+n3n         aconst 0x7ffff4a80754                                                             [0x555556230ea0] bci=[-1,0,-] rc=1 vc=4 vn=- li=- udi=- nc=0
+n22n      treetop                                                                             [0x555556231360] bci=[-1,0,-] rc=0 vc=4 vn=- li=-1 udi=- nc=1
+n21n        icalli  /hdd/wasmjit-omr/third_party/omr/compiler/ilgen/OMRThunkBuilder.cpp:59:thunkCallee[#586  computed-static Method] [flags 0x500 0x0 ]  [0x555556231320] bci=[-1,0,-] rc=2 vc=4 vn=- li=- udi=- nc=2
+n6n           aload  target<parm 0 L>[#583  Parm] [flags 0x40010107 0x0 ]                     [0x555556230f60] bci=[-1,0,-] rc=1 vc=4 vn=- li=- udi=- nc=0
+n19n          l2a                                                                             [0x5555562312a0] bci=[-1,0,-] rc=1 vc=4 vn=- li=- udi=- nc=1
+n17n            lloadi  <array-shadow>[#474  Shadow] [flags 0x80000604 0x0 ]                  [0x555556231220] bci=[-1,0,-] rc=1 vc=4 vn=- li=- udi=- nc=1
+n15n              aladd                                                                       [0x5555562311a0] bci=[-1,0,-] rc=1 vc=4 vn=- li=- udi=- nc=2
+n10n                aload  args<parm 1 LInt64;>[#584  Parm] [flags 0x40010107 0x0 ]           [0x555556231060] bci=[-1,0,-] rc=1 vc=4 vn=- li=- udi=- nc=0
+n14n                lmul                                                                      [0x555556231160] bci=[-1,0,-] rc=1 vc=4 vn=- li=- udi=- nc=2
+n12n                  i2l                                                                     [0x5555562310e0] bci=[-1,0,-] rc=1 vc=4 vn=- li=- udi=- nc=1
+n8n                     iconst 0                                                              [0x555556230fe0] bci=[-1,0,-] rc=1 vc=4 vn=- li=- udi=- nc=0
+n13n                  lconst 8                                                                [0x555556231120] bci=[-1,0,-] rc=1 vc=4 vn=- li=- udi=- nc=0
+n24n      ireturn                                                                             [0x5555562313e0] bci=[-1,0,-] rc=0 vc=4 vn=- li=-1 udi=- nc=1
+n21n        ==>icalli
+n2n       BBEnd </block_2>                                                                    [0x555556230e60] bci=[-1,0,-] rc=0 vc=4 vn=- li=-1 udi=- nc=0
 
 index:       node global index
 bci=[x,y,z]: byte-code-info [callee-index, bytecode-index, line-number]
@@ -326,21 +436,21 @@ nc:          number of children
 addr:        address size in bytes
 flg:         node flags
 
-Number of nodes = 8, symRefCount = 586
+Number of nodes = 16, symRefCount = 587
 </trees>
 
 <cfg>
-         0 [0x555556251600] entry
+         0 [0x55555624f0b0] entry
                  in        = []
                  out       = [2(0) ]
                  exception in  = []
                  exception out = []
-         1 [0x555556251500] exit
+         1 [0x55555624efb0] exit
                  in        = [2(0) ]
                  out       = []
                  exception in  = []
                  exception out = []
-         2 [0x555556251760] BBStart at 0x5555562333b0
+         2 [0x55555624f210] BBStart at 0x555556230e20
                  in        = [0(0) ]
                  out       = [1(0) ]
                  exception in  = []
@@ -356,30 +466,32 @@ Performing 2: inlining
 
 <optimization id=3 name=treeSimplification method=51:/hdd/w:func_1>
 Performing 3: treeSimplification
-         No transformations done by this pass -- omitting listings
-</optimization>
-
-<optimization id=4 name=localCSE method=51:/hdd/w:func_1>
-Performing 4: localCSE
-[     4] O^O LOCAL COMMON SUBEXPRESSION ELIMINATION:    Local Common Subexpression Elimination propagating local #583 in node : 0x5555562334f0 PARENT : 0x555556233570 from node 0x5555562334b0
-         O^O LOCAL COMMON SUBEXPRESSION ELIMINATION:    Rhs of store def node : 0x555556233430
+[     9] O^O TREE SIMPLIFICATION: Constant folding node [0x5555562310e0] i2l          to lconst          0x0
+[    10] O^O TREE SIMPLIFICATION: Constant folding node [0x555556231160] lmul          to lconst          0x0
+[    11] O^O TREE SIMPLIFICATION: Replace node [0x5555562311a0] aladd by [0x555556231060] aload
+         O^O TREE SIMPLIFICATION: anchor child aload [0x555556231060] at depth 0 before treetop [0x555556231360]
 <trees
-	title="Trees after localCSE"
+	title="Trees after treeSimplification"
 	method="51:/hdd/w:func_1"
 	hotness="warm">
 
-Trees after localCSE: for 51:/hdd/w:func_1
+Trees after treeSimplification: for 51:/hdd/w:func_1
 
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-n1n       BBStart <block_2>                                                                   [0x5555562333b0] bci=[-1,0,-] rc=0 vc=12 vn=- li=- udi=- nc=0
-n5n       astore  target<parm 0 L>[#583  Parm] [flags 0x40010107 0x0 ]                        [0x5555562334b0] bci=[-1,0,-] rc=0 vc=15 vn=- li=- udi=- nc=1
-n3n         aconst 0x7ffff4a80214                                                             [0x555556233430] bci=[-1,0,-] rc=2 vc=15 vn=- li=- udi=- nc=0
-n9n       treetop                                                                             [0x5555562335b0] bci=[-1,0,-] rc=0 vc=15 vn=- li=- udi=- nc=1
-n8n         lcalli  /hdd/wasmjit-omr/third_party/omr/compiler/ilgen/OMRThunkBuilder.cpp:59:thunkCallee[#585  computed-static Method] [flags 0x500 0x0 ]  [0x555556233570] bci=[-1,0,-] rc=2 vc=15 vn=- li=- udi=- nc=1
-n3n           ==>aconst 0x7ffff4a80214
-n11n      lreturn                                                                             [0x555556233630] bci=[-1,0,-] rc=0 vc=15 vn=- li=- udi=- nc=1
-n8n         ==>lcalli
-n2n       BBEnd </block_2>                                                                    [0x5555562333f0] bci=[-1,0,-] rc=0 vc=15 vn=- li=- udi=- nc=0
+n1n       BBStart <block_2>                                                                   [0x555556230e20] bci=[-1,0,-] rc=0 vc=22 vn=- li=- udi=- nc=0
+n5n       astore  target<parm 0 L>[#583  Parm] [flags 0x40010107 0x0 ]                        [0x555556230f20] bci=[-1,0,-] rc=0 vc=22 vn=- li=- udi=- nc=1
+n3n         aconst 0x7ffff4a80754                                                             [0x555556230ea0] bci=[-1,0,-] rc=1 vc=22 vn=- li=- udi=- nc=0
+n27n      treetop                                                                             [0x5555562314a0] bci=[-1,0,-] rc=0 vc=0 vn=- li=- udi=- nc=1
+n10n        aload  args<parm 1 LInt64;>[#584  Parm] [flags 0x40010107 0x0 ]                   [0x555556231060] bci=[-1,0,-] rc=2 vc=22 vn=- li=- udi=- nc=0
+n22n      treetop                                                                             [0x555556231360] bci=[-1,0,-] rc=0 vc=22 vn=- li=- udi=- nc=1
+n21n        icalli  /hdd/wasmjit-omr/third_party/omr/compiler/ilgen/OMRThunkBuilder.cpp:59:thunkCallee[#586  computed-static Method] [flags 0x500 0x0 ]  [0x555556231320] bci=[-1,0,-] rc=2 vc=22 vn=- li=- udi=- nc=2
+n6n           aload  target<parm 0 L>[#583  Parm] [flags 0x40010107 0x0 ]                     [0x555556230f60] bci=[-1,0,-] rc=1 vc=22 vn=- li=- udi=- nc=0
+n19n          l2a                                                                             [0x5555562312a0] bci=[-1,0,-] rc=1 vc=22 vn=- li=- udi=- nc=1
+n17n            lloadi  <array-shadow>[#474  Shadow] [flags 0x80000604 0x0 ]                  [0x555556231220] bci=[-1,0,-] rc=1 vc=22 vn=- li=- udi=- nc=1
+n10n              ==>aload
+n24n      ireturn                                                                             [0x5555562313e0] bci=[-1,0,-] rc=0 vc=22 vn=- li=- udi=- nc=1
+n21n        ==>icalli
+n2n       BBEnd </block_2>                                                                    [0x555556230e60] bci=[-1,0,-] rc=0 vc=22 vn=- li=- udi=- nc=0
 
 index:       node global index
 bci=[x,y,z]: byte-code-info [callee-index, bytecode-index, line-number]
@@ -392,21 +504,82 @@ nc:          number of children
 addr:        address size in bytes
 flg:         node flags
 
-Number of nodes = 7, symRefCount = 586
+Number of nodes = 12, symRefCount = 587
 </trees>
 
 <cfg>
-         0 [0x555556251600] entry
+         0 [0x55555624f0b0] entry
                  in        = []
                  out       = [2(0) ]
                  exception in  = []
                  exception out = []
-         1 [0x555556251500] exit
+         1 [0x55555624efb0] exit
                  in        = [2(0) ]
                  out       = []
                  exception in  = []
                  exception out = []
-         2 [0x555556251760] BBStart at 0x5555562333b0
+         2 [0x55555624f210] BBStart at 0x555556230e20
+                 in        = [0(0) ]
+                 out       = [1(0) ]
+                 exception in  = []
+                 exception out = []
+
+</cfg>
+</optimization>
+
+<optimization id=4 name=localCSE method=51:/hdd/w:func_1>
+Performing 4: localCSE
+[    12] O^O LOCAL COMMON SUBEXPRESSION ELIMINATION:    Local Common Subexpression Elimination propagating local #583 in node : 0x555556230f60 PARENT : 0x555556231320 from node 0x555556230f20
+         O^O LOCAL COMMON SUBEXPRESSION ELIMINATION:    Rhs of store def node : 0x555556230ea0
+<trees
+	title="Trees after localCSE"
+	method="51:/hdd/w:func_1"
+	hotness="warm">
+
+Trees after localCSE: for 51:/hdd/w:func_1
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+n1n       BBStart <block_2>                                                                   [0x555556230e20] bci=[-1,0,-] rc=0 vc=22 vn=- li=- udi=- nc=0
+n5n       astore  target<parm 0 L>[#583  Parm] [flags 0x40010107 0x0 ]                        [0x555556230f20] bci=[-1,0,-] rc=0 vc=25 vn=- li=- udi=- nc=1
+n3n         aconst 0x7ffff4a80754                                                             [0x555556230ea0] bci=[-1,0,-] rc=2 vc=25 vn=- li=- udi=- nc=0
+n27n      treetop                                                                             [0x5555562314a0] bci=[-1,0,-] rc=0 vc=25 vn=- li=- udi=- nc=1
+n10n        aload  args<parm 1 LInt64;>[#584  Parm] [flags 0x40010107 0x0 ]                   [0x555556231060] bci=[-1,0,-] rc=2 vc=25 vn=- li=- udi=- nc=0
+n22n      treetop                                                                             [0x555556231360] bci=[-1,0,-] rc=0 vc=25 vn=- li=- udi=- nc=1
+n21n        icalli  /hdd/wasmjit-omr/third_party/omr/compiler/ilgen/OMRThunkBuilder.cpp:59:thunkCallee[#586  computed-static Method] [flags 0x500 0x0 ]  [0x555556231320] bci=[-1,0,-] rc=2 vc=25 vn=- li=- udi=- nc=2
+n3n           ==>aconst 0x7ffff4a80754
+n19n          l2a                                                                             [0x5555562312a0] bci=[-1,0,-] rc=1 vc=25 vn=- li=- udi=- nc=1
+n17n            lloadi  <array-shadow>[#474  Shadow] [flags 0x80000604 0x0 ]                  [0x555556231220] bci=[-1,0,-] rc=1 vc=25 vn=- li=- udi=- nc=1
+n10n              ==>aload
+n24n      ireturn                                                                             [0x5555562313e0] bci=[-1,0,-] rc=0 vc=25 vn=- li=- udi=- nc=1
+n21n        ==>icalli
+n2n       BBEnd </block_2>                                                                    [0x555556230e60] bci=[-1,0,-] rc=0 vc=25 vn=- li=- udi=- nc=0
+
+index:       node global index
+bci=[x,y,z]: byte-code-info [callee-index, bytecode-index, line-number]
+rc:          reference count
+vc:          visit count
+vn:          value number
+li:          local index
+udi:         use/def index
+nc:          number of children
+addr:        address size in bytes
+flg:         node flags
+
+Number of nodes = 11, symRefCount = 587
+</trees>
+
+<cfg>
+         0 [0x55555624f0b0] entry
+                 in        = []
+                 out       = [2(0) ]
+                 exception in  = []
+                 exception out = []
+         1 [0x55555624efb0] exit
+                 in        = [2(0) ]
+                 out       = []
+                 exception in  = []
+                 exception out = []
+         2 [0x55555624f210] BBStart at 0x555556230e20
                  in        = [0(0) ]
                  out       = [1(0) ]
                  exception in  = []
@@ -418,10 +591,10 @@ Number of nodes = 7, symRefCount = 586
 <optimization id=5 name=basicBlockOrdering method=51:/hdd/w:func_1>
 Performing 5: basicBlockOrdering
             (Doing structural analysis)
-[     5] O^O ORDER BLOCKS:  Propagating coldness information
-[     6] O^O ORDER BLOCKS:  choose best successor for block_0 (freq:10000)
-[     7] O^O ORDER BLOCKS:  choose best successor for block_2 (freq:10000)
-[     8] O^O ORDER BLOCKS:  choose best successor for block_1 (freq:10000)
+[    13] O^O ORDER BLOCKS:  Propagating coldness information
+[    14] O^O ORDER BLOCKS:  choose best successor for block_0 (freq:10000)
+[    15] O^O ORDER BLOCKS:  choose best successor for block_2 (freq:10000)
+[    16] O^O ORDER BLOCKS:  choose best successor for block_1 (freq:10000)
 <trees
 	title="Trees after basicBlockOrdering"
 	method="51:/hdd/w:func_1"
@@ -430,15 +603,20 @@ Performing 5: basicBlockOrdering
 Trees after basicBlockOrdering: for 51:/hdd/w:func_1
 
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-n1n       BBStart <block_2> (freq 10000)                                                      [0x5555562333b0] bci=[-1,0,-] rc=0 vc=12 vn=- li=- udi=- nc=0
-n5n       astore  target<parm 0 L>[#583  Parm] [flags 0x40010107 0x0 ]                        [0x5555562334b0] bci=[-1,0,-] rc=0 vc=15 vn=- li=- udi=- nc=1
-n3n         aconst 0x7ffff4a80214                                                             [0x555556233430] bci=[-1,0,-] rc=2 vc=15 vn=- li=- udi=- nc=0
-n9n       treetop                                                                             [0x5555562335b0] bci=[-1,0,-] rc=0 vc=15 vn=- li=- udi=- nc=1
-n8n         lcalli  /hdd/wasmjit-omr/third_party/omr/compiler/ilgen/OMRThunkBuilder.cpp:59:thunkCallee[#585  computed-static Method] [flags 0x500 0x0 ]  [0x555556233570] bci=[-1,0,-] rc=2 vc=15 vn=- li=- udi=- nc=1
-n3n           ==>aconst 0x7ffff4a80214
-n11n      lreturn                                                                             [0x555556233630] bci=[-1,0,-] rc=0 vc=15 vn=- li=- udi=- nc=1
-n8n         ==>lcalli
-n2n       BBEnd </block_2>                                                                    [0x5555562333f0] bci=[-1,0,-] rc=0 vc=15 vn=- li=- udi=- nc=0
+n1n       BBStart <block_2> (freq 10000)                                                      [0x555556230e20] bci=[-1,0,-] rc=0 vc=22 vn=- li=- udi=- nc=0
+n5n       astore  target<parm 0 L>[#583  Parm] [flags 0x40010107 0x0 ]                        [0x555556230f20] bci=[-1,0,-] rc=0 vc=25 vn=- li=- udi=- nc=1
+n3n         aconst 0x7ffff4a80754                                                             [0x555556230ea0] bci=[-1,0,-] rc=2 vc=25 vn=- li=- udi=- nc=0
+n27n      treetop                                                                             [0x5555562314a0] bci=[-1,0,-] rc=0 vc=25 vn=- li=- udi=- nc=1
+n10n        aload  args<parm 1 LInt64;>[#584  Parm] [flags 0x40010107 0x0 ]                   [0x555556231060] bci=[-1,0,-] rc=2 vc=25 vn=- li=- udi=- nc=0
+n22n      treetop                                                                             [0x555556231360] bci=[-1,0,-] rc=0 vc=25 vn=- li=- udi=- nc=1
+n21n        icalli  /hdd/wasmjit-omr/third_party/omr/compiler/ilgen/OMRThunkBuilder.cpp:59:thunkCallee[#586  computed-static Method] [flags 0x500 0x0 ]  [0x555556231320] bci=[-1,0,-] rc=2 vc=25 vn=- li=- udi=- nc=2
+n3n           ==>aconst 0x7ffff4a80754
+n19n          l2a                                                                             [0x5555562312a0] bci=[-1,0,-] rc=1 vc=25 vn=- li=- udi=- nc=1
+n17n            lloadi  <array-shadow>[#474  Shadow] [flags 0x80000604 0x0 ]                  [0x555556231220] bci=[-1,0,-] rc=1 vc=25 vn=- li=- udi=- nc=1
+n10n              ==>aload
+n24n      ireturn                                                                             [0x5555562313e0] bci=[-1,0,-] rc=0 vc=25 vn=- li=- udi=- nc=1
+n21n        ==>icalli
+n2n       BBEnd </block_2>                                                                    [0x555556230e60] bci=[-1,0,-] rc=0 vc=25 vn=- li=- udi=- nc=0
 
 index:       node global index
 bci=[x,y,z]: byte-code-info [callee-index, bytecode-index, line-number]
@@ -451,34 +629,34 @@ nc:          number of children
 addr:        address size in bytes
 flg:         node flags
 
-Number of nodes = 7, symRefCount = 586
+Number of nodes = 11, symRefCount = 587
 </trees>
 
 <cfg>
-         0 [0x555556251600] entry
+         0 [0x55555624f0b0] entry
                  in        = []
                  out       = [2(10000) ]
                  exception in  = []
                  exception out = []
-         1 [0x555556251500] exit
+         1 [0x55555624efb0] exit
                  in        = [2(10000) ]
                  out       = []
                  exception in  = []
                  exception out = []
-         2 [0x555556251760] BBStart at 0x5555562333b0, frequency = 10000
+         2 [0x55555624f210] BBStart at 0x555556230e20, frequency = 10000
                  in        = [0(10000) ]
                  out       = [1(10000) ]
                  exception in  = []
                  exception out = []
 <structure>
-      0 [0x5555562505b0] Acyclic region
+      0 [0x55555624e060] Acyclic region
          Subgraph: (* = exit edge)
-               (0x555556250680:0x555556250550)0 --> 2(0x555556250710)
-               (0x555556250710:0x555556250490)2 --> 1(0x5555562507f0)
-               (0x5555562507f0:0x5555562504f0)1 -->
-         0 [0x555556250550] Block
-         2 [0x555556250490] Block
-         1 [0x5555562504f0] Block
+               (0x55555624e130:0x55555624e000)0 --> 2(0x55555624e1c0)
+               (0x55555624e1c0:0x55555624df40)2 --> 1(0x55555624e2a0)
+               (0x55555624e2a0:0x55555624dfa0)1 -->
+         0 [0x55555624e000] Block
+         2 [0x55555624df40] Block
+         1 [0x55555624dfa0] Block
 </structure>
 </cfg>
 </optimization>
@@ -495,15 +673,20 @@ Performing 6: globalCopyPropagation
 Trees after globalCopyPropagation: for 51:/hdd/w:func_1
 
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-n1n       BBStart <block_2> (freq 10000)                                                      [0x5555562333b0] bci=[-1,0,-] rc=0 vc=27 vn=- li=- udi=- nc=0
-n5n       astore  target<parm 0 L>[#583  Parm] [flags 0x40010107 0x0 ]                        [0x5555562334b0] bci=[-1,0,-] rc=0 vc=27 vn=- li=1 udi=1 nc=1
-n3n         aconst 0x7ffff4a80214                                                             [0x555556233430] bci=[-1,0,-] rc=2 vc=27 vn=- li=- udi=- nc=0
-n9n       treetop                                                                             [0x5555562335b0] bci=[-1,0,-] rc=0 vc=27 vn=- li=- udi=- nc=1
-n8n         lcalli  /hdd/wasmjit-omr/third_party/omr/compiler/ilgen/OMRThunkBuilder.cpp:59:thunkCallee[#585  computed-static Method] [flags 0x500 0x0 ]  [0x555556233570] bci=[-1,0,-] rc=2 vc=27 vn=- li=- udi=- nc=1
-n3n           ==>aconst 0x7ffff4a80214
-n11n      lreturn                                                                             [0x555556233630] bci=[-1,0,-] rc=0 vc=27 vn=- li=- udi=- nc=1
-n8n         ==>lcalli
-n2n       BBEnd </block_2>                                                                    [0x5555562333f0] bci=[-1,0,-] rc=0 vc=27 vn=- li=- udi=- nc=0
+n1n       BBStart <block_2> (freq 10000)                                                      [0x555556230e20] bci=[-1,0,-] rc=0 vc=37 vn=- li=- udi=- nc=0
+n5n       astore  target<parm 0 L>[#583  Parm] [flags 0x40010107 0x0 ]                        [0x555556230f20] bci=[-1,0,-] rc=0 vc=37 vn=- li=1 udi=1 nc=1
+n3n         aconst 0x7ffff4a80754                                                             [0x555556230ea0] bci=[-1,0,-] rc=2 vc=37 vn=- li=- udi=- nc=0
+n27n      treetop                                                                             [0x5555562314a0] bci=[-1,0,-] rc=0 vc=37 vn=- li=- udi=- nc=1
+n10n        aload  args<parm 1 LInt64;>[#584  Parm] [flags 0x40010107 0x0 ]                   [0x555556231060] bci=[-1,0,-] rc=2 vc=37 vn=- li=- udi=2 nc=0
+n22n      treetop                                                                             [0x555556231360] bci=[-1,0,-] rc=0 vc=37 vn=- li=- udi=- nc=1
+n21n        icalli  /hdd/wasmjit-omr/third_party/omr/compiler/ilgen/OMRThunkBuilder.cpp:59:thunkCallee[#586  computed-static Method] [flags 0x500 0x0 ]  [0x555556231320] bci=[-1,0,-] rc=2 vc=37 vn=- li=- udi=- nc=2
+n3n           ==>aconst 0x7ffff4a80754
+n19n          l2a                                                                             [0x5555562312a0] bci=[-1,0,-] rc=1 vc=37 vn=- li=- udi=- nc=1
+n17n            lloadi  <array-shadow>[#474  Shadow] [flags 0x80000604 0x0 ]                  [0x555556231220] bci=[-1,0,-] rc=1 vc=37 vn=- li=- udi=- nc=1
+n10n              ==>aload
+n24n      ireturn                                                                             [0x5555562313e0] bci=[-1,0,-] rc=0 vc=37 vn=- li=- udi=- nc=1
+n21n        ==>icalli
+n2n       BBEnd </block_2>                                                                    [0x555556230e60] bci=[-1,0,-] rc=0 vc=37 vn=- li=- udi=- nc=0
 
 index:       node global index
 bci=[x,y,z]: byte-code-info [callee-index, bytecode-index, line-number]
@@ -516,41 +699,103 @@ nc:          number of children
 addr:        address size in bytes
 flg:         node flags
 
-Number of nodes = 7, symRefCount = 586
+Number of nodes = 11, symRefCount = 587
 </trees>
 
 <cfg>
-         0 [0x555556251600] entry
+         0 [0x55555624f0b0] entry
                  in        = []
                  out       = [2(10000) ]
                  exception in  = []
                  exception out = []
-         1 [0x555556251500] exit
+         1 [0x55555624efb0] exit
                  in        = [2(10000) ]
                  out       = []
                  exception in  = []
                  exception out = []
-         2 [0x555556251760] BBStart at 0x5555562333b0, frequency = 10000
+         2 [0x55555624f210] BBStart at 0x555556230e20, frequency = 10000
                  in        = [0(10000) ]
                  out       = [1(10000) ]
                  exception in  = []
                  exception out = []
 <structure>
-      0 [0x5555562505b0] Acyclic region
+      0 [0x55555624e060] Acyclic region
          Subgraph: (* = exit edge)
-               (0x555556250680:0x555556250550)0 --> 2(0x555556250710)
-               (0x555556250710:0x555556250490)2 --> 1(0x5555562507f0)
-               (0x5555562507f0:0x5555562504f0)1 -->
-         0 [0x555556250550] Block
-         2 [0x555556250490] Block
-         1 [0x5555562504f0] Block
+               (0x55555624e130:0x55555624e000)0 --> 2(0x55555624e1c0)
+               (0x55555624e1c0:0x55555624df40)2 --> 1(0x55555624e2a0)
+               (0x55555624e2a0:0x55555624dfa0)1 -->
+         0 [0x55555624e000] Block
+         2 [0x55555624df40] Block
+         1 [0x55555624dfa0] Block
 </structure>
 </cfg>
 </optimization>
 
 <optimization id=8 name=deadTreesElimination method=51:/hdd/w:func_1>
 Performing 8: deadTreesElimination
-         No transformations done by this pass -- omitting listings
+[    17] O^O DEAD TREES ELIMINATION: Remove tree : [0x5555562314a0] ([0x555556231060] = aload)
+<trees
+	title="Trees after deadTreesElimination"
+	method="51:/hdd/w:func_1"
+	hotness="warm">
+
+Trees after deadTreesElimination: for 51:/hdd/w:func_1
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+n1n       BBStart <block_2> (freq 10000)                                                      [0x555556230e20] bci=[-1,0,-] rc=0 vc=40 vn=- li=-1 udi=- nc=0
+n5n       astore  target<parm 0 L>[#583  Parm] [flags 0x40010107 0x0 ]                        [0x555556230f20] bci=[-1,0,-] rc=0 vc=40 vn=- li=-1 udi=1 nc=1
+n3n         aconst 0x7ffff4a80754                                                             [0x555556230ea0] bci=[-1,0,-] rc=2 vc=40 vn=- li=- udi=- nc=0
+n22n      treetop                                                                             [0x555556231360] bci=[-1,0,-] rc=0 vc=40 vn=- li=-1 udi=- nc=1
+n21n        icalli  /hdd/wasmjit-omr/third_party/omr/compiler/ilgen/OMRThunkBuilder.cpp:59:thunkCallee[#586  computed-static Method] [flags 0x500 0x0 ]  [0x555556231320] bci=[-1,0,-] rc=2 vc=40 vn=- li=- udi=- nc=2
+n3n           ==>aconst 0x7ffff4a80754
+n19n          l2a                                                                             [0x5555562312a0] bci=[-1,0,-] rc=1 vc=40 vn=- li=- udi=- nc=1
+n17n            lloadi  <array-shadow>[#474  Shadow] [flags 0x80000604 0x0 ]                  [0x555556231220] bci=[-1,0,-] rc=1 vc=40 vn=- li=- udi=- nc=1
+n10n              aload  args<parm 1 LInt64;>[#584  Parm] [flags 0x40010107 0x0 ]             [0x555556231060] bci=[-1,0,-] rc=1 vc=40 vn=- li=- udi=2 nc=0
+n24n      ireturn                                                                             [0x5555562313e0] bci=[-1,0,-] rc=0 vc=40 vn=- li=-1 udi=- nc=1
+n21n        ==>icalli
+n2n       BBEnd </block_2>                                                                    [0x555556230e60] bci=[-1,0,-] rc=0 vc=40 vn=- li=-1 udi=- nc=0
+
+index:       node global index
+bci=[x,y,z]: byte-code-info [callee-index, bytecode-index, line-number]
+rc:          reference count
+vc:          visit count
+vn:          value number
+li:          local index
+udi:         use/def index
+nc:          number of children
+addr:        address size in bytes
+flg:         node flags
+
+Number of nodes = 10, symRefCount = 587
+</trees>
+
+<cfg>
+         0 [0x55555624f0b0] entry
+                 in        = []
+                 out       = [2(10000) ]
+                 exception in  = []
+                 exception out = []
+         1 [0x55555624efb0] exit
+                 in        = [2(10000) ]
+                 out       = []
+                 exception in  = []
+                 exception out = []
+         2 [0x55555624f210] BBStart at 0x555556230e20, frequency = 10000
+                 in        = [0(10000) ]
+                 out       = [1(10000) ]
+                 exception in  = []
+                 exception out = []
+<structure>
+      0 [0x55555624e060] Acyclic region
+         Subgraph: (* = exit edge)
+               (0x55555624e130:0x55555624e000)0 --> 2(0x55555624e1c0)
+               (0x55555624e1c0:0x55555624df40)2 --> 1(0x55555624e2a0)
+               (0x55555624e2a0:0x55555624dfa0)1 -->
+         0 [0x55555624e000] Block
+         2 [0x55555624df40] Block
+         1 [0x55555624dfa0] Block
+</structure>
+</cfg>
 </optimization>
 
 <optimization id=9 name=treeSimplification method=51:/hdd/w:func_1>
@@ -585,10 +830,10 @@ Performing 15: treeSimplification
 
 <optimization id=21 name=basicBlockExtension method=51:/hdd/w:func_1>
 Performing 21: basicBlockExtension
-[     9] O^O ORDER BLOCKS:  Propagating coldness information
-[    10] O^O ORDER BLOCKS:  choose best successor for block_0 (freq:10000)
-[    11] O^O ORDER BLOCKS:  choose best successor for block_2 (freq:10000)
-[    12] O^O ORDER BLOCKS:  choose best successor for block_1 (freq:10000)
+[    18] O^O ORDER BLOCKS:  Propagating coldness information
+[    19] O^O ORDER BLOCKS:  choose best successor for block_0 (freq:10000)
+[    20] O^O ORDER BLOCKS:  choose best successor for block_2 (freq:10000)
+[    21] O^O ORDER BLOCKS:  choose best successor for block_1 (freq:10000)
 <trees
 	title="Trees after basicBlockExtension"
 	method="51:/hdd/w:func_1"
@@ -597,15 +842,18 @@ Performing 21: basicBlockExtension
 Trees after basicBlockExtension: for 51:/hdd/w:func_1
 
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-n1n       BBStart <block_2> (freq 10000)                                                      [0x5555562333b0] bci=[-1,0,-] rc=0 vc=44 vn=- li=- udi=- nc=0
-n5n       astore  target<parm 0 L>[#583  Parm] [flags 0x40010107 0x0 ] (X!=0 )                [0x5555562334b0] bci=[-1,0,-] rc=0 vc=44 vn=- li=- udi=1 nc=1 flg=0x4
-n3n         aconst 0x7ffff4a80214 (X!=0 )                                                     [0x555556233430] bci=[-1,0,-] rc=2 vc=44 vn=- li=- udi=- nc=0 flg=0x4
-n9n       treetop                                                                             [0x5555562335b0] bci=[-1,0,-] rc=0 vc=44 vn=- li=- udi=- nc=1
-n8n         lcalli  /hdd/wasmjit-omr/third_party/omr/compiler/ilgen/OMRThunkBuilder.cpp:59:thunkCallee[#585  computed-static Method] [flags 0x500 0x0 ]  [0x555556233570] bci=[-1,0,-] rc=2 vc=44 vn=- li=- udi=- nc=1
-n3n           ==>aconst 0x7ffff4a80214
-n11n      lreturn                                                                             [0x555556233630] bci=[-1,0,-] rc=0 vc=44 vn=- li=- udi=- nc=1
-n8n         ==>lcalli
-n2n       BBEnd </block_2>                                                                    [0x5555562333f0] bci=[-1,0,-] rc=0 vc=44 vn=- li=- udi=- nc=0
+n1n       BBStart <block_2> (freq 10000)                                                      [0x555556230e20] bci=[-1,0,-] rc=0 vc=56 vn=- li=- udi=- nc=0
+n5n       astore  target<parm 0 L>[#583  Parm] [flags 0x40010107 0x0 ] (X!=0 )                [0x555556230f20] bci=[-1,0,-] rc=0 vc=56 vn=- li=- udi=1 nc=1 flg=0x4
+n3n         aconst 0x7ffff4a80754 (X!=0 )                                                     [0x555556230ea0] bci=[-1,0,-] rc=2 vc=56 vn=- li=- udi=- nc=0 flg=0x4
+n22n      treetop                                                                             [0x555556231360] bci=[-1,0,-] rc=0 vc=56 vn=- li=- udi=- nc=1
+n21n        icalli  /hdd/wasmjit-omr/third_party/omr/compiler/ilgen/OMRThunkBuilder.cpp:59:thunkCallee[#586  computed-static Method] [flags 0x500 0x0 ]  [0x555556231320] bci=[-1,0,-] rc=2 vc=56 vn=- li=- udi=- nc=2
+n3n           ==>aconst 0x7ffff4a80754
+n19n          l2a                                                                             [0x5555562312a0] bci=[-1,0,-] rc=1 vc=56 vn=- li=- udi=- nc=1
+n17n            lloadi  <array-shadow>[#474  Shadow] [flags 0x80000604 0x0 ] (cannotOverflow )  [0x555556231220] bci=[-1,0,-] rc=1 vc=56 vn=- li=- udi=- nc=1 flg=0x1000
+n10n              aload  args<parm 1 LInt64;>[#584  Parm] [flags 0x40010107 0x0 ] (X>=0 )     [0x555556231060] bci=[-1,0,-] rc=1 vc=56 vn=- li=- udi=2 nc=0 flg=0x100
+n24n      ireturn                                                                             [0x5555562313e0] bci=[-1,0,-] rc=0 vc=56 vn=- li=- udi=- nc=1
+n21n        ==>icalli
+n2n       BBEnd </block_2>                                                                    [0x555556230e60] bci=[-1,0,-] rc=0 vc=56 vn=- li=- udi=- nc=0
 
 index:       node global index
 bci=[x,y,z]: byte-code-info [callee-index, bytecode-index, line-number]
@@ -618,34 +866,34 @@ nc:          number of children
 addr:        address size in bytes
 flg:         node flags
 
-Number of nodes = 7, symRefCount = 586
+Number of nodes = 10, symRefCount = 587
 </trees>
 
 <cfg>
-         0 [0x555556251600] entry
+         0 [0x55555624f0b0] entry
                  in        = []
                  out       = [2(10000) ]
                  exception in  = []
                  exception out = []
-         1 [0x555556251500] exit
+         1 [0x55555624efb0] exit
                  in        = [2(10000) ]
                  out       = []
                  exception in  = []
                  exception out = []
-         2 [0x555556251760] BBStart at 0x5555562333b0, frequency = 10000
+         2 [0x55555624f210] BBStart at 0x555556230e20, frequency = 10000
                  in        = [0(10000) ]
                  out       = [1(10000) ]
                  exception in  = []
                  exception out = []
 <structure>
-      0 [0x5555562505b0] Acyclic region
+      0 [0x55555624e060] Acyclic region
          Subgraph: (* = exit edge)
-               (0x555556250680:0x555556250550)0 --> 2(0x555556250710)
-               (0x555556250710:0x555556250490)2 --> 1(0x5555562507f0)
-               (0x5555562507f0:0x5555562504f0)1 -->
-         0 [0x555556250550] Block
-         2 [0x555556250490] Block
-         1 [0x5555562504f0] Block
+               (0x55555624e130:0x55555624e000)0 --> 2(0x55555624e1c0)
+               (0x55555624e1c0:0x55555624df40)2 --> 1(0x55555624e2a0)
+               (0x55555624e2a0:0x55555624dfa0)1 -->
+         0 [0x55555624e000] Block
+         2 [0x55555624df40] Block
+         1 [0x55555624dfa0] Block
 </structure>
 </cfg>
 </optimization>
@@ -668,11 +916,16 @@ Performing 26: redundantGotoElimination
 
 <optimization id=27 name=tacticalGlobalRegisterAllocator method=51:/hdd/w:func_1>
 Performing 27: tacticalGlobalRegisterAllocator
+         Weight of candidate (symRef #584 ) is 10000
          Weight of candidate (symRef #583 ) is 10000
-[    13] O^O GLOBAL REGISTER ASSIGNER:  assign auto #583  to reg 3 (edi)
-         O^O GLOBAL REGISTER ASSIGNER:  create TR::GlRegDeps [0x555556233670] on BBStart [0x5555562333b0]
-         O^O GLOBAL REGISTER ASSIGNER:  create load [0x5555562336b0]  from Register 3
-         O^O GLOBAL REGISTER ASSIGNER:  change store var [0x5555562334b0]  #583 to store reg
+[    22] O^O GLOBAL REGISTER ASSIGNER:  assign auto #584  to reg 4 (esi)
+[    23] O^O GLOBAL REGISTER ASSIGNER:  assign auto #583  to reg 3 (edi)
+         O^O GLOBAL REGISTER ASSIGNER:  create TR::GlRegDeps [0x5555562314e0] on BBStart [0x555556230e20]
+         O^O GLOBAL REGISTER ASSIGNER:  create load [0x555556231520]  from Register 3
+         O^O GLOBAL REGISTER ASSIGNER:  create load [0x555556231560]  from Register 4
+         O^O GLOBAL REGISTER ASSIGNER:  change store var [0x555556230f20]  #583 to store reg
+         O^O GLOBAL REGISTER ASSIGNER:  change load var [0x555556231060] of  symRef#584 to load reg
+         O^O GLOBAL REGISTER ASSIGNER:  change load var [0x555556231060] of  symRef#584 to load reg
 <trees
 	title="Trees after tacticalGlobalRegisterAllocator"
 	method="51:/hdd/w:func_1"
@@ -681,17 +934,21 @@ Performing 27: tacticalGlobalRegisterAllocator
 Trees after tacticalGlobalRegisterAllocator: for 51:/hdd/w:func_1
 
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-n1n       BBStart <block_2> (freq 10000)                                                      [0x5555562333b0] bci=[-1,0,-] rc=0 vc=102 vn=- li=- udi=- nc=1
-n12n        GlRegDeps                                                                         [0x555556233670] bci=[-1,0,-] rc=1 vc=0 vn=- li=- udi=- nc=1
-n13n          aRegLoad edi   target<parm 0 L>[#583  Parm] [flags 0x40010107 0x0 ]             [0x5555562336b0] bci=[-1,0,-] rc=1 vc=0 vn=- li=- udi=- nc=0
-n5n       aRegStore edi  (X!=0 )                                                              [0x5555562334b0] bci=[-1,0,-] rc=0 vc=102 vn=- li=- udi=1 nc=1 flg=0x4
-n3n         aconst 0x7ffff4a80214 (X!=0 )                                                     [0x555556233430] bci=[-1,0,-] rc=2 vc=102 vn=- li=- udi=- nc=0 flg=0x4
-n9n       treetop                                                                             [0x5555562335b0] bci=[-1,0,-] rc=0 vc=102 vn=- li=- udi=- nc=1
-n8n         lcalli  /hdd/wasmjit-omr/third_party/omr/compiler/ilgen/OMRThunkBuilder.cpp:59:thunkCallee[#585  computed-static Method] [flags 0x500 0x0 ]  [0x555556233570] bci=[-1,0,-] rc=2 vc=102 vn=- li=- udi=- nc=1
-n3n           ==>aconst 0x7ffff4a80214
-n11n      lreturn                                                                             [0x555556233630] bci=[-1,0,-] rc=0 vc=102 vn=- li=- udi=- nc=1
-n8n         ==>lcalli
-n2n       BBEnd </block_2>                                                                    [0x5555562333f0] bci=[-1,0,-] rc=0 vc=102 vn=- li=- udi=- nc=0
+n1n       BBStart <block_2> (freq 10000)                                                      [0x555556230e20] bci=[-1,0,-] rc=0 vc=158 vn=- li=- udi=- nc=1
+n28n        GlRegDeps                                                                         [0x5555562314e0] bci=[-1,0,-] rc=1 vc=0 vn=- li=- udi=- nc=2
+n29n          aRegLoad edi   target<parm 0 L>[#583  Parm] [flags 0x40010107 0x0 ]             [0x555556231520] bci=[-1,0,-] rc=1 vc=0 vn=- li=- udi=- nc=0
+n30n          aRegLoad esi   args<parm 1 LInt64;>[#584  Parm] [flags 0x40010107 0x0 ] (X>=0 SeenRealReference )  [0x555556231560] bci=[-1,0,-] rc=2 vc=0 vn=- li=- udi=- nc=0 flg=0x8100
+n5n       aRegStore edi  (X!=0 )                                                              [0x555556230f20] bci=[-1,0,-] rc=0 vc=158 vn=- li=- udi=1 nc=1 flg=0x4
+n3n         aconst 0x7ffff4a80754 (X!=0 )                                                     [0x555556230ea0] bci=[-1,0,-] rc=2 vc=158 vn=- li=- udi=- nc=0 flg=0x4
+n22n      treetop                                                                             [0x555556231360] bci=[-1,0,-] rc=0 vc=158 vn=- li=- udi=- nc=1
+n21n        icalli  /hdd/wasmjit-omr/third_party/omr/compiler/ilgen/OMRThunkBuilder.cpp:59:thunkCallee[#586  computed-static Method] [flags 0x500 0x0 ]  [0x555556231320] bci=[-1,0,-] rc=2 vc=158 vn=- li=- udi=- nc=2
+n3n           ==>aconst 0x7ffff4a80754
+n19n          l2a                                                                             [0x5555562312a0] bci=[-1,0,-] rc=1 vc=158 vn=- li=- udi=- nc=1
+n17n            lloadi  <array-shadow>[#474  Shadow] [flags 0x80000604 0x0 ] (cannotOverflow )  [0x555556231220] bci=[-1,0,-] rc=1 vc=158 vn=- li=- udi=- nc=1 flg=0x1000
+n30n              ==>aRegLoad
+n24n      ireturn                                                                             [0x5555562313e0] bci=[-1,0,-] rc=0 vc=158 vn=- li=- udi=- nc=1
+n21n        ==>icalli
+n2n       BBEnd </block_2>                                                                    [0x555556230e60] bci=[-1,0,-] rc=0 vc=158 vn=- li=- udi=- nc=0
 
 index:       node global index
 bci=[x,y,z]: byte-code-info [callee-index, bytecode-index, line-number]
@@ -704,34 +961,34 @@ nc:          number of children
 addr:        address size in bytes
 flg:         node flags
 
-Number of nodes = 9, symRefCount = 586
+Number of nodes = 12, symRefCount = 587
 </trees>
 
 <cfg>
-         0 [0x555556251600] entry
+         0 [0x55555624f0b0] entry
                  in        = []
                  out       = [2(10000) ]
                  exception in  = []
                  exception out = []
-         1 [0x555556251500] exit
+         1 [0x55555624efb0] exit
                  in        = [2(10000) ]
                  out       = []
                  exception in  = []
                  exception out = []
-         2 [0x555556251760] BBStart at 0x5555562333b0, frequency = 10000
+         2 [0x55555624f210] BBStart at 0x555556230e20, frequency = 10000
                  in        = [0(10000) ]
                  out       = [1(10000) ]
                  exception in  = []
                  exception out = []
 <structure>
-      0 [0x5555562505b0] Acyclic region
+      0 [0x55555624e060] Acyclic region
          Subgraph: (* = exit edge)
-               (0x555556250680:0x555556250550)0 --> 2(0x555556250710)
-               (0x555556250710:0x555556250490)2 --> 1(0x5555562507f0)
-               (0x5555562507f0:0x5555562504f0)1 -->
-         0 [0x555556250550] Block
-         2 [0x555556250490] Block
-         1 [0x5555562504f0] Block
+               (0x55555624e130:0x55555624e000)0 --> 2(0x55555624e1c0)
+               (0x55555624e1c0:0x55555624df40)2 --> 1(0x55555624e2a0)
+               (0x55555624e2a0:0x55555624dfa0)1 -->
+         0 [0x55555624e000] Block
+         2 [0x55555624df40] Block
+         1 [0x55555624dfa0] Block
 </structure>
 </cfg>
 </optimization>
@@ -740,8 +997,8 @@ Number of nodes = 9, symRefCount = 586
    <optgroup name=globalDeadStoreGroup>
 <optimization id=29 name=deadTreesElimination method=51:/hdd/w:func_1>
 Performing 29: deadTreesElimination
-[    14] O^O DEAD TREES ELIMINATION: Remove GlRegDep : 0x5555562336b0
-[    15] O^O DEAD TREES ELIMINATION: Move tree : [0x5555562334b0]([0x555556233430] = aconst) to end of block
+[    24] O^O DEAD TREES ELIMINATION: Remove GlRegDep : 0x555556231520
+[    25] O^O DEAD TREES ELIMINATION: Move tree : [0x555556230f20]([0x555556230ea0] = aconst) to end of block
 <trees
 	title="Trees after deadTreesElimination"
 	method="51:/hdd/w:func_1"
@@ -750,15 +1007,20 @@ Performing 29: deadTreesElimination
 Trees after deadTreesElimination: for 51:/hdd/w:func_1
 
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-n1n       BBStart <block_2> (freq 10000)                                                      [0x5555562333b0] bci=[-1,0,-] rc=0 vc=105 vn=- li=-1 udi=- nc=0
-n9n       treetop                                                                             [0x5555562335b0] bci=[-1,0,-] rc=0 vc=105 vn=- li=-1 udi=- nc=1
-n8n         lcalli  /hdd/wasmjit-omr/third_party/omr/compiler/ilgen/OMRThunkBuilder.cpp:59:thunkCallee[#585  computed-static Method] [flags 0x500 0x0 ]  [0x555556233570] bci=[-1,0,-] rc=2 vc=105 vn=- li=- udi=- nc=1
-n3n           aconst 0x7ffff4a80214 (X!=0 )                                                   [0x555556233430] bci=[-1,0,-] rc=2 vc=105 vn=- li=1 udi=- nc=0 flg=0x4
-n5n       aRegStore edi  (X!=0 )                                                              [0x5555562334b0] bci=[-1,0,-] rc=0 vc=105 vn=- li=-1 udi=1 nc=1 flg=0x4
-n3n         ==>aconst 0x7ffff4a80214
-n11n      lreturn                                                                             [0x555556233630] bci=[-1,0,-] rc=0 vc=105 vn=- li=-1 udi=- nc=1
-n8n         ==>lcalli
-n2n       BBEnd </block_2>                                                                    [0x5555562333f0] bci=[-1,0,-] rc=0 vc=105 vn=- li=-1 udi=- nc=0
+n1n       BBStart <block_2> (freq 10000)                                                      [0x555556230e20] bci=[-1,0,-] rc=0 vc=161 vn=- li=-1 udi=- nc=1
+n28n        GlRegDeps                                                                         [0x5555562314e0] bci=[-1,0,-] rc=1 vc=161 vn=- li=- udi=- nc=1
+n30n          aRegLoad esi   args<parm 1 LInt64;>[#584  Parm] [flags 0x40010107 0x0 ] (X>=0 SeenRealReference )  [0x555556231560] bci=[-1,0,-] rc=2 vc=161 vn=- li=- udi=- nc=0 flg=0x8100
+n22n      treetop                                                                             [0x555556231360] bci=[-1,0,-] rc=0 vc=161 vn=- li=-1 udi=- nc=1
+n21n        icalli  /hdd/wasmjit-omr/third_party/omr/compiler/ilgen/OMRThunkBuilder.cpp:59:thunkCallee[#586  computed-static Method] [flags 0x500 0x0 ]  [0x555556231320] bci=[-1,0,-] rc=2 vc=161 vn=- li=- udi=- nc=2
+n3n           aconst 0x7ffff4a80754 (X!=0 )                                                   [0x555556230ea0] bci=[-1,0,-] rc=2 vc=161 vn=- li=1 udi=- nc=0 flg=0x4
+n19n          l2a                                                                             [0x5555562312a0] bci=[-1,0,-] rc=1 vc=161 vn=- li=- udi=- nc=1
+n17n            lloadi  <array-shadow>[#474  Shadow] [flags 0x80000604 0x0 ] (cannotOverflow )  [0x555556231220] bci=[-1,0,-] rc=1 vc=161 vn=- li=- udi=- nc=1 flg=0x1000
+n30n              ==>aRegLoad
+n5n       aRegStore edi  (X!=0 )                                                              [0x555556230f20] bci=[-1,0,-] rc=0 vc=161 vn=- li=-1 udi=1 nc=1 flg=0x4
+n3n         ==>aconst 0x7ffff4a80754
+n24n      ireturn                                                                             [0x5555562313e0] bci=[-1,0,-] rc=0 vc=161 vn=- li=-1 udi=- nc=1
+n21n        ==>icalli
+n2n       BBEnd </block_2>                                                                    [0x555556230e60] bci=[-1,0,-] rc=0 vc=161 vn=- li=-1 udi=- nc=0
 
 index:       node global index
 bci=[x,y,z]: byte-code-info [callee-index, bytecode-index, line-number]
@@ -771,34 +1033,34 @@ nc:          number of children
 addr:        address size in bytes
 flg:         node flags
 
-Number of nodes = 7, symRefCount = 586
+Number of nodes = 11, symRefCount = 587
 </trees>
 
 <cfg>
-         0 [0x555556251600] entry
+         0 [0x55555624f0b0] entry
                  in        = []
                  out       = [2(10000) ]
                  exception in  = []
                  exception out = []
-         1 [0x555556251500] exit
+         1 [0x55555624efb0] exit
                  in        = [2(10000) ]
                  out       = []
                  exception in  = []
                  exception out = []
-         2 [0x555556251760] BBStart at 0x5555562333b0, frequency = 10000
+         2 [0x55555624f210] BBStart at 0x555556230e20, frequency = 10000
                  in        = [0(10000) ]
                  out       = [1(10000) ]
                  exception in  = []
                  exception out = []
 <structure>
-      0 [0x5555562505b0] Acyclic region
+      0 [0x55555624e060] Acyclic region
          Subgraph: (* = exit edge)
-               (0x555556250680:0x555556250550)0 --> 2(0x555556250710)
-               (0x555556250710:0x555556250490)2 --> 1(0x5555562507f0)
-               (0x5555562507f0:0x5555562504f0)1 -->
-         0 [0x555556250550] Block
-         2 [0x555556250490] Block
-         1 [0x5555562504f0] Block
+               (0x55555624e130:0x55555624e000)0 --> 2(0x55555624e1c0)
+               (0x55555624e1c0:0x55555624df40)2 --> 1(0x55555624e2a0)
+               (0x55555624e2a0:0x55555624dfa0)1 -->
+         0 [0x55555624e000] Block
+         2 [0x55555624df40] Block
+         1 [0x55555624dfa0] Block
 </structure>
 </cfg>
 </optimization>
@@ -822,15 +1084,20 @@ Performing 33: regDepCopyRemoval
 Post Optimization Trees: for 51:/hdd/w:func_1
 
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-n1n       BBStart <block_2> (freq 10000)                                                      [0x5555562333b0] bci=[-1,0,-] rc=0 vc=110 vn=- li=-1 udi=- nc=0
-n9n       treetop                                                                             [0x5555562335b0] bci=[-1,0,-] rc=0 vc=110 vn=- li=-1 udi=- nc=1
-n8n         lcalli  /hdd/wasmjit-omr/third_party/omr/compiler/ilgen/OMRThunkBuilder.cpp:59:thunkCallee[#585  computed-static Method] [flags 0x500 0x0 ]  [0x555556233570] bci=[-1,0,-] rc=2 vc=110 vn=- li=- udi=- nc=1
-n3n           aconst 0x7ffff4a80214 (X!=0 )                                                   [0x555556233430] bci=[-1,0,-] rc=2 vc=110 vn=- li=- udi=- nc=0 flg=0x4
-n5n       aRegStore edi  (X!=0 )                                                              [0x5555562334b0] bci=[-1,0,-] rc=0 vc=110 vn=- li=-1 udi=1 nc=1 flg=0x4
-n3n         ==>aconst 0x7ffff4a80214
-n11n      lreturn                                                                             [0x555556233630] bci=[-1,0,-] rc=0 vc=110 vn=- li=-1 udi=- nc=1
-n8n         ==>lcalli
-n2n       BBEnd </block_2>                                                                    [0x5555562333f0] bci=[-1,0,-] rc=0 vc=110 vn=- li=-1 udi=- nc=0
+n1n       BBStart <block_2> (freq 10000)                                                      [0x555556230e20] bci=[-1,0,-] rc=0 vc=166 vn=- li=-1 udi=- nc=1
+n28n        GlRegDeps                                                                         [0x5555562314e0] bci=[-1,0,-] rc=1 vc=166 vn=- li=- udi=- nc=1
+n30n          aRegLoad esi   args<parm 1 LInt64;>[#584  Parm] [flags 0x40010107 0x0 ] (X>=0 SeenRealReference )  [0x555556231560] bci=[-1,0,-] rc=2 vc=166 vn=- li=- udi=- nc=0 flg=0x8100
+n22n      treetop                                                                             [0x555556231360] bci=[-1,0,-] rc=0 vc=166 vn=- li=-1 udi=- nc=1
+n21n        icalli  /hdd/wasmjit-omr/third_party/omr/compiler/ilgen/OMRThunkBuilder.cpp:59:thunkCallee[#586  computed-static Method] [flags 0x500 0x0 ]  [0x555556231320] bci=[-1,0,-] rc=2 vc=166 vn=- li=- udi=- nc=2
+n3n           aconst 0x7ffff4a80754 (X!=0 )                                                   [0x555556230ea0] bci=[-1,0,-] rc=2 vc=166 vn=- li=- udi=- nc=0 flg=0x4
+n19n          l2a                                                                             [0x5555562312a0] bci=[-1,0,-] rc=1 vc=166 vn=- li=- udi=- nc=1
+n17n            lloadi  <array-shadow>[#474  Shadow] [flags 0x80000604 0x0 ] (cannotOverflow )  [0x555556231220] bci=[-1,0,-] rc=1 vc=166 vn=- li=- udi=- nc=1 flg=0x1000
+n30n              ==>aRegLoad
+n5n       aRegStore edi  (X!=0 )                                                              [0x555556230f20] bci=[-1,0,-] rc=0 vc=166 vn=- li=-1 udi=1 nc=1 flg=0x4
+n3n         ==>aconst 0x7ffff4a80754
+n24n      ireturn                                                                             [0x5555562313e0] bci=[-1,0,-] rc=0 vc=166 vn=- li=-1 udi=- nc=1
+n21n        ==>icalli
+n2n       BBEnd </block_2>                                                                    [0x555556230e60] bci=[-1,0,-] rc=0 vc=166 vn=- li=-1 udi=- nc=0
 
 index:       node global index
 bci=[x,y,z]: byte-code-info [callee-index, bytecode-index, line-number]
@@ -843,34 +1110,34 @@ nc:          number of children
 addr:        address size in bytes
 flg:         node flags
 
-Number of nodes = 7, symRefCount = 586
+Number of nodes = 11, symRefCount = 587
 </trees>
 
 <cfg>
-         0 [0x555556251600] entry
+         0 [0x55555624f0b0] entry
                  in        = []
                  out       = [2(10000) ]
                  exception in  = []
                  exception out = []
-         1 [0x555556251500] exit
+         1 [0x55555624efb0] exit
                  in        = [2(10000) ]
                  out       = []
                  exception in  = []
                  exception out = []
-         2 [0x555556251760] BBStart at 0x5555562333b0, frequency = 10000
+         2 [0x55555624f210] BBStart at 0x555556230e20, frequency = 10000
                  in        = [0(10000) ]
                  out       = [1(10000) ]
                  exception in  = []
                  exception out = []
 <structure>
-      0 [0x5555562505b0] Acyclic region
+      0 [0x55555624e060] Acyclic region
          Subgraph: (* = exit edge)
-               (0x555556250680:0x555556250550)0 --> 2(0x555556250710)
-               (0x555556250710:0x555556250490)2 --> 1(0x5555562507f0)
-               (0x5555562507f0:0x5555562504f0)1 -->
-         0 [0x555556250550] Block
-         2 [0x555556250490] Block
-         1 [0x5555562504f0] Block
+               (0x55555624e130:0x55555624e000)0 --> 2(0x55555624e1c0)
+               (0x55555624e1c0:0x55555624df40)2 --> 1(0x55555624e2a0)
+               (0x55555624e2a0:0x55555624dfa0)1 -->
+         0 [0x55555624e000] Block
+         2 [0x55555624df40] Block
+         1 [0x55555624dfa0] Block
 </structure>
 </cfg>
 </optimize>
@@ -887,15 +1154,20 @@ Number of nodes = 7, symRefCount = 586
 Post Lower Trees: for 51:/hdd/w:func_1
 
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-n1n       BBStart <block_2> (freq 10000)                                                      [0x5555562333b0] bci=[-1,0,-] rc=0 vc=111 vn=- li=2 udi=- nc=0
-n9n       treetop                                                                             [0x5555562335b0] bci=[-1,0,-] rc=0 vc=111 vn=- li=2 udi=- nc=1
-n8n         lcalli  /hdd/wasmjit-omr/third_party/omr/compiler/ilgen/OMRThunkBuilder.cpp:59:thunkCallee[#585  computed-static Method] [flags 0x500 0x0 ]  [0x555556233570] bci=[-1,0,-] rc=2 vc=111 vn=- li=2 udi=- nc=1
-n3n           aconst 0x7ffff4a80214 (X!=0 )                                                   [0x555556233430] bci=[-1,0,-] rc=2 vc=111 vn=- li=2 udi=- nc=0 flg=0x4
-n5n       aRegStore edi  (X!=0 )                                                              [0x5555562334b0] bci=[-1,0,-] rc=0 vc=111 vn=- li=2 udi=1 nc=1 flg=0x4
-n3n         ==>aconst 0x7ffff4a80214
-n11n      lreturn                                                                             [0x555556233630] bci=[-1,0,-] rc=0 vc=111 vn=- li=2 udi=- nc=1
-n8n         ==>lcalli
-n2n       BBEnd </block_2>                                                                    [0x5555562333f0] bci=[-1,0,-] rc=0 vc=111 vn=- li=2 udi=- nc=0
+n1n       BBStart <block_2> (freq 10000)                                                      [0x555556230e20] bci=[-1,0,-] rc=0 vc=167 vn=- li=2 udi=- nc=1
+n28n        GlRegDeps                                                                         [0x5555562314e0] bci=[-1,0,-] rc=1 vc=167 vn=- li=2 udi=- nc=1
+n30n          aRegLoad esi   args<parm 1 LInt64;>[#584  Parm] [flags 0x40010107 0x0 ] (X>=0 SeenRealReference )  [0x555556231560] bci=[-1,0,-] rc=2 vc=167 vn=- li=2 udi=- nc=0 flg=0x8100
+n22n      treetop                                                                             [0x555556231360] bci=[-1,0,-] rc=0 vc=167 vn=- li=2 udi=- nc=1
+n21n        icalli  /hdd/wasmjit-omr/third_party/omr/compiler/ilgen/OMRThunkBuilder.cpp:59:thunkCallee[#586  computed-static Method] [flags 0x500 0x0 ]  [0x555556231320] bci=[-1,0,-] rc=2 vc=167 vn=- li=2 udi=- nc=2
+n3n           aconst 0x7ffff4a80754 (X!=0 )                                                   [0x555556230ea0] bci=[-1,0,-] rc=2 vc=167 vn=- li=2 udi=- nc=0 flg=0x4
+n19n          l2a                                                                             [0x5555562312a0] bci=[-1,0,-] rc=1 vc=167 vn=- li=2 udi=- nc=1
+n17n            lloadi  <array-shadow>[#474  Shadow] [flags 0x80000604 0x0 ] (cannotOverflow )  [0x555556231220] bci=[-1,0,-] rc=1 vc=167 vn=- li=2 udi=- nc=1 flg=0x1000
+n30n              ==>aRegLoad
+n5n       aRegStore edi  (X!=0 )                                                              [0x555556230f20] bci=[-1,0,-] rc=0 vc=167 vn=- li=2 udi=1 nc=1 flg=0x4
+n3n         ==>aconst 0x7ffff4a80754
+n24n      ireturn                                                                             [0x5555562313e0] bci=[-1,0,-] rc=0 vc=167 vn=- li=2 udi=- nc=1
+n21n        ==>icalli
+n2n       BBEnd </block_2>                                                                    [0x555556230e60] bci=[-1,0,-] rc=0 vc=167 vn=- li=2 udi=- nc=0
 
 index:       node global index
 bci=[x,y,z]: byte-code-info [callee-index, bytecode-index, line-number]
@@ -908,34 +1180,34 @@ nc:          number of children
 addr:        address size in bytes
 flg:         node flags
 
-Number of nodes = 7, symRefCount = 586
+Number of nodes = 11, symRefCount = 587
 </trees>
 
 <cfg>
-         0 [0x555556251600] entry
+         0 [0x55555624f0b0] entry
                  in        = []
                  out       = [2(10000) ]
                  exception in  = []
                  exception out = []
-         1 [0x555556251500] exit
+         1 [0x55555624efb0] exit
                  in        = [2(10000) ]
                  out       = []
                  exception in  = []
                  exception out = []
-         2 [0x555556251760] BBStart at 0x5555562333b0, frequency = 10000
+         2 [0x55555624f210] BBStart at 0x555556230e20, frequency = 10000
                  in        = [0(10000) ]
                  out       = [1(10000) ]
                  exception in  = []
                  exception out = []
 <structure>
-      0 [0x5555562505b0] Acyclic region
+      0 [0x55555624e060] Acyclic region
          Subgraph: (* = exit edge)
-               (0x555556250680:0x555556250550)0 --> 2(0x555556250710)
-               (0x555556250710:0x555556250490)2 --> 1(0x5555562507f0)
-               (0x5555562507f0:0x5555562504f0)1 -->
-         0 [0x555556250550] Block
-         2 [0x555556250490] Block
-         1 [0x5555562504f0] Block
+               (0x55555624e130:0x55555624e000)0 --> 2(0x55555624e1c0)
+               (0x55555624e1c0:0x55555624df40)2 --> 1(0x55555624e2a0)
+               (0x55555624e2a0:0x55555624dfa0)1 -->
+         0 [0x55555624e000] Block
+         2 [0x55555624df40] Block
+         1 [0x55555624dfa0] Block
 </structure>
 </cfg>
 <trees
@@ -946,15 +1218,20 @@ Number of nodes = 7, symRefCount = 586
 Pre Uncommon Call Constant Node Trees: for 51:/hdd/w:func_1
 
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-n1n       BBStart <block_2> (freq 10000)                                                      [0x5555562333b0] bci=[-1,0,-] rc=0 vc=111 vn=- li=2 udi=- nc=0
-n9n       treetop                                                                             [0x5555562335b0] bci=[-1,0,-] rc=0 vc=111 vn=- li=2 udi=- nc=1
-n8n         lcalli  /hdd/wasmjit-omr/third_party/omr/compiler/ilgen/OMRThunkBuilder.cpp:59:thunkCallee[#585  computed-static Method] [flags 0x500 0x0 ]  [0x555556233570] bci=[-1,0,-] rc=2 vc=111 vn=- li=2 udi=- nc=1
-n3n           aconst 0x7ffff4a80214 (X!=0 )                                                   [0x555556233430] bci=[-1,0,-] rc=2 vc=111 vn=- li=2 udi=- nc=0 flg=0x4
-n5n       aRegStore edi  (X!=0 )                                                              [0x5555562334b0] bci=[-1,0,-] rc=0 vc=111 vn=- li=2 udi=1 nc=1 flg=0x4
-n3n         ==>aconst 0x7ffff4a80214
-n11n      lreturn                                                                             [0x555556233630] bci=[-1,0,-] rc=0 vc=111 vn=- li=2 udi=- nc=1
-n8n         ==>lcalli
-n2n       BBEnd </block_2>                                                                    [0x5555562333f0] bci=[-1,0,-] rc=0 vc=111 vn=- li=2 udi=- nc=0
+n1n       BBStart <block_2> (freq 10000)                                                      [0x555556230e20] bci=[-1,0,-] rc=0 vc=167 vn=- li=2 udi=- nc=1
+n28n        GlRegDeps                                                                         [0x5555562314e0] bci=[-1,0,-] rc=1 vc=167 vn=- li=2 udi=- nc=1
+n30n          aRegLoad esi   args<parm 1 LInt64;>[#584  Parm] [flags 0x40010107 0x0 ] (X>=0 SeenRealReference )  [0x555556231560] bci=[-1,0,-] rc=2 vc=167 vn=- li=2 udi=- nc=0 flg=0x8100
+n22n      treetop                                                                             [0x555556231360] bci=[-1,0,-] rc=0 vc=167 vn=- li=2 udi=- nc=1
+n21n        icalli  /hdd/wasmjit-omr/third_party/omr/compiler/ilgen/OMRThunkBuilder.cpp:59:thunkCallee[#586  computed-static Method] [flags 0x500 0x0 ]  [0x555556231320] bci=[-1,0,-] rc=2 vc=167 vn=- li=2 udi=- nc=2
+n3n           aconst 0x7ffff4a80754 (X!=0 )                                                   [0x555556230ea0] bci=[-1,0,-] rc=2 vc=167 vn=- li=2 udi=- nc=0 flg=0x4
+n19n          l2a                                                                             [0x5555562312a0] bci=[-1,0,-] rc=1 vc=167 vn=- li=2 udi=- nc=1
+n17n            lloadi  <array-shadow>[#474  Shadow] [flags 0x80000604 0x0 ] (cannotOverflow )  [0x555556231220] bci=[-1,0,-] rc=1 vc=167 vn=- li=2 udi=- nc=1 flg=0x1000
+n30n              ==>aRegLoad
+n5n       aRegStore edi  (X!=0 )                                                              [0x555556230f20] bci=[-1,0,-] rc=0 vc=167 vn=- li=2 udi=1 nc=1 flg=0x4
+n3n         ==>aconst 0x7ffff4a80754
+n24n      ireturn                                                                             [0x5555562313e0] bci=[-1,0,-] rc=0 vc=167 vn=- li=2 udi=- nc=1
+n21n        ==>icalli
+n2n       BBEnd </block_2>                                                                    [0x555556230e60] bci=[-1,0,-] rc=0 vc=167 vn=- li=2 udi=- nc=0
 
 index:       node global index
 bci=[x,y,z]: byte-code-info [callee-index, bytecode-index, line-number]
@@ -967,39 +1244,39 @@ nc:          number of children
 addr:        address size in bytes
 flg:         node flags
 
-Number of nodes = 7, symRefCount = 586
+Number of nodes = 11, symRefCount = 587
 </trees>
 
 <cfg>
-         0 [0x555556251600] entry
+         0 [0x55555624f0b0] entry
                  in        = []
                  out       = [2(10000) ]
                  exception in  = []
                  exception out = []
-         1 [0x555556251500] exit
+         1 [0x55555624efb0] exit
                  in        = [2(10000) ]
                  out       = []
                  exception in  = []
                  exception out = []
-         2 [0x555556251760] BBStart at 0x5555562333b0, frequency = 10000
+         2 [0x55555624f210] BBStart at 0x555556230e20, frequency = 10000
                  in        = [0(10000) ]
                  out       = [1(10000) ]
                  exception in  = []
                  exception out = []
 <structure>
-      0 [0x5555562505b0] Acyclic region
+      0 [0x55555624e060] Acyclic region
          Subgraph: (* = exit edge)
-               (0x555556250680:0x555556250550)0 --> 2(0x555556250710)
-               (0x555556250710:0x555556250490)2 --> 1(0x5555562507f0)
-               (0x5555562507f0:0x5555562504f0)1 -->
-         0 [0x555556250550] Block
-         2 [0x555556250490] Block
-         1 [0x5555562504f0] Block
+               (0x55555624e130:0x55555624e000)0 --> 2(0x55555624e1c0)
+               (0x55555624e1c0:0x55555624df40)2 --> 1(0x55555624e2a0)
+               (0x55555624e2a0:0x55555624dfa0)1 -->
+         0 [0x55555624e000] Block
+         2 [0x55555624df40] Block
+         1 [0x55555624dfa0] Block
 </structure>
 </cfg>
 Performing uncommon call constant nodes
-Uncommon const node 56233430 [n3n]
-Skipping previously visited call node 8
+Uncommon const node 56230EA0 [n3n]
+Skipping previously visited call node 21
 <trees
 	title="Post Uncommon Call Constant Node Trees"
 	method="51:/hdd/w:func_1"
@@ -1008,15 +1285,20 @@ Skipping previously visited call node 8
 Post Uncommon Call Constant Node Trees: for 51:/hdd/w:func_1
 
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-n1n       BBStart <block_2> (freq 10000)                                                      [0x5555562333b0] bci=[-1,0,-] rc=0 vc=111 vn=- li=2 udi=- nc=0
-n9n       treetop                                                                             [0x5555562335b0] bci=[-1,0,-] rc=0 vc=111 vn=- li=2 udi=- nc=1
-n8n         lcalli  /hdd/wasmjit-omr/third_party/omr/compiler/ilgen/OMRThunkBuilder.cpp:59:thunkCallee[#585  computed-static Method] [flags 0x500 0x0 ]  [0x555556233570] bci=[-1,0,-] rc=2 vc=111 vn=- li=2 udi=- nc=1
-n15n          aconst 0x7ffff4a80214                                                           [0x555556233730] bci=[-1,0,-] rc=1 vc=0 vn=- li=- udi=- nc=0
-n5n       aRegStore edi  (X!=0 )                                                              [0x5555562334b0] bci=[-1,0,-] rc=0 vc=111 vn=- li=2 udi=1 nc=1 flg=0x4
-n3n         aconst 0x7ffff4a80214 (X!=0 )                                                     [0x555556233430] bci=[-1,0,-] rc=1 vc=111 vn=- li=2 udi=- nc=0 flg=0x4
-n11n      lreturn                                                                             [0x555556233630] bci=[-1,0,-] rc=0 vc=111 vn=- li=2 udi=- nc=1
-n8n         ==>lcalli
-n2n       BBEnd </block_2>                                                                    [0x5555562333f0] bci=[-1,0,-] rc=0 vc=111 vn=- li=2 udi=- nc=0
+n1n       BBStart <block_2> (freq 10000)                                                      [0x555556230e20] bci=[-1,0,-] rc=0 vc=167 vn=- li=2 udi=- nc=1
+n28n        GlRegDeps                                                                         [0x5555562314e0] bci=[-1,0,-] rc=1 vc=167 vn=- li=2 udi=- nc=1
+n30n          aRegLoad esi   args<parm 1 LInt64;>[#584  Parm] [flags 0x40010107 0x0 ] (X>=0 SeenRealReference )  [0x555556231560] bci=[-1,0,-] rc=2 vc=167 vn=- li=2 udi=- nc=0 flg=0x8100
+n22n      treetop                                                                             [0x555556231360] bci=[-1,0,-] rc=0 vc=167 vn=- li=2 udi=- nc=1
+n21n        icalli  /hdd/wasmjit-omr/third_party/omr/compiler/ilgen/OMRThunkBuilder.cpp:59:thunkCallee[#586  computed-static Method] [flags 0x500 0x0 ]  [0x555556231320] bci=[-1,0,-] rc=2 vc=167 vn=- li=2 udi=- nc=2
+n32n          aconst 0x7ffff4a80754                                                           [0x5555562315e0] bci=[-1,0,-] rc=1 vc=0 vn=- li=- udi=- nc=0
+n19n          l2a                                                                             [0x5555562312a0] bci=[-1,0,-] rc=1 vc=167 vn=- li=2 udi=- nc=1
+n17n            lloadi  <array-shadow>[#474  Shadow] [flags 0x80000604 0x0 ] (cannotOverflow )  [0x555556231220] bci=[-1,0,-] rc=1 vc=167 vn=- li=2 udi=- nc=1 flg=0x1000
+n30n              ==>aRegLoad
+n5n       aRegStore edi  (X!=0 )                                                              [0x555556230f20] bci=[-1,0,-] rc=0 vc=167 vn=- li=2 udi=1 nc=1 flg=0x4
+n3n         aconst 0x7ffff4a80754 (X!=0 )                                                     [0x555556230ea0] bci=[-1,0,-] rc=1 vc=167 vn=- li=2 udi=- nc=0 flg=0x4
+n24n      ireturn                                                                             [0x5555562313e0] bci=[-1,0,-] rc=0 vc=167 vn=- li=2 udi=- nc=1
+n21n        ==>icalli
+n2n       BBEnd </block_2>                                                                    [0x555556230e60] bci=[-1,0,-] rc=0 vc=167 vn=- li=2 udi=- nc=0
 
 index:       node global index
 bci=[x,y,z]: byte-code-info [callee-index, bytecode-index, line-number]
@@ -1029,34 +1311,34 @@ nc:          number of children
 addr:        address size in bytes
 flg:         node flags
 
-Number of nodes = 8, symRefCount = 586
+Number of nodes = 12, symRefCount = 587
 </trees>
 
 <cfg>
-         0 [0x555556251600] entry
+         0 [0x55555624f0b0] entry
                  in        = []
                  out       = [2(10000) ]
                  exception in  = []
                  exception out = []
-         1 [0x555556251500] exit
+         1 [0x55555624efb0] exit
                  in        = [2(10000) ]
                  out       = []
                  exception in  = []
                  exception out = []
-         2 [0x555556251760] BBStart at 0x5555562333b0, frequency = 10000
+         2 [0x55555624f210] BBStart at 0x555556230e20, frequency = 10000
                  in        = [0(10000) ]
                  out       = [1(10000) ]
                  exception in  = []
                  exception out = []
 <structure>
-      0 [0x5555562505b0] Acyclic region
+      0 [0x55555624e060] Acyclic region
          Subgraph: (* = exit edge)
-               (0x555556250680:0x555556250550)0 --> 2(0x555556250710)
-               (0x555556250710:0x555556250490)2 --> 1(0x5555562507f0)
-               (0x5555562507f0:0x5555562504f0)1 -->
-         0 [0x555556250550] Block
-         2 [0x555556250490] Block
-         1 [0x5555562504f0] Block
+               (0x55555624e130:0x55555624e000)0 --> 2(0x55555624e1c0)
+               (0x55555624e1c0:0x55555624df40)2 --> 1(0x55555624e2a0)
+               (0x55555624e2a0:0x55555624dfa0)1 -->
+         0 [0x55555624e000] Block
+         2 [0x55555624df40] Block
+         1 [0x55555624dfa0] Block
 </structure>
 </cfg>
 <trees
@@ -1067,15 +1349,20 @@ Number of nodes = 8, symRefCount = 586
 Pre Instruction Selection Trees: for 51:/hdd/w:func_1
 
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-n1n       BBStart <block_2> (freq 10000)                                                      [0x5555562333b0] bci=[-1,0,-] rc=0 vc=112 vn=- li=2 udi=- nc=0
-n9n       treetop                                                                             [0x5555562335b0] bci=[-1,0,-] rc=0 vc=112 vn=- li=2 udi=- nc=1
-n8n         lcalli  /hdd/wasmjit-omr/third_party/omr/compiler/ilgen/OMRThunkBuilder.cpp:59:thunkCallee[#585  computed-static Method] [flags 0x500 0x0 ]  [0x555556233570] bci=[-1,0,-] rc=2 vc=112 vn=- li=2 udi=- nc=1
-n15n          aconst 0x7ffff4a80214                                                           [0x555556233730] bci=[-1,0,-] rc=1 vc=112 vn=- li=- udi=- nc=0
-n5n       aRegStore edi  (X!=0 )                                                              [0x5555562334b0] bci=[-1,0,-] rc=0 vc=112 vn=- li=2 udi=- nc=1 flg=0x4
-n3n         aconst 0x7ffff4a80214 (X!=0 )                                                     [0x555556233430] bci=[-1,0,-] rc=1 vc=112 vn=- li=2 udi=- nc=0 flg=0x4
-n11n      lreturn                                                                             [0x555556233630] bci=[-1,0,-] rc=0 vc=112 vn=- li=2 udi=- nc=1
-n8n         ==>lcalli
-n2n       BBEnd </block_2>                                                                    [0x5555562333f0] bci=[-1,0,-] rc=0 vc=112 vn=- li=2 udi=- nc=0
+n1n       BBStart <block_2> (freq 10000)                                                      [0x555556230e20] bci=[-1,0,-] rc=0 vc=168 vn=- li=2 udi=- nc=1
+n28n        GlRegDeps                                                                         [0x5555562314e0] bci=[-1,0,-] rc=1 vc=168 vn=- li=2 udi=- nc=1
+n30n          aRegLoad esi   args<parm 1 LInt64;>[#584  Parm] [flags 0x40010107 0x0 ] (X>=0 SeenRealReference )  [0x555556231560] bci=[-1,0,-] rc=2 vc=168 vn=- li=2 udi=- nc=0 flg=0x8100
+n22n      treetop                                                                             [0x555556231360] bci=[-1,0,-] rc=0 vc=168 vn=- li=2 udi=- nc=1
+n21n        icalli  /hdd/wasmjit-omr/third_party/omr/compiler/ilgen/OMRThunkBuilder.cpp:59:thunkCallee[#586  computed-static Method] [flags 0x500 0x0 ]  [0x555556231320] bci=[-1,0,-] rc=2 vc=168 vn=- li=2 udi=- nc=2
+n32n          aconst 0x7ffff4a80754                                                           [0x5555562315e0] bci=[-1,0,-] rc=1 vc=168 vn=- li=- udi=- nc=0
+n19n          l2a                                                                             [0x5555562312a0] bci=[-1,0,-] rc=1 vc=168 vn=- li=2 udi=- nc=1
+n17n            lloadi  <array-shadow>[#474  Shadow] [flags 0x80000604 0x0 ] (cannotOverflow )  [0x555556231220] bci=[-1,0,-] rc=1 vc=168 vn=- li=2 udi=- nc=1 flg=0x1000
+n30n              ==>aRegLoad
+n5n       aRegStore edi  (X!=0 )                                                              [0x555556230f20] bci=[-1,0,-] rc=0 vc=168 vn=- li=2 udi=- nc=1 flg=0x4
+n3n         aconst 0x7ffff4a80754 (X!=0 )                                                     [0x555556230ea0] bci=[-1,0,-] rc=1 vc=168 vn=- li=2 udi=- nc=0 flg=0x4
+n24n      ireturn                                                                             [0x5555562313e0] bci=[-1,0,-] rc=0 vc=168 vn=- li=2 udi=- nc=1
+n21n        ==>icalli
+n2n       BBEnd </block_2>                                                                    [0x555556230e60] bci=[-1,0,-] rc=0 vc=168 vn=- li=2 udi=- nc=0
 
 index:       node global index
 bci=[x,y,z]: byte-code-info [callee-index, bytecode-index, line-number]
@@ -1088,34 +1375,34 @@ nc:          number of children
 addr:        address size in bytes
 flg:         node flags
 
-Number of nodes = 8, symRefCount = 586
+Number of nodes = 12, symRefCount = 587
 </trees>
 
 <cfg>
-         0 [0x555556251600] entry
+         0 [0x55555624f0b0] entry
                  in        = []
                  out       = [2(10000) ]
                  exception in  = []
                  exception out = []
-         1 [0x555556251500] exit
+         1 [0x55555624efb0] exit
                  in        = [2(10000) ]
                  out       = []
                  exception in  = []
                  exception out = []
-         2 [0x555556251760] BBStart at 0x5555562333b0, frequency = 10000
+         2 [0x55555624f210] BBStart at 0x555556230e20, frequency = 10000
                  in        = [0(10000) ]
                  out       = [1(10000) ]
                  exception in  = []
                  exception out = []
 <structure>
-      0 [0x5555562505b0] Acyclic region
+      0 [0x55555624e060] Acyclic region
          Subgraph: (* = exit edge)
-               (0x555556250680:0x555556250550)0 --> 2(0x555556250710)
-               (0x555556250710:0x555556250490)2 --> 1(0x5555562507f0)
-               (0x5555562507f0:0x5555562504f0)1 -->
-         0 [0x555556250550] Block
-         2 [0x555556250490] Block
-         1 [0x5555562504f0] Block
+               (0x55555624e130:0x55555624e000)0 --> 2(0x55555624e1c0)
+               (0x55555624e1c0:0x55555624df40)2 --> 1(0x55555624e2a0)
+               (0x55555624e2a0:0x55555624dfa0)1 -->
+         0 [0x55555624e000] Block
+         2 [0x55555624df40] Block
+         1 [0x55555624dfa0] Block
 </structure>
 </cfg>
 
@@ -1125,82 +1412,98 @@ Performing Instruction Selection:
 ============================================================
 ; Live regs: GPR=0 FPR=0 VRF=0 {}
 ------------------------------
- n1n      (  0)  BBStart <block_2> (freq 10000)                                                       [0x5555562333b0] bci=[-1,0,-] rc=0 vc=112 vn=- li=2 udi=- nc=0
+ n1n      (  0)  BBStart <block_2> (freq 10000)                                                       [0x555556230e20] bci=[-1,0,-] rc=0 vc=168 vn=- li=2 udi=- nc=1
+ n28n     (  1)    GlRegDeps                                                                          [0x5555562314e0] bci=[-1,0,-] rc=1 vc=168 vn=- li=2 udi=- nc=1
+ n30n     (  2)      aRegLoad esi   args<parm 1 LInt64;>[#584  Parm] [flags 0x40010107 0x0 ] (X>=0 SeenRealReference )  [0x555556231560] bci=[-1,0,-] rc=2 vc=168 vn=- li=2 udi=- nc=0 flg=0x8100
 ------------------------------
 ------------------------------
- n1n      (  0)  BBStart <block_2> (freq 10000)                                                       [0x5555562333b0] bci=[-1,0,-] rc=0 vc=112 vn=- li=2 udi=- nc=0
-------------------------------
-
- [0x5555562c4b70]	Label L0016:			# LABEL
-========================================
- [0x5555562c4c00]	Fence Relative [ 0x555556251800 ]	# FENCE BBStart <block_2> (frequency 10000)
-
-============================================================
-; Live regs: GPR=0 FPR=0 VRF=0 {}
-------------------------------
- n9n      (  0)  treetop                                                                              [0x5555562335b0] bci=[-1,0,-] rc=0 vc=112 vn=- li=2 udi=- nc=1
- n8n      (  2)    lcalli  /hdd/wasmjit-omr/third_party/omr/compiler/ilgen/OMRThunkBuilder.cpp:59:thunkCallee[#585  computed-static Method] [flags 0x500 0x0 ]  [0x555556233570] bci=[-1,0,-] rc=2 vc=112 vn=- li=2 udi=- nc=1
- n15n     (  1)      aconst 0x7ffff4a80214                                                            [0x555556233730] bci=[-1,0,-] rc=1 vc=112 vn=- li=- udi=- nc=0
-------------------------------
-------------------------------
- n9n      (  0)  treetop                                                                              [0x5555562335b0] bci=[-1,0,-] rc=0 vc=112 vn=- li=2 udi=- nc=1
- n8n      (  1)    lcalli  /hdd/wasmjit-omr/third_party/omr/compiler/ilgen/OMRThunkBuilder.cpp:59:thunkCallee[#585  computed-static Method] [flags 0x500 0x0 ] (in GPR_0041)  [0x555556233570] bci=[-1,0,-] rc=1 vc=112 vn=- li=2 udi=25600 nc=1
- n15n     (  0)      aconst 0x7ffff4a80214 (in GPR_0016)                                              [0x555556233730] bci=[-1,0,-] rc=0 vc=112 vn=- li=- udi=19952 nc=0
+ n1n      (  0)  BBStart <block_2> (freq 10000)                                                       [0x555556230e20] bci=[-1,0,-] rc=0 vc=168 vn=- li=2 udi=- nc=1
+ n28n     (  1)    GlRegDeps                                                                          [0x5555562314e0] bci=[-1,0,-] rc=1 vc=168 vn=- li=2 udi=- nc=1
+ n30n     (  1)      aRegLoad esi   args<parm 1 LInt64;>[#584  Parm] [flags 0x40010107 0x0 ] (in GPR_0016) (X>=0 SeenRealReference )  [0x555556231560] bci=[-1,0,-] rc=1 vc=168 vn=- li=2 udi=17152 nc=0 flg=0x8100
 ------------------------------
 
- [0x5555562c4eb0]	mov	GPR_0016, 0x00007ffff4a80214	# MOV8RegImm64
- [0x5555562c5320]	assocRegs                       # ASSOCREGS
+ [0x5555562c4670]	assocRegs                       # ASSOCREGS
 	POST: None
- [0x5555562c50f0]	call	GPR_0016			# CALLReg
-	 PRE: [GPR_0016 : r11d]
-	POST: [GPR_0016 : r11d]
- [0x5555562c6720]	assocRegs                       # ASSOCREGS
-	POST: [GPR_0016 : r11d]
- [0x5555562c64e0]	Label L0017:			# LABEL
-	POST: [GPR_0017 : ecx] [GPR_0018 : edx] [GPR_0019 : esi] [GPR_0020 : edi] [GPR_0021 : r8d] [GPR_0022 : r9d] [GPR_0023 : r10d] [GPR_0024 : r11d] [FPR_0025 : xmm0] [FPR_0026 : xmm1] [FPR_0027 : xmm2] [FPR_0028 : xmm3] [FPR_0029 : xmm4] [FPR_0030 : xmm5] [FPR_0031 : xmm6] [FPR_0032 : xmm7] [FPR_0033 : xmm8] [FPR_0034 : xmm9] [FPR_0035 : xmm10] [FPR_0036 : xmm11] [FPR_0037 : xmm12] [FPR_0038 : xmm13] [FPR_0039 : xmm14] [FPR_0040 : xmm15] [GPR_0041 : eax]
+ [0x5555562c4430]	Label L0016:			# LABEL
+	 PRE: [GPR_0016 : esi]
+	POST: [GPR_0016 : esi]
+========================================
+ [0x5555562c46e0]	Fence Relative [ 0x55555624f2b0 ]	# FENCE BBStart <block_2> (frequency 10000)
 
 ============================================================
-; Live regs: GPR=1 FPR=0 VRF=0 {GPR_0041}
+; Live regs: GPR=1 FPR=0 VRF=0 {GPR_0016}
 ------------------------------
- n5n      (  0)  aRegStore edi  (X!=0 )                                                               [0x5555562334b0] bci=[-1,0,-] rc=0 vc=112 vn=- li=2 udi=- nc=1 flg=0x4
- n3n      (  1)    aconst 0x7ffff4a80214 (X!=0 )                                                      [0x555556233430] bci=[-1,0,-] rc=1 vc=112 vn=- li=2 udi=- nc=0 flg=0x4
+ n22n     (  0)  treetop                                                                              [0x555556231360] bci=[-1,0,-] rc=0 vc=168 vn=- li=2 udi=- nc=1
+ n21n     (  2)    icalli  /hdd/wasmjit-omr/third_party/omr/compiler/ilgen/OMRThunkBuilder.cpp:59:thunkCallee[#586  computed-static Method] [flags 0x500 0x0 ]  [0x555556231320] bci=[-1,0,-] rc=2 vc=168 vn=- li=2 udi=- nc=2
+ n32n     (  1)      aconst 0x7ffff4a80754                                                            [0x5555562315e0] bci=[-1,0,-] rc=1 vc=168 vn=- li=- udi=- nc=0
+ n19n     (  1)      l2a                                                                              [0x5555562312a0] bci=[-1,0,-] rc=1 vc=168 vn=- li=2 udi=- nc=1
+ n17n     (  1)        lloadi  <array-shadow>[#474  Shadow] [flags 0x80000604 0x0 ] (cannotOverflow )  [0x555556231220] bci=[-1,0,-] rc=1 vc=168 vn=- li=2 udi=- nc=1 flg=0x1000
+ n30n     (  1)          ==>aRegLoad (in GPR_0016) (X>=0 SeenRealReference )
 ------------------------------
+layout param node 0x5555562312a0 in register
 ------------------------------
- n5n      (  0)  aRegStore edi  (X!=0 )                                                               [0x5555562334b0] bci=[-1,0,-] rc=0 vc=112 vn=- li=2 udi=- nc=1 flg=0x4
- n3n      (  0)    aconst 0x7ffff4a80214 (in GPR_0042) (X!=0 )                                        [0x555556233430] bci=[-1,0,-] rc=0 vc=112 vn=- li=2 udi=27904 nc=0 flg=0x4
+ n22n     (  0)  treetop                                                                              [0x555556231360] bci=[-1,0,-] rc=0 vc=168 vn=- li=2 udi=- nc=1
+ n21n     (  1)    icalli  /hdd/wasmjit-omr/third_party/omr/compiler/ilgen/OMRThunkBuilder.cpp:59:thunkCallee[#586  computed-static Method] [flags 0x500 0x0 ] (in GPR_0043)  [0x555556231320] bci=[-1,0,-] rc=1 vc=168 vn=- li=2 udi=25152 nc=2
+ n32n     (  0)      aconst 0x7ffff4a80754 (in GPR_0017)                                              [0x5555562315e0] bci=[-1,0,-] rc=0 vc=168 vn=- li=- udi=19040 nc=0
+ n19n     (  0)      l2a (in GPR_0018)                                                                [0x5555562312a0] bci=[-1,0,-] rc=0 vc=168 vn=- li=2 udi=19952 nc=1
+ n17n     (  0)        lloadi  <array-shadow>[#474  Shadow] [flags 0x80000604 0x0 ] (in GPR_0018) (cannotOverflow )  [0x555556231220] bci=[-1,0,-] rc=0 vc=168 vn=- li=2 udi=19952 nc=1 flg=0x1000
+ n30n     (  0)          ==>aRegLoad (in GPR_0016) (X>=0 SeenRealReference )
 ------------------------------
 
- [0x5555562c6dc0]	mov	GPR_0042, 0x00007ffff4a80214	# MOV8RegImm64
+ [0x5555562c4b20]	mov	GPR_0017, 0x00007ffff4a80754	# MOV8RegImm64
+ [0x5555562c4eb0]	mov	GPR_0018, qword ptr [GPR_0016]		# L8RegMem, SymRef  <array-shadow>[#474  Shadow] [flags 0x80000604 0x0 ]
+ [0x5555562c5160]	assocRegs                       # ASSOCREGS
+	POST: [GPR_0016 : esi]
+ [0x5555562c4f30]	call	GPR_0017			# CALLReg
+	 PRE: [GPR_0017 : r11d] [GPR_0018 : edi]
+	POST: [GPR_0017 : r11d]
+ [0x5555562c6560]	assocRegs                       # ASSOCREGS
+	POST: [GPR_0018 : edi] [GPR_0017 : r11d]
+ [0x5555562c6320]	Label L0017:			# LABEL
+	POST: [GPR_0019 : ecx] [GPR_0020 : edx] [GPR_0021 : esi] [GPR_0022 : edi] [GPR_0023 : r8d] [GPR_0024 : r9d] [GPR_0025 : r10d] [GPR_0026 : r11d] [FPR_0027 : xmm0] [FPR_0028 : xmm1] [FPR_0029 : xmm2] [FPR_0030 : xmm3] [FPR_0031 : xmm4] [FPR_0032 : xmm5] [FPR_0033 : xmm6] [FPR_0034 : xmm7] [FPR_0035 : xmm8] [FPR_0036 : xmm9] [FPR_0037 : xmm10] [FPR_0038 : xmm11] [FPR_0039 : xmm12] [FPR_0040 : xmm13] [FPR_0041 : xmm14] [FPR_0042 : xmm15] [GPR_0043 : eax]
 
 ============================================================
-; Live regs: GPR=1 FPR=0 VRF=0 {GPR_0041}
+; Live regs: GPR=1 FPR=0 VRF=0 {GPR_0043}
 ------------------------------
- n11n     (  0)  lreturn                                                                              [0x555556233630] bci=[-1,0,-] rc=0 vc=112 vn=- li=2 udi=- nc=1
- n8n      (  1)    ==>lcalli (in GPR_0041)
+ n5n      (  0)  aRegStore edi  (X!=0 )                                                               [0x555556230f20] bci=[-1,0,-] rc=0 vc=168 vn=- li=2 udi=- nc=1 flg=0x4
+ n3n      (  1)    aconst 0x7ffff4a80754 (X!=0 )                                                      [0x555556230ea0] bci=[-1,0,-] rc=1 vc=168 vn=- li=2 udi=- nc=0 flg=0x4
 ------------------------------
 ------------------------------
- n11n     (  0)  lreturn                                                                              [0x555556233630] bci=[-1,0,-] rc=0 vc=112 vn=- li=2 udi=- nc=1
- n8n      (  0)    ==>lcalli (in GPR_0041)
+ n5n      (  0)  aRegStore edi  (X!=0 )                                                               [0x555556230f20] bci=[-1,0,-] rc=0 vc=168 vn=- li=2 udi=- nc=1 flg=0x4
+ n3n      (  0)    aconst 0x7ffff4a80754 (in GPR_0044) (X!=0 )                                        [0x555556230ea0] bci=[-1,0,-] rc=0 vc=168 vn=- li=2 udi=27728 nc=0 flg=0x4
 ------------------------------
 
- [0x5555562c7190]	assocRegs                       # ASSOCREGS
-	POST: [GPR_0041 : eax] [GPR_0017 : ecx] [GPR_0018 : edx] [GPR_0020 : edi] [GPR_0019 : esi] [GPR_0021 : r8d] [GPR_0022 : r9d] [GPR_0023 : r10d] [GPR_0024 : r11d]
- [0x5555562c6f70]	ret                             # RET
-	 PRE: [GPR_0041 : eax]
+ [0x5555562c6cd0]	mov	GPR_0044, 0x00007ffff4a80754	# MOV8RegImm64
+
+============================================================
+; Live regs: GPR=1 FPR=0 VRF=0 {GPR_0043}
+------------------------------
+ n24n     (  0)  ireturn                                                                              [0x5555562313e0] bci=[-1,0,-] rc=0 vc=168 vn=- li=2 udi=- nc=1
+ n21n     (  1)    ==>icalli (in GPR_0043)
+------------------------------
+------------------------------
+ n24n     (  0)  ireturn                                                                              [0x5555562313e0] bci=[-1,0,-] rc=0 vc=168 vn=- li=2 udi=- nc=1
+ n21n     (  0)    ==>icalli (in GPR_0043)
+------------------------------
+
+ [0x5555562c70a0]	assocRegs                       # ASSOCREGS
+	POST: [GPR_0043 : eax] [GPR_0019 : ecx] [GPR_0020 : edx] [GPR_0022 : edi] [GPR_0021 : esi] [GPR_0023 : r8d] [GPR_0024 : r9d] [GPR_0025 : r10d] [GPR_0026 : r11d]
+ [0x5555562c6e80]	ret                             # RET
+	 PRE: [GPR_0043 : eax]
 
 ============================================================
 ; Live regs: GPR=0 FPR=0 VRF=0 {}
 ------------------------------
- n2n      (  0)  BBEnd </block_2>                                                                     [0x5555562333f0] bci=[-1,0,-] rc=0 vc=112 vn=- li=2 udi=- nc=0
+ n2n      (  0)  BBEnd </block_2>                                                                     [0x555556230e60] bci=[-1,0,-] rc=0 vc=168 vn=- li=2 udi=- nc=0
 ------------------------------
 ------------------------------
- n2n      (  0)  BBEnd </block_2>                                                                     [0x5555562333f0] bci=[-1,0,-] rc=0 vc=112 vn=- li=2 udi=- nc=0
+ n2n      (  0)  BBEnd </block_2>                                                                     [0x555556230e60] bci=[-1,0,-] rc=0 vc=168 vn=- li=2 udi=- nc=0
 ------------------------------
 
- [0x5555562c72c0]	Fence Relative [ 0x555556251804 ]	# FENCE BBEnd </block_2>
- [0x5555562c74f0]	assocRegs                       # ASSOCREGS
-	POST: [GPR_0041 : eax]
- [0x5555562c75c0]	Label L0018:			# LABEL
+ [0x5555562c71d0]	Fence Relative [ 0x55555624f2b4 ]	# FENCE BBEnd </block_2>
+ [0x5555562c7400]	assocRegs                       # ASSOCREGS
+	POST: [GPR_0043 : eax]
+ [0x5555562c74d0]	Label L0018:			# LABEL
 
 ============================================================
 
@@ -1214,30 +1517,35 @@ Performing Instruction Selection:
                 |       |       +----------------------------------------- instruction
                 |       |       |
                 V       V       V
- [0x5555562c49f0]	.int	0x00000000		# DDImm4
- [0x5555562c4a70]	ProcEntry                       # PROCENTRY
- [0x5555562c4b70]	Label L0016:			# LABEL
-========================================
- [0x5555562c4c00]	Fence Relative [ 0x555556251800 ]	# FENCE BBStart <block_2> (frequency 10000)
- [0x5555562c4eb0]	mov	GPR_0016, 0x00007ffff4a80214	# MOV8RegImm64
- [0x5555562c5320]	assocRegs                       # ASSOCREGS
+ [0x5555562c40d0]	.int	0x00000000		# DDImm4
+ [0x5555562c4150]	ProcEntry                       # PROCENTRY
+ [0x5555562c4670]	assocRegs                       # ASSOCREGS
 	POST: None
- [0x5555562c50f0]	call	GPR_0016			# CALLReg
-	 PRE: [GPR_0016 : r11d]
-	POST: [GPR_0016 : r11d]
- [0x5555562c6720]	assocRegs                       # ASSOCREGS
-	POST: [GPR_0016 : r11d]
- [0x5555562c64e0]	Label L0017:			# LABEL
-	POST: [GPR_0017 : ecx] [GPR_0018 : edx] [GPR_0019 : esi] [GPR_0020 : edi] [GPR_0021 : r8d] [GPR_0022 : r9d] [GPR_0023 : r10d] [GPR_0024 : r11d] [FPR_0025 : xmm0] [FPR_0026 : xmm1] [FPR_0027 : xmm2] [FPR_0028 : xmm3] [FPR_0029 : xmm4] [FPR_0030 : xmm5] [FPR_0031 : xmm6] [FPR_0032 : xmm7] [FPR_0033 : xmm8] [FPR_0034 : xmm9] [FPR_0035 : xmm10] [FPR_0036 : xmm11] [FPR_0037 : xmm12] [FPR_0038 : xmm13] [FPR_0039 : xmm14] [FPR_0040 : xmm15] [GPR_0041 : eax]
- [0x5555562c6dc0]	mov	GPR_0042, 0x00007ffff4a80214	# MOV8RegImm64
- [0x5555562c7190]	assocRegs                       # ASSOCREGS
-	POST: [GPR_0041 : eax] [GPR_0017 : ecx] [GPR_0018 : edx] [GPR_0020 : edi] [GPR_0019 : esi] [GPR_0021 : r8d] [GPR_0022 : r9d] [GPR_0023 : r10d] [GPR_0024 : r11d]
- [0x5555562c6f70]	ret                             # RET
-	 PRE: [GPR_0041 : eax]
- [0x5555562c72c0]	Fence Relative [ 0x555556251804 ]	# FENCE BBEnd </block_2>
- [0x5555562c74f0]	assocRegs                       # ASSOCREGS
-	POST: [GPR_0041 : eax]
- [0x5555562c75c0]	Label L0018:			# LABEL
+ [0x5555562c4430]	Label L0016:			# LABEL
+	 PRE: [GPR_0016 : esi]
+	POST: [GPR_0016 : esi]
+========================================
+ [0x5555562c46e0]	Fence Relative [ 0x55555624f2b0 ]	# FENCE BBStart <block_2> (frequency 10000)
+ [0x5555562c4b20]	mov	GPR_0017, 0x00007ffff4a80754	# MOV8RegImm64
+ [0x5555562c4eb0]	mov	GPR_0018, qword ptr [GPR_0016]		# L8RegMem, SymRef  <array-shadow>[#474  Shadow] [flags 0x80000604 0x0 ]
+ [0x5555562c5160]	assocRegs                       # ASSOCREGS
+	POST: [GPR_0016 : esi]
+ [0x5555562c4f30]	call	GPR_0017			# CALLReg
+	 PRE: [GPR_0017 : r11d] [GPR_0018 : edi]
+	POST: [GPR_0017 : r11d]
+ [0x5555562c6560]	assocRegs                       # ASSOCREGS
+	POST: [GPR_0018 : edi] [GPR_0017 : r11d]
+ [0x5555562c6320]	Label L0017:			# LABEL
+	POST: [GPR_0019 : ecx] [GPR_0020 : edx] [GPR_0021 : esi] [GPR_0022 : edi] [GPR_0023 : r8d] [GPR_0024 : r9d] [GPR_0025 : r10d] [GPR_0026 : r11d] [FPR_0027 : xmm0] [FPR_0028 : xmm1] [FPR_0029 : xmm2] [FPR_0030 : xmm3] [FPR_0031 : xmm4] [FPR_0032 : xmm5] [FPR_0033 : xmm6] [FPR_0034 : xmm7] [FPR_0035 : xmm8] [FPR_0036 : xmm9] [FPR_0037 : xmm10] [FPR_0038 : xmm11] [FPR_0039 : xmm12] [FPR_0040 : xmm13] [FPR_0041 : xmm14] [FPR_0042 : xmm15] [GPR_0043 : eax]
+ [0x5555562c6cd0]	mov	GPR_0044, 0x00007ffff4a80754	# MOV8RegImm64
+ [0x5555562c70a0]	assocRegs                       # ASSOCREGS
+	POST: [GPR_0043 : eax] [GPR_0019 : ecx] [GPR_0020 : edx] [GPR_0022 : edi] [GPR_0021 : esi] [GPR_0023 : r8d] [GPR_0024 : r9d] [GPR_0025 : r10d] [GPR_0026 : r11d]
+ [0x5555562c6e80]	ret                             # RET
+	 PRE: [GPR_0043 : eax]
+ [0x5555562c71d0]	Fence Relative [ 0x55555624f2b4 ]	# FENCE BBEnd </block_2>
+ [0x5555562c7400]	assocRegs                       # ASSOCREGS
+	POST: [GPR_0043 : eax]
+ [0x5555562c74d0]	Label L0018:			# LABEL
 </instructions>
 
 <instructions
@@ -1250,49 +1558,53 @@ Performing Instruction Selection:
                 |       |       +----------------------------------------- instruction
                 |       |       |
                 V       V       V
- [0x5555562c49f0]	.int	0x00000000		# DDImm4
- [0x5555562c4a70]	ProcEntry                       # PROCENTRY
- [0x5555562c4b70]	Label L0016:			# LABEL
+ [0x5555562c40d0]	.int	0x00000000		# DDImm4
+ [0x5555562c4150]	ProcEntry                       # PROCENTRY
+ [0x5555562c4670]	assocRegs                       # ASSOCREGS
+ [0x5555562c4430]	Label L0016:			# LABEL
 ========================================
- [0x5555562c4c00]	Fence Relative [ 0x555556251800 ]	# FENCE BBStart <block_2> (frequency 10000)
- [0x5555562c4eb0]	mov	r11, 0x00007ffff4a80214	# MOV8RegImm64
- [0x5555562c5320]	assocRegs                       # ASSOCREGS
- [0x5555562c50f0]	call	r11d			# CALLReg
- [0x5555562c6720]	assocRegs                       # ASSOCREGS
- [0x5555562c64e0]	Label L0017:			# LABEL
- [0x5555562c6dc0]	mov	rcx, 0x00007ffff4a80214	# MOV8RegImm64
- [0x5555562c7190]	assocRegs                       # ASSOCREGS
- [0x5555562c6f70]	ret                             # RET
- [0x5555562c72c0]	Fence Relative [ 0x555556251804 ]	# FENCE BBEnd </block_2>
- [0x5555562c74f0]	assocRegs                       # ASSOCREGS
- [0x5555562c75c0]	Label L0018:			# LABEL
+ [0x5555562c46e0]	Fence Relative [ 0x55555624f2b0 ]	# FENCE BBStart <block_2> (frequency 10000)
+ [0x5555562c4b20]	mov	r11, 0x00007ffff4a80754	# MOV8RegImm64
+ [0x5555562c4eb0]	mov	rdi, qword ptr [rsi]		# L8RegMem, SymRef  <array-shadow>[#474  Shadow] [flags 0x80000604 0x0 ]
+ [0x5555562c5160]	assocRegs                       # ASSOCREGS
+ [0x5555562c4f30]	call	r11d			# CALLReg
+ [0x5555562c6560]	assocRegs                       # ASSOCREGS
+ [0x5555562c6320]	Label L0017:			# LABEL
+ [0x5555562c6cd0]	mov	rcx, 0x00007ffff4a80754	# MOV8RegImm64
+ [0x5555562c70a0]	assocRegs                       # ASSOCREGS
+ [0x5555562c6e80]	ret                             # RET
+ [0x5555562c71d0]	Fence Relative [ 0x55555624f2b4 ]	# FENCE BBEnd </block_2>
+ [0x5555562c7400]	assocRegs                       # ASSOCREGS
+ [0x5555562c74d0]	Label L0018:			# LABEL
 </instructions>
-layout param symbol 0x555556234590 in register
-layout param symbol 0x555556234740 in register
-mapIncomingParms setParameterOffset -8 for param symbol (reg param without home location) 0x555556234590, hasToBeOnStack() 0
-mapIncomingParms setParameterOffset -16 for param symbol (reg param without home location) 0x555556234740, hasToBeOnStack() 0
+layout param symbol 0x555556232000 in register
+layout param symbol 0x5555562321b0 in register
+mapIncomingParms setParameterOffset -8 for param symbol (reg param without home location) 0x555556232000, hasToBeOnStack() 0
+mapIncomingParms no need to set parm 0x5555562321b0, for it has got register 6 assigned
 
 <instructions
 	title="Post Stack Map"
 	method="51:/hdd/w:func_1"
 	hotness="warm">
 
- [0x5555562c49f0]	.int	0x00000000		# DDImm4
- [0x5555562c4a70]	ProcEntry                       # PROCENTRY
- [0x5555562c4b70]	Label L0016:			# LABEL
+ [0x5555562c40d0]	.int	0x00000000		# DDImm4
+ [0x5555562c4150]	ProcEntry                       # PROCENTRY
+ [0x5555562c4670]	assocRegs                       # ASSOCREGS
+ [0x5555562c4430]	Label L0016:			# LABEL
 ========================================
- [0x5555562c4c00]	Fence Relative [ 0x555556251800 ]	# FENCE BBStart <block_2> (frequency 10000)
- [0x5555562c4eb0]	mov	r11, 0x00007ffff4a80214	# MOV8RegImm64
- [0x5555562c5320]	assocRegs                       # ASSOCREGS
- [0x5555562c50f0]	call	r11d			# CALLReg
- [0x5555562c6720]	assocRegs                       # ASSOCREGS
- [0x5555562c64e0]	Label L0017:			# LABEL
- [0x5555562c6dc0]	mov	rcx, 0x00007ffff4a80214	# MOV8RegImm64
- [0x5555562c7190]	assocRegs                       # ASSOCREGS
- [0x5555562c6f70]	ret                             # RET
- [0x5555562c72c0]	Fence Relative [ 0x555556251804 ]	# FENCE BBEnd </block_2>
- [0x5555562c74f0]	assocRegs                       # ASSOCREGS
- [0x5555562c75c0]	Label L0018:			# LABEL
+ [0x5555562c46e0]	Fence Relative [ 0x55555624f2b0 ]	# FENCE BBStart <block_2> (frequency 10000)
+ [0x5555562c4b20]	mov	r11, 0x00007ffff4a80754	# MOV8RegImm64
+ [0x5555562c4eb0]	mov	rdi, qword ptr [rsi]		# L8RegMem, SymRef  <array-shadow>[#474  Shadow] [flags 0x80000604 0x0 ]
+ [0x5555562c5160]	assocRegs                       # ASSOCREGS
+ [0x5555562c4f30]	call	r11d			# CALLReg
+ [0x5555562c6560]	assocRegs                       # ASSOCREGS
+ [0x5555562c6320]	Label L0017:			# LABEL
+ [0x5555562c6cd0]	mov	rcx, 0x00007ffff4a80754	# MOV8RegImm64
+ [0x5555562c70a0]	assocRegs                       # ASSOCREGS
+ [0x5555562c6e80]	ret                             # RET
+ [0x5555562c71d0]	Fence Relative [ 0x55555624f2b4 ]	# FENCE BBEnd </block_2>
+ [0x5555562c7400]	assocRegs                       # ASSOCREGS
+ [0x5555562c74d0]	Label L0018:			# LABEL
 </instructions>
 
 <instructions
@@ -1300,35 +1612,36 @@ mapIncomingParms setParameterOffset -16 for param symbol (reg param without home
 	method="51:/hdd/w:func_1"
 	hotness="warm">
 
- [0x5555562c49f0]	.int	0x00000000		# DDImm4
- [0x5555562c4a70]	ProcEntry                       # PROCENTRY
- [0x5555562c4b70]	Label L0016:			# LABEL
+ [0x5555562c40d0]	.int	0x00000000		# DDImm4
+ [0x5555562c4150]	ProcEntry                       # PROCENTRY
+ [0x5555562c4670]	assocRegs                       # ASSOCREGS
+ [0x5555562c4430]	Label L0016:			# LABEL
 ========================================
- [0x5555562c4c00]	Fence Relative [ 0x555556251800 ]	# FENCE BBStart <block_2> (frequency 10000)
- [0x5555562c4eb0]	mov	r11, 0x00007ffff4a80214	# MOV8RegImm64
- [0x5555562c5320]	assocRegs                       # ASSOCREGS
- [0x5555562c50f0]	call	r11d			# CALLReg
- [0x5555562c6720]	assocRegs                       # ASSOCREGS
- [0x5555562c64e0]	Label L0017:			# LABEL
- [0x5555562c6dc0]	mov	rcx, 0x00007ffff4a80214	# MOV8RegImm64
- [0x5555562c7190]	assocRegs                       # ASSOCREGS
- [0x5555562c6f70]	ret                             # RET
- [0x5555562c72c0]	Fence Relative [ 0x555556251804 ]	# FENCE BBEnd </block_2>
- [0x5555562c74f0]	assocRegs                       # ASSOCREGS
- [0x5555562c75c0]	Label L0018:			# LABEL
+ [0x5555562c46e0]	Fence Relative [ 0x55555624f2b0 ]	# FENCE BBStart <block_2> (frequency 10000)
+ [0x5555562c4b20]	mov	r11, 0x00007ffff4a80754	# MOV8RegImm64
+ [0x5555562c4eb0]	mov	rdi, qword ptr [rsi]		# L8RegMem, SymRef  <array-shadow>[#474  Shadow] [flags 0x80000604 0x0 ]
+ [0x5555562c5160]	assocRegs                       # ASSOCREGS
+ [0x5555562c4f30]	call	r11d			# CALLReg
+ [0x5555562c6560]	assocRegs                       # ASSOCREGS
+ [0x5555562c6320]	Label L0017:			# LABEL
+ [0x5555562c6cd0]	mov	rcx, 0x00007ffff4a80754	# MOV8RegImm64
+ [0x5555562c70a0]	assocRegs                       # ASSOCREGS
+ [0x5555562c6e80]	ret                             # RET
+ [0x5555562c71d0]	Fence Relative [ 0x55555624f2b4 ]	# FENCE BBEnd </block_2>
+ [0x5555562c7400]	assocRegs                       # ASSOCREGS
+ [0x5555562c74d0]	Label L0018:			# LABEL
 </instructions>
 <proepilogue>
-create prologue using system linkage, after savePreservedRegisters, cursor is 0x5555562c8580.
-copyToHomeLocation param 0x555556234590, linkage reg index 0, allocated index -1, parameter offset -8, hasToBeOnStack 0, parm->isParmHasToBeOnStack() 0.
-copyToHomeLocation param 0x555556234740, linkage reg index 1, allocated index -1, parameter offset -16, hasToBeOnStack 0, parm->isParmHasToBeOnStack() 0.
-create prologue using system linkage, after copyParametersToHomeLocation, cursor is 0x5555562c87a0.
+create prologue using system linkage, after savePreservedRegisters, cursor is 0x5555562c86f0.
+copyToHomeLocation param 0x555556232000, linkage reg index 0, allocated index -1, parameter offset -8, hasToBeOnStack 0, parm->isParmHasToBeOnStack() 0.
+create prologue using system linkage, after copyParametersToHomeLocation, cursor is 0x5555562c8800.
 reg 16, getHasBeenAssignedInMethod 0, p 0, p->get(idx) -1.
 reg 15, getHasBeenAssignedInMethod 0, p 0, p->get(idx) -1.
 reg 14, getHasBeenAssignedInMethod 0, p 0, p->get(idx) -1.
 reg 13, getHasBeenAssignedInMethod 0, p 0, p->get(idx) -1.
 reg 2, getHasBeenAssignedInMethod 0, p 0, p->get(idx) -1.
-create epilogue using system linkage, after restorePreservedRegisters, cursor is 562c7190.
-create epilogue using system linkage, after delocating stack frame, cursor is 562c8820.
+create epilogue using system linkage, after restorePreservedRegisters, cursor is 562c70a0.
+create epilogue using system linkage, after delocating stack frame, cursor is 562c8880.
 </proepilogue>
 <encode>
 </encode>
@@ -1346,28 +1659,29 @@ create epilogue using system linkage, after delocating stack frame, cursor is 56
                  |        |                   |  |                          |				+----------- additional information
                  |        |                   |  |                          |				|
                  V        V                   V  V                          V				V
-0x7ffff5c82030 fffffffc [0x5555562c49f0] 00 00 00 00                        .int	0x00000000		# DDImm4
-0x7ffff5c82034 00000000 [0x5555562c8470]                                    nop (0 bytes)		# Align patchable code @32 [0x0:2]
-0x7ffff5c82034 00000000 [0x5555562c4a70]                                    ProcEntry                       # PROCENTRY
-0x7ffff5c82034 00000000 [0x5555562c8580] 48 83 ec 18                        sub	rsp, 0x00000018	# SUB8RegImms
-0x7ffff5c82038 00000004 [0x5555562c8690] 48 89 7c 24 10                     mov	qword ptr [rsp+0x10], rdi		# S8MemReg, SymRef [#586 +16]
-0x7ffff5c8203d 00000009 [0x5555562c87a0] 48 89 74 24 08                     mov	qword ptr [rsp+0x8], rsi		# S8MemReg, SymRef [#587 +8]
-0x7ffff5c82042 0000000e [0x5555562c8500]                                    vfpSave			# AdjustFramePtr
-0x7ffff5c82042 0000000e [0x5555562c4b70]                                    Label L0016:			# LABEL
+0x7ffff5c82030 fffffffc [0x5555562c40d0] 00 00 00 00                        .int	0x00000000		# DDImm4
+0x7ffff5c82034 00000000 [0x5555562c85e0]                                    nop (0 bytes)		# Align patchable code @32 [0x0:2]
+0x7ffff5c82034 00000000 [0x5555562c4150]                                    ProcEntry                       # PROCENTRY
+0x7ffff5c82034 00000000 [0x5555562c86f0] 48 83 ec 18                        sub	rsp, 0x00000018	# SUB8RegImms
+0x7ffff5c82038 00000004 [0x5555562c8800] 48 89 7c 24 10                     mov	qword ptr [rsp+0x10], rdi		# S8MemReg, SymRef [#588 +16]
+0x7ffff5c8203d 00000009 [0x5555562c8670]                                    vfpSave			# AdjustFramePtr
+0x7ffff5c8203d 00000009 [0x5555562c4670]                                    assocRegs                       # ASSOCREGS
+0x7ffff5c8203d 00000009 [0x5555562c4430]                                    Label L0016:			# LABEL
 ========================================
-0x7ffff5c82042 0000000e [0x5555562c4c00]                                    Fence Relative [ 0x555556251800 ]	# FENCE BBStart <block_2> (frequency 10000)
-0x7ffff5c82042 0000000e [0x5555562c4eb0] 49 bb 14 02 a8 f4 ff 7f 00 00      mov	r11, 0x00007ffff4a80214	# MOV8RegImm64
-0x7ffff5c8204c 00000018 [0x5555562c5320]                                    assocRegs                       # ASSOCREGS
-0x7ffff5c8204c 00000018 [0x5555562c50f0] 41 ff d3                           call	r11d			# CALLReg
-0x7ffff5c8204f 0000001b [0x5555562c6720]                                    assocRegs                       # ASSOCREGS
-0x7ffff5c8204f 0000001b [0x5555562c64e0]                                    Label L0017:			# LABEL
-0x7ffff5c8204f 0000001b [0x5555562c6dc0] 48 b9 14 02 a8 f4 ff 7f 00 00      mov	rcx, 0x00007ffff4a80214	# MOV8RegImm64
-0x7ffff5c82059 00000025 [0x5555562c7190]                                    assocRegs                       # ASSOCREGS
-0x7ffff5c82059 00000025 [0x5555562c8820] 48 83 c4 18                        add	rsp, 0x00000018	# ADD8RegImms
-0x7ffff5c8205d 00000029 [0x5555562c6f70] c3                                 ret                             # RET
-0x7ffff5c8205e 0000002a [0x5555562c72c0]                                    Fence Relative [ 0x555556251804 ]	# FENCE BBEnd </block_2>
-0x7ffff5c8205e 0000002a [0x5555562c74f0]                                    assocRegs                       # ASSOCREGS
-0x7ffff5c8205e 0000002a [0x5555562c75c0]                                    Label L0018:			# LABEL
+0x7ffff5c8203d 00000009 [0x5555562c46e0]                                    Fence Relative [ 0x55555624f2b0 ]	# FENCE BBStart <block_2> (frequency 10000)
+0x7ffff5c8203d 00000009 [0x5555562c4b20] 49 bb 54 07 a8 f4 ff 7f 00 00      mov	r11, 0x00007ffff4a80754	# MOV8RegImm64
+0x7ffff5c82047 00000013 [0x5555562c4eb0] 48 8b 3e                           mov	rdi, qword ptr [rsi]		# L8RegMem, SymRef  <array-shadow>[#474  Shadow] [flags 0x80000604 0x0 ]
+0x7ffff5c8204a 00000016 [0x5555562c5160]                                    assocRegs                       # ASSOCREGS
+0x7ffff5c8204a 00000016 [0x5555562c4f30] 41 ff d3                           call	r11d			# CALLReg
+0x7ffff5c8204d 00000019 [0x5555562c6560]                                    assocRegs                       # ASSOCREGS
+0x7ffff5c8204d 00000019 [0x5555562c6320]                                    Label L0017:			# LABEL
+0x7ffff5c8204d 00000019 [0x5555562c6cd0] 48 b9 54 07 a8 f4 ff 7f 00 00      mov	rcx, 0x00007ffff4a80754	# MOV8RegImm64
+0x7ffff5c82057 00000023 [0x5555562c70a0]                                    assocRegs                       # ASSOCREGS
+0x7ffff5c82057 00000023 [0x5555562c8880] 48 83 c4 18                        add	rsp, 0x00000018	# ADD8RegImms
+0x7ffff5c8205b 00000027 [0x5555562c6e80] c3                                 ret                             # RET
+0x7ffff5c8205c 00000028 [0x5555562c71d0]                                    Fence Relative [ 0x55555624f2b4 ]	# FENCE BBEnd </block_2>
+0x7ffff5c8205c 00000028 [0x5555562c7400]                                    assocRegs                       # ASSOCREGS
+0x7ffff5c8205c 00000028 [0x5555562c74d0]                                    Label L0018:			# LABEL
 </instructions>
 <snippets>
 </snippets>
@@ -1382,8 +1696,8 @@ Internal stack atlas:
   localBaseOffset=0
 
   Locals information : 
-  Local [0x555556234590] (GC map index :  -1, Offset :  -8, Size : 8) is an uninitialized uncollected parm 
-  Local [0x555556234740] (GC map index :  -1, Offset : -16, Size : 8) is an uninitialized collected parm 
+  Local [0x555556232000] (GC map index :  -1, Offset :  -8, Size : 8) is an uninitialized uncollected parm 
+  Local [0x5555562321b0] (GC map index :  -1, Offset :   8, Size : 8) is an uninitialized uncollected parm 
 
   No internal pointers in this method
 
@@ -1403,30 +1717,31 @@ Internal stack atlas:
                  |        |                   |  |                          |				+----------- additional information
                  |        |                   |  |                          |				|
                  V        V                   V  V                          V				V
-0x7ffff5c82030 fffffffc [0x5555562c49f0] 00 00 00 00                        .int	0x00000000		# DDImm4
-0x7ffff5c82034 00000000 [0x5555562c8470]                                    nop (0 bytes)		# Align patchable code @32 [0x0:2]
-0x7ffff5c82034 00000000 [0x5555562c4a70]                                    ProcEntry                       # PROCENTRY
-0x7ffff5c82034 00000000 [0x5555562c8580] 48 83 ec 18                        sub	rsp, 0x00000018	# SUB8RegImms
-0x7ffff5c82038 00000004 [0x5555562c8690] 48 89 7c 24 10                     mov	qword ptr [rsp+0x10], rdi		# S8MemReg, SymRef [#586 +16]
-0x7ffff5c8203d 00000009 [0x5555562c87a0] 48 89 74 24 08                     mov	qword ptr [rsp+0x8], rsi		# S8MemReg, SymRef [#587 +8]
-0x7ffff5c82042 0000000e [0x5555562c8500]                                    vfpSave			# AdjustFramePtr
-0x7ffff5c82042 0000000e [0x5555562c4b70]                                    Label L0016:			# LABEL
+0x7ffff5c82030 fffffffc [0x5555562c40d0] 00 00 00 00                        .int	0x00000000		# DDImm4
+0x7ffff5c82034 00000000 [0x5555562c85e0]                                    nop (0 bytes)		# Align patchable code @32 [0x0:2]
+0x7ffff5c82034 00000000 [0x5555562c4150]                                    ProcEntry                       # PROCENTRY
+0x7ffff5c82034 00000000 [0x5555562c86f0] 48 83 ec 18                        sub	rsp, 0x00000018	# SUB8RegImms
+0x7ffff5c82038 00000004 [0x5555562c8800] 48 89 7c 24 10                     mov	qword ptr [rsp+0x10], rdi		# S8MemReg, SymRef [#588 +16]
+0x7ffff5c8203d 00000009 [0x5555562c8670]                                    vfpSave			# AdjustFramePtr
+0x7ffff5c8203d 00000009 [0x5555562c4670]                                    assocRegs                       # ASSOCREGS
+0x7ffff5c8203d 00000009 [0x5555562c4430]                                    Label L0016:			# LABEL
 ========================================
-0x7ffff5c82042 0000000e [0x5555562c4c00]                                    Fence Relative [ 0x555556251800 ]	# FENCE BBStart <block_2> (frequency 10000)
-0x7ffff5c82042 0000000e [0x5555562c4eb0] 49 bb 14 02 a8 f4 ff 7f 00 00      mov	r11, 0x00007ffff4a80214	# MOV8RegImm64
-0x7ffff5c8204c 00000018 [0x5555562c5320]                                    assocRegs                       # ASSOCREGS
-0x7ffff5c8204c 00000018 [0x5555562c50f0] 41 ff d3                           call	r11d			# CALLReg
-0x7ffff5c8204f 0000001b [0x5555562c6720]                                    assocRegs                       # ASSOCREGS
-0x7ffff5c8204f 0000001b [0x5555562c64e0]                                    Label L0017:			# LABEL
-0x7ffff5c8204f 0000001b [0x5555562c6dc0] 48 b9 14 02 a8 f4 ff 7f 00 00      mov	rcx, 0x00007ffff4a80214	# MOV8RegImm64
-0x7ffff5c82059 00000025 [0x5555562c7190]                                    assocRegs                       # ASSOCREGS
-0x7ffff5c82059 00000025 [0x5555562c8820] 48 83 c4 18                        add	rsp, 0x00000018	# ADD8RegImms
-0x7ffff5c8205d 00000029 [0x5555562c6f70] c3                                 ret                             # RET
-0x7ffff5c8205e 0000002a [0x5555562c72c0]                                    Fence Relative [ 0x555556251804 ]	# FENCE BBEnd </block_2>
-0x7ffff5c8205e 0000002a [0x5555562c74f0]                                    assocRegs                       # ASSOCREGS
-0x7ffff5c8205e 0000002a [0x5555562c75c0]                                    Label L0018:			# LABEL
+0x7ffff5c8203d 00000009 [0x5555562c46e0]                                    Fence Relative [ 0x55555624f2b0 ]	# FENCE BBStart <block_2> (frequency 10000)
+0x7ffff5c8203d 00000009 [0x5555562c4b20] 49 bb 54 07 a8 f4 ff 7f 00 00      mov	r11, 0x00007ffff4a80754	# MOV8RegImm64
+0x7ffff5c82047 00000013 [0x5555562c4eb0] 48 8b 3e                           mov	rdi, qword ptr [rsi]		# L8RegMem, SymRef  <array-shadow>[#474  Shadow] [flags 0x80000604 0x0 ]
+0x7ffff5c8204a 00000016 [0x5555562c5160]                                    assocRegs                       # ASSOCREGS
+0x7ffff5c8204a 00000016 [0x5555562c4f30] 41 ff d3                           call	r11d			# CALLReg
+0x7ffff5c8204d 00000019 [0x5555562c6560]                                    assocRegs                       # ASSOCREGS
+0x7ffff5c8204d 00000019 [0x5555562c6320]                                    Label L0017:			# LABEL
+0x7ffff5c8204d 00000019 [0x5555562c6cd0] 48 b9 54 07 a8 f4 ff 7f 00 00      mov	rcx, 0x00007ffff4a80754	# MOV8RegImm64
+0x7ffff5c82057 00000023 [0x5555562c70a0]                                    assocRegs                       # ASSOCREGS
+0x7ffff5c82057 00000023 [0x5555562c8880] 48 83 c4 18                        add	rsp, 0x00000018	# ADD8RegImms
+0x7ffff5c8205b 00000027 [0x5555562c6e80] c3                                 ret                             # RET
+0x7ffff5c8205c 00000028 [0x5555562c71d0]                                    Fence Relative [ 0x55555624f2b4 ]	# FENCE BBEnd </block_2>
+0x7ffff5c8205c 00000028 [0x5555562c7400]                                    assocRegs                       # ASSOCREGS
+0x7ffff5c8205c 00000028 [0x5555562c74d0]                                    Label L0018:			# LABEL
 </instructions>
 <snippets>
 </snippets>
 </codegen>
-<result success="true" startPC="0x7ffff5c82034" time="41.22ms"/>
+<result success="true" startPC="0x7ffff5c82034" time="102.0ms"/>

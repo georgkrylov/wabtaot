@@ -43,11 +43,13 @@ JITedFunction compile(interp::Thread* thread, interp::DefinedFunc* fn) {
 JITedFunction loadCompiled(interp::Thread* thread, interp::DefinedFunc* fn,
 			   interp::Environment& env) {
   TypeDictionary types;
-  unsigned int numCalleeParams = env.GetFuncSignature(fn->sig_index)->param_types.size();
+  //unsigned int numCalleeParams = env.GetFuncSignature(fn->sig_index)->param_types.size();
+  unsigned int numCalleeParams = 1;
   TR::IlType** tv = new TR::IlType*[numCalleeParams];
   for(int i=0;i<numCalleeParams;i++) {
     tv[i] = TypeFieldType(env.GetFuncSignature(fn->sig_index)->param_types[i]);
   }
+  tv[0] = types.threadPtr;
   FunctionThunkBuilder builder(&types,fn->dbg_name_.c_str(),functionReturnType(fn,env),
 		       numCalleeParams,tv);
 		       

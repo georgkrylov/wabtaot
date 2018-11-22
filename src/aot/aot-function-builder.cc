@@ -18,6 +18,7 @@
 #include "aot-type-dictionary.h"
 #include "aot-state.h"
 #include "trap-with.h"
+#include "reg_addr.h"
 #include "src/cast.h"
 #include "src/interp.h"
 #include "infra/Assert.hpp"
@@ -28,6 +29,7 @@
 #include <cmath>
 #include <limits>
 #include <type_traits>
+
 
 namespace wabt {
 
@@ -183,12 +185,18 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFu
 		 1,
 		 Int32);
 
+  DefineFunction("address",__FILE__,"0",
+		 reinterpret_cast<void*>(static_cast<void *(*)()>(reg_addr)),
+		 Address,
+		 0);
+
   returnType_ = functionReturnType(fn_);
 
   auto memories_size = env_.GetMemoryCount();
   auto globals_size = env_.GetGlobalCount();
-  auto param_count = env_.GetFuncSignature(fn_->sig_index)->param_types.size();
-  int total_size = param_count+2; //2 is added for stackPointer and stack top
+  //auto param_count = env_.GetFuncSignature(fn_->sig_index)->param_types.size();
+  auto param_count = 0;
+  int total_size = param_count+1; //2 is added for stackPointer and stack top
 
   if (memories_size > 0)
   		total_size++;
@@ -196,11 +204,8 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFu
   		total_size++;
   param_names_.reserve(total_size);
 
-  param_names_.push_back("stack");
-  DefineParameter(param_names_.back().data(), types->stackElementPtr);
-
-  param_names_.push_back("stackTop");
-  DefineParameter(param_names_.back().data(), types->stackTop);
+  param_names_.push_back("thread");
+  DefineParameter(param_names_.back().data(), types->threadPtr);
 
   if(memories_size > 0) {
     // reserve to prevent a reallocation if the vector grows, and its
@@ -216,7 +221,7 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFu
 
   int arg = 0;
 
-  for(const auto& t: env_.GetFuncSignature(fn_->sig_index)->param_types) {
+  /*for(const auto& t: env_.GetFuncSignature(fn_->sig_index)->param_types) {
     char param[6]; // ie, "p6" is the sixth parameter.
     sprintf(param, "p%d", arg++);
 
@@ -225,7 +230,7 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFu
 
     DefineParameter(param_names_.back().data(), tt);
     param_types_.push_back(tt);
-  }
+    }*/
 
   DefineReturnType(returnType_);
 }
@@ -269,14 +274,20 @@ void AOTFunctionBuilder::defineFunction(const std::string& name, interp::Defined
 }
 
 bool AOTFunctionBuilder::buildIL() {
-  setVMState(new State(this,*types_));
+  int32_t nump = env_.GetFuncSignature(fn_->sig_index)->param_types.size();
+  Store("sp",Load("thread"));
+  setVMState(new State(this,*types_,nump));
 
   // expects a non-NULL Compilation object to exist, so must be
   // constructed here, at compile time
+  /*TR::IlValue *sp = StructFieldInstanceAddress(
+		    "thread","value_stack_",Load("thread"));
+  TR::IlValue *tp = StructFieldInstanceAddress(
+		    "thread","vs_top_",Load("thread"));
   stack_ = Load("stack");
-  stackCount_ = Load("stackTop");
+  stackCount_ = Load("stackTop");*/
 
-  pushParams();
+  //pushParams();
 
   const uint8_t* istream = thread_->GetIstream();
 
@@ -286,6 +297,7 @@ bool AOTFunctionBuilder::buildIL() {
   AppendBuilder(workItems_[0].builder);
 
   int32_t next_index;
+  Call("address",0);
 
   for(;;) {
     if ((next_index = GetNextBytecodeFromWorklist()) != -1) {
@@ -329,7 +341,8 @@ void AOTFunctionBuilder::Push(TR::IlBuilder* b, const char* type,
   //TODO: should probably compare to valueType_ here, if that's
   //possible. I'm not sure if a simple pointer comparison will
   //work. IlTypes* for primitives might not be singleton values.
-  auto* value_wrapper = strcmp(type, "i64") ? b->BitcastTo(valueType_, value) : value;
+  //auto* value_wrapper = strcmp(type, "i64") ? b->BitcastTo(valueType_, value) : value;
+  auto* value_wrapper = value;
   //b->StoreOver(stackCount_,b->Add(stackCount_,b->Const(1))); because of Pop
  // auto nextElement = b->IndexAt(types_->stackElement,stack_,stackCount);
  // b->StoreAt(nextElement,value_wrapper);
@@ -351,7 +364,8 @@ TR::IlValue* AOTFunctionBuilder::Pop(TR::IlBuilder* b, const char* type) {
   //stackCount_--;
   auto *value = dynamic_cast<State *>(b->vmState())->popValue(b);
   //b->StoreOver(stackCount_,b->Sub(stackCount_,b->Const(1))); triggers badilop segfault after a while for some reason
-  return strcmp("i64", type) ? b->BitcastTo(TypeFieldType(type), value) : value;
+  //return strcmp("i64", type) ? b->BitcastTo(TypeFieldType(type), value) : value;
+  return value;
 }
 
 /**

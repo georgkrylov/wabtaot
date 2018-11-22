@@ -26,6 +26,15 @@ class TypeDictionary : public TR::TypeDictionary {
  public:
   TypeDictionary();
   TR::IlType *stackElement;
+  TR::IlType *stackElementPtr;
+  //TR::IlType *instruction;
+  //TR::IlType *instructionPtr;
+
+  //TR::IlType *operandStack;
+  //TR::IlType *operandStackPtr;
+  TR::IlType *thread;
+  TR::IlType *threadPtr;
+  TR::IlType *stackTop;
 };
 
 }

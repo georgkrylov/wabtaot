@@ -4,19 +4,20 @@
 #include "src/common.h"
 #include "ilgen/VirtualMachineState.hpp"
 #include "ilgen/VirtualMachineOperandStack.hpp"
-#include "ilgen/VirtualMachineRegister.hpp"
+#include "ilgen/VirtualMachineRegisterInStruct.hpp"
 
 namespace wabt {
 namespace aot {
 
 class State: public TR::VirtualMachineState {
   public:
-   State(TR::MethodBuilder *b, AOTTypeDictionary &types)
+ State(TR::MethodBuilder *b, AOTTypeDictionary &types, int32_t numpar)
      : stack_(nullptr), stackTop_(nullptr) {
-    stackTop_ = new TR::VirtualMachineRegister(b,"stackTop",types.stackTop,
-					       4,b->Load("stackTop"));
+    stackTop_ = new TR::VirtualMachineRegisterInStruct(
+		b,"Thread","sp","vs_top_","stackTop");
     stack_ = new TR::VirtualMachineOperandStack(b,64,types.stackElement,stackTop_,
-					       true,-1);
+						true,0,numpar);
+    stack_->Reload(b);
    }
 
    void pushValue(TR::IlBuilder *b, TR::IlValue *value) {

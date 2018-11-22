@@ -590,6 +590,8 @@ class Environment {
   ELFLoader *elfLoader;
 };
 
+struct ThreadOffset;
+ 
 class Thread {
  public:
   struct Options {
@@ -624,6 +626,7 @@ class Thread {
  private:
   friend class wabt::jit::FunctionBuilder;
   friend class wabt::aot::AOTFunctionBuilder;
+  friend class ThreadOffset;
   friend class Executor;
   
   const uint8_t* GetIstream() const { return env_->istream_->data.data(); }
@@ -690,10 +693,17 @@ class Thread {
   Environment* env_ = nullptr;
   std::vector<Value> value_stack_;
   std::vector<IstreamOffset> call_stack_;
+  Value *vs_array_;
+  Value *vs_top_;
   uint32_t value_stack_top_ = 0;
   uint32_t call_stack_top_ = 0;
   uint32_t last_jit_frame_ = 0;
   IstreamOffset pc_ = 0;
+};
+
+struct ThreadOffset {
+  static const std::size_t so = offsetof(Thread,vs_array_);
+  static const std::size_t to = offsetof(Thread,vs_top_);
 };
 
 struct ExecResult {

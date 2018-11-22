@@ -171,7 +171,9 @@ Thread::Options::Options(uint32_t value_stack_size,
 Thread::Thread(Environment* env, const Options& options)
     : env_(env),
       value_stack_(options.value_stack_size),
-      call_stack_(options.call_stack_size) {}
+      call_stack_(options.call_stack_size) {
+  vs_top_ = value_stack_.data();
+}
 
 FuncSignature::FuncSignature(Index param_count,
                              Type* param_types,
@@ -684,10 +686,12 @@ void Thread::Reset() {
 Result Thread::Push(Value value) {
   CHECK_STACK();
   value_stack_[value_stack_top_++] = value;
+  vs_top_++;
   return Result::Ok;
 }
 
 Value Thread::Pop() {
+  vs_top_--;
   return value_stack_[--value_stack_top_];
 }
 
@@ -1411,8 +1415,14 @@ Result Thread::Run(int num_instructions) {
 	    /*uint64_t (*func)(Value *,uint32_t *) = reinterpret_cast<uint64_t(*)(Value *,uint32_t *)>(jit_fn);
 	    auto result = func(value_stack_.data(),&value_stack_top_);
 	    Push<uint64_t>(result);*/
-	    void(*func)(Value *,uint32_t *) = reinterpret_cast<void(*)(Value *,uint32_t *)>(jit_fn);
-	    func(value_stack_.data(),&value_stack_top_);
+	    // void(*func)(Thread*) = reinterpret_cast<void(*)(Thread*)>(jit_fn);
+	    //func(this);
+	    Push<uint64_t>(7);
+	    vs_top_-=2;
+	    void *handle = dlopen("/hdd/wasmjit-omr/tempmod1.so",RTLD_LAZY);
+	    const void *funct = dlsym(handle,std::string{"func_1"}.c_str());
+	    void(*func)(Thread*) = reinterpret_cast<void(*)(Thread*)>(funct);
+	    func(this);
 	    //jit_fn();
 	  } else {
 	    auto result = jit_fn();

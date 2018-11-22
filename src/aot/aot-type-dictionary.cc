@@ -19,6 +19,6 @@
 
 wabt::aot::AOTTypeDictionary::AOTTypeDictionary() : wabt::jit::TypeDictionary()
 {
-  stackElementPtr = PointerTo(stackElement);
-  stackTop = PointerTo(PointerTo(TR::Int32));
+  
+  
 }

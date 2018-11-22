@@ -25,4 +25,13 @@ wabt::jit::TypeDictionary::TypeDictionary() : TR::TypeDictionary() {
     UnionField("Value", "f32", toIlType<float>());
     UnionField("Value", "f64", toIlType<double>());
     CloseUnion("Value");
+    stackElementPtr = PointerTo(stackElement);
+  stackTop = PointerTo(stackElementPtr);
+  auto name = "Thread";
+  thread = DefineStruct(name);
+  DefineField(name,"vs_array_",stackElementPtr,
+	      wabt::interp::ThreadOffset::so);
+  DefineField(name,"vs_top_",stackTop,wabt::interp::ThreadOffset::to);
+  CloseStruct(name);
+  threadPtr = PointerTo(thread);
 }
