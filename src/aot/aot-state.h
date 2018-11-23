@@ -16,7 +16,7 @@ class State: public TR::VirtualMachineState {
     stackTop_ = new TR::VirtualMachineRegisterInStruct(
 		b,"Thread","sp","vs_top_","stackTop");
     stack_ = new TR::VirtualMachineOperandStack(b,64,types.stackElement,stackTop_,
-						true,0,numpar);
+						true,0,numpar-1); //1 as intialoffset works for me...
     stack_->Reload(b);
    }
 
