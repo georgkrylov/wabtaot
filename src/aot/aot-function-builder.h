@@ -192,12 +192,13 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
   struct PreviousCompilerState {
     TR::BytecodeBuilder* b;
     TR::VirtualMachineOperandStack* stack;
+    TR::VirtualMachineRegister* reg;
     const uint8_t* pc;
-    uint32_t stack_count;
+    //uint32_t stack_count;
 
     PreviousCompilerState(TR::BytecodeBuilder* b, TR::VirtualMachineOperandStack* stack,
-			  const uint8_t* pc, uint32_t stack_count)
-     : b(b), stack(stack), pc(pc), stack_count(stack_count) {}
+			  const uint8_t* pc, TR::VirtualMachineRegister* reg/*, uint32_t stack_count*/)
+    : b(b), stack(stack), reg(reg), pc(pc)/*,stack_count(stack_count)*/ {}
   };
 
   std::vector<PreviousCompilerState> stackOfStacks_;

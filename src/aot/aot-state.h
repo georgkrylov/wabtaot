@@ -16,7 +16,7 @@ class State: public TR::VirtualMachineState {
     stackTop_ = new TR::VirtualMachineRegisterInStruct(
 		b,"Thread","sp","vs_top_","stackTop");
     stack_ = new TR::VirtualMachineOperandStack(b,64,types.stackElement,stackTop_,
-						true,0,numpar-1); //1 as intialoffset works for me...
+						true,-1,numpar-1); //1 as intialoffset works for me...
     stack_->Reload(b);
    }
 
@@ -29,7 +29,7 @@ class State: public TR::VirtualMachineState {
    }
 
    TR::IlValue *pickValue(Index depth) {
-     return stack_->Pick(depth-1);
+     return stack_->Pick(depth-1);//what about this??
    } 
 
    void Commit(TR::IlBuilder *b) override {
@@ -49,6 +49,11 @@ class State: public TR::VirtualMachineState {
    void MergeInto(TR::VirtualMachineState *other, TR::IlBuilder *b) override {
      MergeInto(dynamic_cast<State *>(other), b);
    }
+
+   void MergeInto(State *other, TR::IlBuilder *b) {
+    stack_->MergeInto(other->stack_, b);
+    stackTop_->MergeInto(other->stackTop_, b);
+  }
 
    TR::VirtualMachineOperandStack *stack_;
    TR::VirtualMachineRegister *stackTop_;

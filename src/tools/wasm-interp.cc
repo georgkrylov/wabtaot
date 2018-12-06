@@ -260,7 +260,11 @@ static void InitEnvironment(Environment* env) {
   }
   if (s_load_from_dlib) {
     env->enable_load_from_dlib = true;
-    env->LoadDLib("tempmod1.so");
+    //env->LoadDLib("tempmod1.so");
+    std::string str(s_infile);
+    str.replace(str.end()-4,str.end(),"so");
+    env->infile = new char[str.size()+1];
+    memcpy(env->infile,str.c_str(),str.size()+1);
   }
 
   env->jit_threshold = s_jit_threshold;

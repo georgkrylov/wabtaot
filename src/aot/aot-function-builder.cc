@@ -18,7 +18,6 @@
 #include "aot-type-dictionary.h"
 #include "aot-state.h"
 #include "trap-with.h"
-#include "reg_addr.h"
 #include "src/cast.h"
 #include "src/interp.h"
 #include "infra/Assert.hpp"
@@ -185,10 +184,10 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFu
 		 1,
 		 Int32);
 
-  DefineFunction("address",__FILE__,"0",
+  /*DefineFunction("address",__FILE__,"0",
 		 reinterpret_cast<void*>(static_cast<void *(*)()>(reg_addr)),
 		 Address,
-		 0);
+		 0);*/
 
   returnType_ = functionReturnType(fn_);
 
@@ -295,17 +294,21 @@ bool AOTFunctionBuilder::buildIL() {
 						const_cast<char*>(ReadOpcodeAt(&istream[fn_->offset]).GetName())),
                           &istream[fn_->offset]);
   AppendBuilder(workItems_[0].builder);
-
+  bool zika = false;
+  TR::VirtualMachineOperandStack* aa;
   int32_t next_index;
-  Call("address",0);
+  //Call("address",0);
 
   for(;;) {
     if ((next_index = GetNextBytecodeFromWorklist()) != -1) {
       auto& work_item = workItems_[next_index];
-
+      if(zika) {
+	dynamic_cast<State *>(work_item.builder->vmState())->stack_=aa;
+	zika = false;
+      }
       if (!Emit(work_item.builder, istream, work_item.pc))
 	return false;
-      /* } else if(!stackOfStacks_.empty()) {
+      } else if(!stackOfStacks_.empty()) {
       auto prev_state = stackOfStacks_.back();
       stackOfStacks_.pop_back();
 
@@ -316,8 +319,10 @@ bool AOTFunctionBuilder::buildIL() {
 			      prev_state.pc);
 
       prev_state.b->AddFallThroughBuilder(workItems_[next_index].builder);
-      stack_ = prev_state.stack;
-      stackCount_ = prev_state.stack_count;*/
+      aa = prev_state.stack;
+      zika = true;
+      //stackCount_ = prev_state.stack_count;
+      dynamic_cast<State *>(vmState())->stackTop_ = prev_state.reg;
     } else {
       break;
     }
@@ -341,12 +346,17 @@ void AOTFunctionBuilder::Push(TR::IlBuilder* b, const char* type,
   //TODO: should probably compare to valueType_ here, if that's
   //possible. I'm not sure if a simple pointer comparison will
   //work. IlTypes* for primitives might not be singleton values.
-  //auto* value_wrapper = strcmp(type, "i64") ? b->BitcastTo(valueType_, value) : value;
-  auto* value_wrapper = value;
+  auto* value_wrapper = strcmp(type, "i64") ? b->BitcastTo(valueType_, value) : value;
+  /*if(type[0]=='f')
+    value = b->ConvertTo(TypeFieldType("f64"),value);
+    auto* value_wrapper = strcmp("i64", type) ? b->ConvertBitsTo(valueType_,value) : value;*/
+  //auto* value_wrapper = strcmp("i32", type) ? value : b->ConvertTo(valueType_,value);
+  //value = b->ConvertTo(TypeFieldType("f64"),value);
   //b->StoreOver(stackCount_,b->Add(stackCount_,b->Const(1))); because of Pop
  // auto nextElement = b->IndexAt(types_->stackElement,stack_,stackCount);
  // b->StoreAt(nextElement,value_wrapper);
  // stack_->Push(b, value_wrapper);
+  //dynamic_cast<State *>(b->vmState())->pushValue(b,value_wrapper);
   dynamic_cast<State *>(b->vmState())->pushValue(b,value_wrapper);
 }
 
@@ -364,8 +374,14 @@ TR::IlValue* AOTFunctionBuilder::Pop(TR::IlBuilder* b, const char* type) {
   //stackCount_--;
   auto *value = dynamic_cast<State *>(b->vmState())->popValue(b);
   //b->StoreOver(stackCount_,b->Sub(stackCount_,b->Const(1))); triggers badilop segfault after a while for some reason
-  //return strcmp("i64", type) ? b->BitcastTo(TypeFieldType(type), value) : value;
-  return value;
+  /*if(type[0]=='f')
+    value = b->ConvertBitsTo(TypeFieldType("f64"),value);
+    return strcmp("i64", type) ? b->ConvertTo(TypeFieldType(type),value) : value;*/
+  return strcmp("i64", type) ? b->BitcastTo(TypeFieldType(type),value) : value;
+  //int a = strcmp("i32",type);
+  //return a ? value : b->ConvertTo(TypeFieldType(type),value);
+  //return b->LoadIndirect("Value","i32",value);
+  //return LoadAt(TypeFieldType(type),UnionFieldInstanceAddress("Value","i32",value));
 }
 
 /**
@@ -393,7 +409,6 @@ void AOTFunctionBuilder::DropKeep(TR::IlBuilder* b, uint32_t drop_count, uint8_t
   } else {
     for (uint32_t i = 0; i < drop_count; i++) Pop(b,"i64");
   }
-
   stackCount_ -= drop_count;
 }
 
@@ -817,11 +832,11 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
       return true;
     }
 
-    case Opcode::Unreachable:
+      case Opcode::Unreachable:
       EmitTrap(b, interp::Result::TrapUnreachable);
       return true;
 
-    case Opcode::I32Const: {
+      case Opcode::I32Const: {
       auto* val = b->ConstInt32(ReadU32(&pc));
       Push(b, "i32", val);
       break;
@@ -928,18 +943,25 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
 	  args.push_back(b->Load("memories"));
 	}
 
-	for(const auto& t: env_.GetFuncSignature(builder.fn_->sig_index)->param_types) {
+	/*for(const auto& t: env_.GetFuncSignature(builder.fn_->sig_index)->param_types) {
 	  args.push_back(Pop(b, TypeFieldName(t)));
+	  }*/
+	int t = (-env_.GetFuncSignature(builder.fn_->sig_index)->result_types.size() +
+		 env_.GetFuncSignature(builder.fn_->sig_index)->param_types.size());
+	b->vmState()->Commit(b);
+ 	b->Call(builder.fn_name_.c_str(), 1, b->Load("thread"));
+	if(t!=0) {
+	  dynamic_cast<State *>(b->vmState())->stack_->adjustStackTop(-t);
 	}
-
- 	auto* value = b->Call(builder.fn_name_.c_str(), args.size(), args.data());
-	pushReturnValue(builder, b, value);
+	b->vmState()->Reload(b);
       } else {
 	throw std::runtime_error("Call: function not found!");
       }
 
       break;
     }
+
+
 
   case Opcode::CallIndirect: {
     throw std::runtime_error("indirect calls not supported");
@@ -1888,7 +1910,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
     }
 
     case Opcode::InterpBrUnless: {
-/*      auto target = &istream[ReadU32(&pc)];
+      auto target = &istream[ReadU32(&pc)];
       auto condition = Pop(b, "i32");
       auto it = std::find_if(workItems_.begin(), workItems_.end(),
 			     [&](const BytecodeWorkItem& b) {
@@ -1906,7 +1928,8 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
       }
 
       TR::VirtualMachineOperandStack* prev_stack = new TR::VirtualMachineOperandStack(dynamic_cast<State *>(vmState())->stack_);
-      stackOfStacks_.emplace_back(b, prev_stack, pc, stackCount_);*/
+      TR::VirtualMachineRegister* reg = dynamic_cast<State *>(vmState())->stackTop_;
+      stackOfStacks_.emplace_back(b, prev_stack, pc, reg);
 
       return true;
     }

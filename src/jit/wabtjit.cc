@@ -22,6 +22,7 @@
 #include "ilgen/ThunkBuilder.hpp"
 #include "ilgen/MethodBuilder.hpp"
 #include "infra/Assert.hpp"
+#include <dlfcn.h>
 
 #include "Jit.hpp"
 
@@ -42,14 +43,14 @@ JITedFunction compile(interp::Thread* thread, interp::DefinedFunc* fn) {
 
 JITedFunction loadCompiled(interp::Thread* thread, interp::DefinedFunc* fn,
 			   interp::Environment& env) {
-  TypeDictionary types;
+  /*TypeDictionary types;
   //unsigned int numCalleeParams = env.GetFuncSignature(fn->sig_index)->param_types.size();
   unsigned int numCalleeParams = 1;
   TR::IlType** tv = new TR::IlType*[numCalleeParams];
   /*for(int i=0;i<numCalleeParams;i++) {
     tv[i] = TypeFieldType(env.GetFuncSignature(fn->sig_index)->param_types[i]);
     }*/
-  tv[0] = types.threadPtr;
+  /* tv[0] = types.threadPtr;
   FunctionThunkBuilder builder(&types,fn->dbg_name_.c_str(),functionReturnType(fn,env),
 		       numCalleeParams,tv);
 		       
@@ -59,7 +60,13 @@ JITedFunction loadCompiled(interp::Thread* thread, interp::DefinedFunc* fn,
     return reinterpret_cast<JITedFunction>(function);
   } else {
     return nullptr;
+    }*/
+  void *handle = dlopen(env.infile,RTLD_LAZY);
+  if(!handle) {
+    return nullptr;
   }
+  void *funct = dlsym(handle,fn->dbg_name_.c_str());
+  return reinterpret_cast<JITedFunction>(funct);
 }
 
 TR::IlType* functionReturnType(interp::DefinedFunc* fn,interp::Environment& env)

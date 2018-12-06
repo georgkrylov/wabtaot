@@ -172,7 +172,7 @@ Thread::Thread(Environment* env, const Options& options)
     : env_(env),
       value_stack_(options.value_stack_size),
       call_stack_(options.call_stack_size) {
-  vs_top_ = value_stack_.data();
+  vs_top_ = value_stack_.data()-1;
 }
 
 FuncSignature::FuncSignature(Index param_count,
@@ -514,14 +514,14 @@ Value MakeValue(ValueTypeRep<T>);
 
 template <>
 Value MakeValue<uint32_t>(uint32_t v) {
-  Value result;
+  Value result {0};
   result.i32 = v;
   return result;
 }
 
 template <>
 Value MakeValue<int32_t>(uint32_t v) {
-  Value result;
+  Value result {0};
   result.i32 = v;
   return result;
 }
@@ -542,7 +542,7 @@ Value MakeValue<int64_t>(uint64_t v) {
 
 template <>
 Value MakeValue<float>(uint32_t v) {
-  Value result;
+  Value result {0};
   result.f32_bits = v;
   return result;
 }
@@ -681,6 +681,7 @@ void Thread::Reset() {
   pc_ = 0;
   value_stack_top_ = 0;
   call_stack_top_ = 0;
+  vs_top_ = value_stack_.data()-1;
 }
 
 Result Thread::Push(Value value) {
@@ -688,13 +689,13 @@ Result Thread::Push(Value value) {
   value_stack_[value_stack_top_++] = value;
   /**vs_top_ = value;
      value_stack_top_++;*/
-  if(value_stack_top_>1)
+  //if(value_stack_top_>1)
   vs_top_++;
   return Result::Ok;
 }
 
 Value Thread::Pop() {
-  if(vs_top_!=value_stack_.data())
+  /*if(vs_top_!=value_stack_.data()-1)*/
   vs_top_--;
   return value_stack_[--value_stack_top_];
   /*--value_stack_top_;
@@ -1233,8 +1234,8 @@ bool Environment::TryJit(Thread* t, IstreamOffset offset, Environment::JITedFunc
       meta->num_calls++;
 
       if (meta->num_calls >= jit_threshold) {
-	//if(enable_load_from_dlib) {
-	if(0){
+	if(enable_load_from_dlib) {
+	//if(0){
 	  meta->jit_fn = jit::loadCompiled(t,meta->wasm_fn,*this);
 	  meta->tried_jit = true;
 	} else {
@@ -1431,17 +1432,19 @@ Result Thread::Run(int num_instructions) {
 	    //func(this);
 	    //Push<uint64_t>(7);
 	    //vs_top_-=2;
-	    void *handle = dlopen("/hdd/wasmjit-omr/tempmod1.so",RTLD_LAZY);
-	    const void *funct = dlsym(handle,std::string{"func_1"}.c_str());
-	    void(*func)(Thread*) = reinterpret_cast<void(*)(Thread*)>(funct);
+	    /*void *handle = dlopen("/hdd/wasmjit-omr/tempmod1.so",RTLD_LAZY);
+	      const void *funct = dlsym(handle,std::string{"func_1"}.c_str());*/
+	    void(*func)(Thread*) = reinterpret_cast<void(*)(Thread*)>(jit_fn);
+	    auto previous_top = vs_top_;
 	    func(this);
-	    int change = vs_top_ - value_stack_.data();
-	    if(change==0){
+	    int change = vs_top_ - previous_top;
+	    /*(change==0){
 	      value_stack_top_=1;
 	      if((*value_stack_.data()).i32==0)
 		value_stack_top_=0;
 	    }else
-	      value_stack_top_=1+change;
+	    value_stack_top_=1+change;*/
+	    value_stack_top_ +=change;
 	    //jit_fn();
 	  } else {
 	    auto result = jit_fn();

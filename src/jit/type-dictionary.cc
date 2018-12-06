@@ -19,12 +19,13 @@
 
 wabt::jit::TypeDictionary::TypeDictionary() : TR::TypeDictionary() {
     using namespace wabt::interp;
-    stackElement = DefineUnion("Value");
+    /*stackElement = DefineUnion("Value");
     UnionField("Value", "i32", toIlType<decltype(Value::i32)>());
     UnionField("Value", "i64", toIlType<decltype(Value::i64)>());
     UnionField("Value", "f32", toIlType<float>());
     UnionField("Value", "f64", toIlType<double>());
-    CloseUnion("Value");
+    CloseUnion("Value");*/
+    stackElement = toIlType<decltype(Value::i64)>();
     stackElementPtr = PointerTo(stackElement);
   stackTop = PointerTo(stackElementPtr);
   auto name = "Thread";

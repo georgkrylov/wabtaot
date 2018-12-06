@@ -436,6 +436,7 @@ class Environment {
   bool enable_jit = true;
   bool trap_on_failed_comp = false;
   bool enable_load_from_dlib = false;
+  char *infile = nullptr;
   uint32_t jit_threshold = 1;
   TR::ThunkBuilder *thbu;
 
@@ -587,7 +588,7 @@ class Environment {
 
   jit::JitEnvironment jit_env_;
   std::unordered_map<IstreamOffset, JitMeta> jit_meta_;
-  ELFLoader *elfLoader;
+  ELFLoader *elfLoader = nullptr;
 };
 
 struct ThreadOffset;
