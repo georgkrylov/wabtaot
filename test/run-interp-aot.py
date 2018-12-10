@@ -52,9 +52,11 @@ def main(args):
   parser.add_argument('--enable-threads', action='store_true')
   parser.add_argument('--disable-jit', action='store_true')
   parser.add_argument('--trap-on-failed-comp', action='store_true')
+  parser.add_argument('--load-from-dlib', action='store_true')
   options = parser.parse_args(args)
 
   wast_tool = None
+  wabtaot_tool = None
   interp_tool = None
   if options.spec:
     wast_tool = utils.Executable(
@@ -67,7 +69,9 @@ def main(args):
     wast_tool = utils.Executable(
         find_exe.GetWat2WasmExecutable(options.bindir),
         error_cmdline=options.error_cmdline)
-    
+    wabtaot_tool = utils.Executable(
+        find_exe.GetWabtAotExecutable(options.bindir),
+        error_cmdline=options.error_cmdline)
     interp_tool = utils.Executable(
         find_exe.GetWasmInterpExecutable(options.bindir),
         error_cmdline=options.error_cmdline)
@@ -92,6 +96,7 @@ def main(args):
           options.enable_saturating_float_to_int,
       '--enable-threads': options.enable_threads,
       '--disable-jit': options.disable_jit,
+      '--load-from-dlib':options.load_from_dlib,
       '--no-stack-trace': not options.spec
   })
 
@@ -102,7 +107,9 @@ def main(args):
     new_ext = '.json' if options.spec else '.wasm'
     out_file = utils.ChangeDir(utils.ChangeExt(options.file, new_ext), out_dir)
     wast_tool.RunWithArgs(options.file, '-o', out_file)
+    subprocess.call(["bash","/hdd/wasmjit-omr/gdeb.sh",out_file[:-5]])
     interp_tool.RunWithArgs(out_file)
+    #wabtaot_tool.RunWithArgs(out_file)
 
   return 0
 

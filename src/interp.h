@@ -31,7 +31,6 @@
 #include "src/common.h"
 #include "src/opcode.h"
 #include "src/stream.h"
-#include "ilgen/ThunkBuilder.hpp"
 
 namespace wabt {
 
@@ -159,6 +158,9 @@ enum class Result : int32_t {
   FOREACH_INTERP_RESULT(V)
 #undef V
 };
+
+extern bool trapFlag;
+extern Result trapResult;
 
 typedef uint32_t IstreamOffset;
 static const IstreamOffset kInvalidIstreamOffset = ~0;
@@ -438,7 +440,6 @@ class Environment {
   bool enable_load_from_dlib = false;
   char *infile = nullptr;
   uint32_t jit_threshold = 1;
-  TR::ThunkBuilder *thbu;
 
   Environment();
   ~Environment();

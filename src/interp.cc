@@ -38,6 +38,9 @@
 namespace wabt {
 namespace interp {
 
+bool trapFlag = false;
+Result trapResult = Result::Ok;
+
 // Differs from the normal CHECK_RESULT because this one is meant to return the
 // interp Result type.
 #undef CHECK_RESULT
@@ -1437,6 +1440,11 @@ Result Thread::Run(int num_instructions) {
 	    void(*func)(Thread*) = reinterpret_cast<void(*)(Thread*)>(jit_fn);
 	    auto previous_top = vs_top_;
 	    func(this);
+	    if(trapFlag) {
+	      tpc.Reload();
+	      trapFlag = false;
+	      return trapResult;
+	    }
 	    int change = vs_top_ - previous_top;
 	    /*(change==0){
 	      value_stack_top_=1;
@@ -1458,6 +1466,7 @@ Result Thread::Run(int num_instructions) {
 
           PopCall();
         } else {
+	  printf("interpreting...\n");
           CHECK_TRAP(PushCall(pc));
           GOTO(offset);
         }

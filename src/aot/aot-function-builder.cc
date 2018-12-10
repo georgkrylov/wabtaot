@@ -156,13 +156,13 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFu
   DefineFile(__FILE__);
   DefineName(fn_name_.c_str());
 
-  DefineFunction("f32_sqrt", __FILE__, "0",
-                 reinterpret_cast<void*>(static_cast<float (*)(float)>(std::sqrt)),
+  DefineFunction("sqrtf", __FILE__, "0",
+                 reinterpret_cast<void*>(static_cast<float (*)(float)>(sqrtf)),
                  Float,
                  1,
                  Float);
-  DefineFunction("f32_copysign", __FILE__, "0",
-                 reinterpret_cast<void*>(static_cast<float (*)(float, float)>(std::copysign)),
+  DefineFunction("copysignf", __FILE__, "0",
+                 reinterpret_cast<void*>(static_cast<float (*)(float, float)>(copysignf)),
                  Float,
                  2,
                  Float,
@@ -1523,7 +1523,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
 
     case Opcode::F32Sqrt:
       EmitUnaryOp<float>(b, [&](TR::IlValue* value) {
-        return b->Call("f32_sqrt", 1, value);
+        return b->Call("sqrtf", 1, value);
       });
       break;
 
@@ -1553,7 +1553,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
 
     case Opcode::F32Copysign:
       EmitBinaryOp<float>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
-        return b->Call("f32_copysign", 2, lhs, rhs);
+        return b->Call("copysignf", 2, lhs, rhs);
       });
       break;
 
