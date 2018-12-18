@@ -1241,7 +1241,7 @@ bool Environment::TryJit(Thread* t, IstreamOffset offset, Environment::JITedFunc
 	//if(0){
 	  meta->jit_fn = jit::loadCompiled(t,meta->wasm_fn,*this);
 	  meta->tried_jit = true;
-	} else {
+	}else{
 	  meta->jit_fn = jit::compile(t, meta->wasm_fn);
 	  meta->tried_jit = true;
 	}
@@ -1251,6 +1251,39 @@ bool Environment::TryJit(Thread* t, IstreamOffset offset, Environment::JITedFunc
       }
     }
     *fn = meta->jit_fn;
+    return trap_on_failed_comp || *fn;
+  } else {
+    *fn = nullptr;
+    return trap_on_failed_comp;
+  }
+}
+
+bool Environment::TryJit(Thread* t, IstreamOffset offset, Environment::JITedFunction* fn,DefinedFunc *&df) {
+  if (!enable_jit) {
+    *fn = nullptr;
+    return false;
+  }
+
+  auto meta_it = jit_meta_.find(offset);
+
+  if (meta_it != jit_meta_.end()) {
+    auto* meta = &meta_it->second;
+    if (!meta->tried_jit) {
+      meta->num_calls++;
+
+      if (meta->num_calls >= jit_threshold) {
+	if(enable_load_thunk){
+	  df = meta->wasm_fn;
+	  meta->jit_fn = jit::loadThunk(t,meta->wasm_fn,*this);
+	  meta->tried_jit = true;
+	}
+      } else {
+        *fn = nullptr;
+        return false;
+      }
+    }
+    *fn = meta->jit_fn;
+    df = meta->wasm_fn;
     return trap_on_failed_comp || *fn;
   } else {
     *fn = nullptr;
@@ -1422,8 +1455,9 @@ Result Thread::Run(int num_instructions) {
       case Opcode::Call: {
         IstreamOffset offset = ReadU32(&pc);
         Environment::JITedFunction jit_fn;
+	DefinedFunc *df;
 
-        if (env_->TryJit(this, offset, &jit_fn)) {
+        if (env_->TryJit(this, offset, &jit_fn,df)) {
           TRAP_IF(!jit_fn, FailedJITCompilation);
           CHECK_TRAP(PushCall(pc));
 
@@ -1454,6 +1488,52 @@ Result Thread::Run(int num_instructions) {
 	    value_stack_top_=1+change;*/
 	    value_stack_top_ +=change;
 	    //jit_fn();
+	  } else if(env_->enable_load_thunk) {
+	    void *handle = dlopen(env_->infile,RTLD_LAZY);
+	    void *func = dlsym(handle,df->dbg_name_.c_str());
+	    unsigned int numCalleeParams = env_->GetFuncSignature(df->sig_index)->param_types.size();
+	    Value* params = new Value[numCalleeParams+1]();
+	    for(int i=0;i<numCalleeParams;i++) {
+	      if(env_->GetFuncSignature(df->sig_index)->param_types[i]==Type::F32){
+		unsigned int fl = PopRep<float>();
+	        memcpy(params+i,&fl,sizeof(float));
+	      }else
+		params[i] = Pop();
+	    }
+	    Value res{0};
+	    if(env_->GetFuncSignature(df->sig_index)->result_types.size()>0){
+	      if (env_->GetFuncSignature(df->sig_index)->result_types.front()==
+		  Type::F32)
+	      {
+		  float(*fn)(void*,Value*) = (float(*)(void*,Value*))(jit_fn);
+		  float res1 = fn(func,params);
+		  memcpy(&res.f32_bits,&res1,sizeof(float));
+		  //res.f32_bits = res1;
+	      }else if (env_->GetFuncSignature(df->sig_index)->result_types.front()==
+			  Type::F64){
+		double(*fn)(void*,Value*) = (double(*)(void*,Value*))(jit_fn);
+		double res1 = fn(func,params);
+		memcpy(&res,&res1,sizeof(double));
+		//res.f64_bits = res1;
+	      }else{
+		Value(*fn)(void*,Value*) = (Value(*)(void*,Value*))(jit_fn);
+		res = fn(func,params);
+	      }
+	      if(trapFlag) {
+		tpc.Reload();
+		trapFlag = false;
+		return trapResult;
+	      }
+	      CHECK_TRAP(Push(res));
+	    }else{
+	      void(*fn)(void*,Value*) = (void(*)(void*,Value*))(jit_fn);
+	      fn(func,params);
+	      if(trapFlag) {
+		tpc.Reload();
+		trapFlag = false;
+		return trapResult;
+	      }
+	    }  
 	  } else {
 	    auto result = jit_fn();
 	    if (result != Result::Ok) {

@@ -438,6 +438,7 @@ class Environment {
   bool enable_jit = true;
   bool trap_on_failed_comp = false;
   bool enable_load_from_dlib = false;
+  bool enable_load_thunk = false;
   char *infile = nullptr;
   uint32_t jit_threshold = 1;
 
@@ -576,6 +577,7 @@ class Environment {
   };
 
   bool TryJit(Thread* t, IstreamOffset offset, JITedFunction* fn);
+  bool TryJit(Thread* t, IstreamOffset offset, JITedFunction* fn,DefinedFunc *&);
 
   std::vector<std::unique_ptr<Module>> modules_;
   std::vector<FuncSignature> sigs_;

@@ -69,12 +69,31 @@ JITedFunction loadCompiled(interp::Thread* thread, interp::DefinedFunc* fn,
   return reinterpret_cast<JITedFunction>(funct);
 }
 
-TR::IlType* functionReturnType(interp::DefinedFunc* fn,interp::Environment& env)
+JITedFunction loadThunk(interp::Thread* thread, interp::DefinedFunc* fn,
+			interp::Environment& env) {
+  TypeDictionary types;
+  unsigned int numCalleeParams = env.GetFuncSignature(fn->sig_index)->param_types.size();
+  TR::IlType** tv = new TR::IlType*[numCalleeParams];
+  for(int i=0;i<numCalleeParams;i++) {
+    tv[i] = TypeFieldType(env.GetFuncSignature(fn->sig_index)->param_types[i]);
+  }
+  TR::ThunkBuilder builder(&types,fn->dbg_name_.c_str(),
+			   functionReturnType(fn,env,types),numCalleeParams,tv);
+  uint8_t* function = nullptr;
+  if(compileMethodBuilder(&builder,&function)==0) {
+    return reinterpret_cast<JITedFunction>(function);
+  }else{
+    return nullptr;
+  }
+}
+
+TR::IlType* functionReturnType(interp::DefinedFunc* fn,interp::Environment& env,
+			       TypeDictionary &types)
 {
     const auto& result_types = env.GetFuncSignature(fn->sig_index)->result_types;
 
     if(result_types.empty()) {
-      return 0;
+      return types.toIlType<void>();
     } else {
       return TypeFieldType(result_types.front());
     }

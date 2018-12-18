@@ -51,6 +51,7 @@ static bool s_run_all_exports;
 static bool s_host_print;
 static bool s_disable_jit;
 static bool s_load_from_dlib;
+static bool s_load_thunk;
 static bool s_trap_on_failed_comp;
 static bool s_no_stack_trace;
 static uint32_t s_jit_threshold = 1;
@@ -120,6 +121,9 @@ static void ParseOptions(int argc, char** argv) {
   parser.AddOption("load-from-dlib",
 		   "Use dynamic library containing precompiled functions",
 		   []() { s_load_from_dlib = true; });
+  parser.AddOption("load-thunk",
+		   "Load from dynamic library using ThunkBuilder",
+		   []() {s_load_thunk =true; });
   parser.AddOption("trap-on-failed-comp",
                    "Trap if a JIT compilation fails",
                    []() { s_trap_on_failed_comp = true; });
@@ -266,7 +270,13 @@ static void InitEnvironment(Environment* env) {
     env->infile = new char[str.size()+1];
     memcpy(env->infile,str.c_str(),str.size()+1);
   }
-
+  if(s_load_thunk) {
+    env->enable_load_thunk = true;
+    std::string str(s_infile);
+    str.replace(str.end()-4,str.end(),"so");
+    env->infile = new char[str.size()+1];
+    memcpy(env->infile,str.c_str(),str.size()+1);
+  }
   env->jit_threshold = s_jit_threshold;
 }
 

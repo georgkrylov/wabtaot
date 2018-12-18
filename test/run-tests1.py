@@ -114,6 +114,18 @@ TOOLS = {
         ],
         'VERBOSE-FLAGS': ['--print-cmd', '-v']
     },
+    'run-interp-thunk': {
+        'EXE': 'test/run-interp-thunk.py',
+        'FLAGS': [
+                '--bindir=%(bindir)s',
+                '--run-all-exports',
+                '--no-error-cmdline',
+                '--load-thunk',
+                '-o',
+                '%(out_dir)s',
+        ],
+        'VERBOSE-FLAGS': ['--print-cmd', '-v']
+    },
     'run-interp-spec': {
         'EXE': 'test/run-interp.py',
         'FLAGS': [
