@@ -37,6 +37,21 @@ class TypeDictionary : public TR::TypeDictionary {
   TR::IlType *stackTop;
 };
 
+class AOTTypeDictionary : public TR::TypeDictionary {
+ public:
+  AOTTypeDictionary();
+  TR::IlType *stackElement;
+  TR::IlType *stackElementPtr;
+  //TR::IlType *instruction;
+  //TR::IlType *instructionPtr;
+
+  //TR::IlType *operandStack;
+  //TR::IlType *operandStackPtr;
+  TR::IlType *thread;
+  TR::IlType *threadPtr;
+  TR::IlType *stackTop;
+};
+
 }
 }
 

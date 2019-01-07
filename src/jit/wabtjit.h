@@ -32,7 +32,7 @@ JITedFunction compile(interp::Thread* thread, interp::DefinedFunc*);
 TR::IlType* TypeFieldType(const char* t);
 TR::IlType* TypeFieldType(Type t);
 TR::IlType* functionReturnType(interp::DefinedFunc* fn,interp::Environment& env,
-			       TypeDictionary &types);
+			       AOTTypeDictionary &types);
 JITedFunction loadCompiled(interp::Thread* thread, interp::DefinedFunc* fn,
 			   interp::Environment& env);
 JITedFunction loadThunk(interp::Thread* thread, interp::DefinedFunc* fn,

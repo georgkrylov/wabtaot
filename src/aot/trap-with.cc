@@ -6,6 +6,7 @@
 extern "C" void trapWith(int32_t r) {
   using namespace wabt::interp;
   Result result = static_cast<Result>(r);
+  trapResult = result;
   trapFlag = true;
   
   switch(result) {

@@ -1275,9 +1275,17 @@ bool Environment::TryJit(Thread* t, IstreamOffset offset, Environment::JITedFunc
 	if(enable_load_thunk){
 	  df = meta->wasm_fn;
 	  meta->jit_fn = jit::loadThunk(t,meta->wasm_fn,*this);
+	  //meta->tried_jit = true;
+	} else if(enable_load_from_dlib) {
+	//if(0){
+	  meta->jit_fn = jit::loadCompiled(t,meta->wasm_fn,*this);
+	  meta->tried_jit = true;
+	}else{
+	  meta->jit_fn = jit::compile(t, meta->wasm_fn);
 	  meta->tried_jit = true;
 	}
-      } else {
+     
+    } else {
         *fn = nullptr;
         return false;
       }
@@ -1491,13 +1499,44 @@ Result Thread::Run(int num_instructions) {
 	  } else if(env_->enable_load_thunk) {
 	    void *handle = dlopen(env_->infile,RTLD_LAZY);
 	    void *func = dlsym(handle,df->dbg_name_.c_str());
-	    unsigned int numCalleeParams = env_->GetFuncSignature(df->sig_index)->param_types.size();
+	    int numCalleeParams = env_->GetFuncSignature(df->sig_index)->param_types.size();
+	   int memglcount = 0;
+	    if(env_->GetMemoryCount()>0){
+	      numCalleeParams++;
+	      memglcount++;
+	    }
+	    if(env_->GetGlobalCount()>0) {
+	      numCalleeParams++;
+	      memglcount++;
+	    }
 	    Value* params = new Value[numCalleeParams+1]();
-	    for(int i=0;i<numCalleeParams;i++) {
-	      if(env_->GetFuncSignature(df->sig_index)->param_types[i]==Type::F32){
-		unsigned int fl = PopRep<float>();
-	        memcpy(params+i,&fl,sizeof(float));
-	      }else
+	    char** mems = nullptr;
+	    Value** globs = nullptr;
+	    if(env_->GetMemoryCount()>0){
+	      /*mems = new long*[env_->GetMemoryCount()];
+	      for(int j=0;j<env_->memories_.size();j++){
+		mems[j] = new long[env_->memories_[j].data.size()];
+		for(int k=0;k<env_->memories_[j].data.size();k++){
+		  memcpy(&mems[j][k],&env_->memories_[j].data[k],sizeof(long));
+		}
+		}*/
+	      mems = new char*[env_->GetMemoryCount()];
+	      for(int j=0;j<env_->memories_.size();j++){
+		mems[j] = env_->memories_[j].data.data();
+	       }
+	      memcpy(params,&mems,sizeof(char*));
+	    }
+	    if(env_->GetGlobalCount()>0) {
+	      globs = new Value*[env_->GetGlobalCount()]();
+	      for(int i=0;i<env_->globals_.size();i++){
+		globs[i] = &env_->globals_[i].typed_value.value;
+	      }
+	      if(env_->GetMemoryCount()>0)
+		memcpy(params+1,&globs,sizeof(void*));
+	      else
+		memcpy(params,&globs,sizeof(void*));
+	    }
+	    for(int i=numCalleeParams-1;i>=memglcount;i--) {//because thom's aot is using params in revers
 		params[i] = Pop();
 	    }
 	    Value res{0};
@@ -1533,7 +1572,17 @@ Result Thread::Run(int num_instructions) {
 		trapFlag = false;
 		return trapResult;
 	      }
-	    }  
+	    }
+	    /*if(env_->GetMemoryCount()>0){
+	      for(int j=0;j<env_->memories_.size();j++){
+		for(int k=0;k<env_->memories_[j].data.size();k++){
+		  memcpy(&env_->memories_[j].data[k],&mems[j][k],sizeof(long));
+		}
+	      }
+	      }*/
+	    delete [] mems;
+	    delete [] globs;
+	    delete [] params;
 	  } else {
 	    auto result = jit_fn();
 	    if (result != Result::Ok) {

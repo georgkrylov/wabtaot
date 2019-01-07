@@ -71,12 +71,30 @@ JITedFunction loadCompiled(interp::Thread* thread, interp::DefinedFunc* fn,
 
 JITedFunction loadThunk(interp::Thread* thread, interp::DefinedFunc* fn,
 			interp::Environment& env) {
-  TypeDictionary types;
+  AOTTypeDictionary types;
   unsigned int numCalleeParams = env.GetFuncSignature(fn->sig_index)->param_types.size();
-  TR::IlType** tv = new TR::IlType*[numCalleeParams];
-  for(int i=0;i<numCalleeParams;i++) {
-    tv[i] = TypeFieldType(env.GetFuncSignature(fn->sig_index)->param_types[i]);
+  unsigned int memglcount = 0;
+  if(env.GetMemoryCount()>0){
+    numCalleeParams++;
+    memglcount++;
   }
+  if(env.GetGlobalCount()>0){
+    numCalleeParams++;
+    memglcount++;
+  }
+  TR::IlType** tv = new TR::IlType*[numCalleeParams];
+  if(env.GetMemoryCount()>0){
+    //tv[0] = types.PointerTo(types.PointerTo(types.toIlType<int64_t>()));
+    tv[0] = types.toIlType<int64_t>();
+    if(env.GetGlobalCount()>0)
+      tv[1] = types.toIlType<int64_t>();
+  } else if (env.GetGlobalCount()>0){
+    tv[0] = types.toIlType<int64_t>();
+  }
+  for(int i=memglcount;i<numCalleeParams;i++) {
+    tv[i] = TypeFieldType(env.GetFuncSignature(fn->sig_index)->param_types[i-memglcount]);
+    }
+  
   TR::ThunkBuilder builder(&types,fn->dbg_name_.c_str(),
 			   functionReturnType(fn,env,types),numCalleeParams,tv);
   uint8_t* function = nullptr;
@@ -88,7 +106,7 @@ JITedFunction loadThunk(interp::Thread* thread, interp::DefinedFunc* fn,
 }
 
 TR::IlType* functionReturnType(interp::DefinedFunc* fn,interp::Environment& env,
-			       TypeDictionary &types)
+			       wabt::jit::AOTTypeDictionary &types)
 {
     const auto& result_types = env.GetFuncSignature(fn->sig_index)->result_types;
 
@@ -100,7 +118,7 @@ TR::IlType* functionReturnType(interp::DefinedFunc* fn,interp::Environment& env,
 }
 
 TR::IlType* TypeFieldType(Type t) {
-  TypeDictionary types_;
+  AOTTypeDictionary types_;
   switch (t) {
     case Type::I32:
       return types_.toIlType<int32_t>();
@@ -117,7 +135,7 @@ TR::IlType* TypeFieldType(Type t) {
 }
 
 TR::IlType* TypeFieldType(const char* t) {
-  TypeDictionary types_;
+  AOTTypeDictionary types_;
   if(strcmp(t, "i32") == 0) {
       return types_.toIlType<int32_t>();
   } else if(strcmp(t, "i64") == 0) {
