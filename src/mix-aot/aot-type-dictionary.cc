@@ -14,21 +14,10 @@
  * limitations under the License.
  */
 
-#ifndef AOTTYPEDICTIONARY_HPP
-#define AOTTYPEDICTIONARY_HPP
+#include "aot-type-dictionary.h"
+#include "src/interp.h"
 
-#include "ilgen/TypeDictionary.hpp"
-#include "../jit/type-dictionary.h"
 
-namespace wabt {
-namespace aot {
-
-class AOTTypeDictionary : public wabt::jit::TypeDictionary {
- public:
-  AOTTypeDictionary();
-};
-
+wabt::aot::AOTTypeDictionary::AOTTypeDictionary() : wabt::jit::AOTTypeDictionary()
+{
 }
-}
-
-#endif // AOTTYPEDICTIONARY_HPP

@@ -17,7 +17,6 @@
 #include "aot-type-dictionary.h"
 #include "src/interp.h"
 
-
-wabt::aot::AOTTypeDictionary::AOTTypeDictionary() : wabt::jit::AOTTypeDictionary()
+wabt::aot::AOTTypeDictionary::AOTTypeDictionary() : wabt::jit::TypeDictionary()
 {
 }

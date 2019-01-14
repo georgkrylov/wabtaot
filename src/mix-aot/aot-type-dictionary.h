@@ -23,7 +23,9 @@
 namespace wabt {
 namespace aot {
 
-class AOTTypeDictionary : public wabt::jit::TypeDictionary {
+
+
+class AOTTypeDictionary : public wabt::jit::AOTTypeDictionary {
  public:
   AOTTypeDictionary();
 };
