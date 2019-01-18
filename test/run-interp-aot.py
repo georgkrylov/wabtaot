@@ -69,9 +69,9 @@ def main(args):
     wast_tool = utils.Executable(
         find_exe.GetWat2WasmExecutable(options.bindir),
         error_cmdline=options.error_cmdline)
-    wabtaot_tool = utils.Executable(
-        find_exe.GetWabtAotExecutable(options.bindir),
-        error_cmdline=options.error_cmdline)
+    #wabtaot_tool = utils.Executable(
+    #    find_exe.GetWabtAotExecutable(options.bindir),
+    #    error_cmdline=options.error_cmdline)
     interp_tool = utils.Executable(
         find_exe.GetWasmInterpExecutable(options.bindir),
         error_cmdline=options.error_cmdline)
@@ -107,7 +107,7 @@ def main(args):
     new_ext = '.json' if options.spec else '.wasm'
     out_file = utils.ChangeDir(utils.ChangeExt(options.file, new_ext), out_dir)
     wast_tool.RunWithArgs(options.file, '-o', out_file)
-    subprocess.call(["bash","/hdd/wasmjit-omr/gdeb.sh",out_file[:-5]])
+    subprocess.call(["bash",SCRIPT_DIR[:-4]+"gdeb.sh",out_file[:-5]])
     interp_tool.RunWithArgs(out_file)
     #wabtaot_tool.RunWithArgs(out_file)
 

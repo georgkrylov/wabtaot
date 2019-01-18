@@ -25,8 +25,7 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 REPO_ROOT_DIR = os.path.dirname(SCRIPT_DIR)
 EXECUTABLES = [
     'wat2wasm', 'wast2json', 'wasm2wat', 'wasm-objdump', 'wasm-interp',
-    'wasm-opcodecnt', 'wat-desugar', 'wasm-link', 'spectest-interp',
-    'wabtaot'
+    'wasm-opcodecnt', 'wat-desugar', 'wasm-link', 'spectest-interp'
 ]
 
 

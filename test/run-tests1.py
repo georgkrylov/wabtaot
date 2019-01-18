@@ -823,9 +823,9 @@ def main(args):
   status.Start(len(infos_to_run))
 
   try:
-    if options.jobs > 1:
-      RunMultiThreaded(infos_to_run, status, options, variables)
-    else:
+    #if options.jobs > 1:
+      #RunMultiThreaded(infos_to_run, status, options, variables)
+    #else:
       RunSingleThreaded(infos_to_run, status, options, variables)
   except KeyboardInterrupt:
     print('\nInterrupted testing\n')
