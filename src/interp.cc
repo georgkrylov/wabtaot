@@ -2960,6 +2960,100 @@ void Thread::Trace(Stream* stream) {
   }
 }
 
+Result Thread::CallThunk(Environment::JITedFunction jit_fn,DefinedFunc *df) {
+  void *handle = dlopen(env_->infile,RTLD_LAZY);
+  if(!handle)
+    return wabt::interp::Result::TrapFailedAOTLookup;
+  void *func = dlsym(handle,df->dbg_name_.c_str());
+  if(!func)
+    return wabt::interp::Result::TrapFailedAOTLookup;
+   int numCalleeParams = env_->GetFuncSignature(df->sig_index)->param_types.size();
+   int memglcount = 0;
+    if(env_->GetMemoryCount()>0){
+      numCalleeParams++;
+      memglcount++;
+    }
+    if(env_->GetGlobalCount()>0) {
+      numCalleeParams++;
+      memglcount++;
+    }
+    Value* params = new Value[numCalleeParams+1]();
+    char** mems = nullptr;
+    Value** globs = nullptr;
+    if(env_->GetMemoryCount()>0){
+      /*mems = new long*[env_->GetMemoryCount()];
+      for(int j=0;j<env_->memories_.size();j++){
+	mems[j] = new long[env_->memories_[j].data.size()];
+	for(int k=0;k<env_->memories_[j].data.size();k++){
+	  memcpy(&mems[j][k],&env_->memories_[j].data[k],sizeof(long));
+	}
+	}*/
+      mems = new char*[env_->GetMemoryCount()];
+      for(int j=0;j<env_->memories_.size();j++){
+	mems[j] = env_->memories_[j].data.data();
+       }
+      memcpy(params,&mems,sizeof(char*));
+    }
+    if(env_->GetGlobalCount()>0) {
+      globs = new Value*[env_->GetGlobalCount()]();
+      for(int i=0;i<env_->globals_.size();i++){
+	globs[i] = &env_->globals_[i].typed_value.value;
+      }
+      if(env_->GetMemoryCount()>0)
+	memcpy(params+1,&globs,sizeof(void*));
+      else
+	memcpy(params,&globs,sizeof(void*));
+    }
+    for(int i=numCalleeParams-1;i>=memglcount;i--) {//because thom's aot is using params in revers
+	params[i] = Pop();
+    }
+    Value res{0};
+    if(env_->GetFuncSignature(df->sig_index)->result_types.size()>0){
+      if (env_->GetFuncSignature(df->sig_index)->result_types.front()==
+	  Type::F32)
+      {
+	  float(*fn)(void*,Value*) = (float(*)(void*,Value*))(jit_fn);
+	  float res1 = fn(func,params);
+	  memcpy(&res.f32_bits,&res1,sizeof(float));
+	  //res.f32_bits = res1;
+      }else if (env_->GetFuncSignature(df->sig_index)->result_types.front()==
+		  Type::F64){
+	double(*fn)(void*,Value*) = (double(*)(void*,Value*))(jit_fn);
+	double res1 = fn(func,params);
+	memcpy(&res,&res1,sizeof(double));
+	//res.f64_bits = res1;
+      }else{
+	Value(*fn)(void*,Value*) = (Value(*)(void*,Value*))(jit_fn);
+	res = fn(func,params);
+      }
+      if(trapFlag) {
+	//tpc.Reload();
+	trapFlag = false;
+	return trapResult;
+      }
+      CHECK_TRAP(Push(res));
+    }else{
+      void(*fn)(void*,Value*) = (void(*)(void*,Value*))(jit_fn);
+      fn(func,params);
+      if(trapFlag) {
+	//tpc.Reload();
+	trapFlag = false;
+	return trapResult;
+      }
+    }
+    /*if(env_->GetMemoryCount()>0){
+      for(int j=0;j<env_->memories_.size();j++){
+	for(int k=0;k<env_->memories_[j].data.size();k++){
+	  memcpy(&env_->memories_[j].data[k],&mems[j][k],sizeof(long));
+	}
+      }
+      }*/
+    delete [] mems;
+    delete [] globs;
+    delete [] params;
+    return Result::Ok;
+}
+
 void Environment::Disassemble(Stream* stream,
                               IstreamOffset from,
                               IstreamOffset to) {

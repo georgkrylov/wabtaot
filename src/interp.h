@@ -143,6 +143,7 @@ protected:
   V(TrapHostResultTypeMismatch, "host result type mismatch")                \
   /* we called an import function, but it didn't complete succesfully */    \
   V(TrapHostTrapped, "host function trapped")                               \
+  V(TrapFailedAOTLookup, "AOT lookup failed")                               \
   /* we attempted to JIT compile a function and failed */                   \
   V(TrapFailedJITCompilation, "failed JIT compilation")                     \
   /* we attempted to call a function with the an argument list that doesn't \
@@ -624,7 +625,7 @@ class Thread {
 
   void Trace(Stream*);
   Result Run(int num_instructions = 1);
-
+  Result CallThunk(Environment::JITedFunction,DefinedFunc*);
   Result CallHost(HostFunc*);
 
  private:

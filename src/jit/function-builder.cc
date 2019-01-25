@@ -116,8 +116,7 @@ FunctionBuilder::Result_t FunctionBuilder::CallHelper(wabt::interp::Thread* th, 
       meta->num_calls++;
 
       if (meta->num_calls >= th->env_->jit_threshold) {
-        meta->jit_fn = jit::compile(th, meta->wasm_fn);
-        meta->tried_jit = true;
+        meta->jit_fn = jit::loadThunk(th, meta->wasm_fn,*th->env_);
 
         if (th->env_->trap_on_failed_comp && meta->jit_fn == nullptr)
           return static_cast<Result_t>(wabt::interp::Result::TrapFailedJITCompilation);
@@ -125,7 +124,22 @@ FunctionBuilder::Result_t FunctionBuilder::CallHelper(wabt::interp::Thread* th, 
     }
 
     if (meta->jit_fn) {
-      CHECK_TRAP_IN_HELPER(meta->jit_fn());
+      wabt::interp::Result result = th->CallThunk(meta->jit_fn,meta->wasm_fn); 
+      if (result != wabt::interp::Result::Ok && result != wabt::interp::Result::TrapFailedAOTLookup) {    
+	return static_cast<Result_t>(result);      
+      }                                            
+      
+      if(result == wabt::interp::Result::TrapFailedAOTLookup) {     
+        meta->jit_fn = jit::compile(th, meta->wasm_fn);
+        meta->tried_jit = true;
+	if (meta->jit_fn) {
+	  CHECK_TRAP_IN_HELPER(meta->jit_fn());
+	} else {
+	  auto result = call_interp();
+	  if (result != wabt::interp::Result::Returned)
+	    return static_cast<Result_t>(result);
+	}
+      }
     } else {
       auto result = call_interp();
       if (result != wabt::interp::Result::Returned)
@@ -554,7 +568,7 @@ template <>
 TR::IlValue* FunctionBuilder::EmitIsNan<float>(TR::IlBuilder* b, TR::IlValue* value) {
   return b->GreaterThan(
          b->           And(
-         b->               ConvertTo(Int32, value),
+         b->               BitcastTo(Int32, value),
          b->               ConstInt32(0x7fffffffU)),
          b->           ConstInt32(0x7f800000U));
 }
@@ -563,7 +577,7 @@ template <>
 TR::IlValue* FunctionBuilder::EmitIsNan<double>(TR::IlBuilder* b, TR::IlValue* value) {
   return b->GreaterThan(
          b->           And(
-         b->               ConvertTo(Int64, value),
+         b->               BitcastTo(Int64, value),
          b->               ConstInt64(0x7fffffffffffffffULL)),
          b->           ConstInt64(0x7ff0000000000000ULL));
 }
@@ -594,7 +608,7 @@ void FunctionBuilder::EmitTruncation(TR::IlBuilder* b, const uint8_t* pc) {
 
   // this could be optimized using templates or constant expressions,
   // but the compiler should be able to simplify this anyways
-  auto* new_value = std::is_unsigned<ToType>::value ? b->UnsignedConvertTo(target_type, value)
+  auto* new_value = std::is_unsigned<ToType>::value ? b->BitcastTo(target_type, value)
                                                     : b->ConvertTo(target_type, value);
 
   Push(b, TypeFieldName<ToType>(), new_value, pc);
@@ -1610,25 +1624,25 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
     }
 
     case Opcode::F32ReinterpretI32: {
-      auto* value = b->ConvertTo(Float, Pop(b, "i32"));
+      auto* value = b->BitcastTo(Float, Pop(b, "i32"));
       Push(b, "f32", value, pc);
       break;
     }
 
     case Opcode::I32ReinterpretF32: {
-      auto* value = b->ConvertTo(Int32, Pop(b, "f32"));
+      auto* value = b->BitcastTo(Int32, Pop(b, "f32"));
       Push(b, "i32", value, pc);
       break;
     }
 
     case Opcode::F64ReinterpretI64: {
-      auto* value = b->ConvertTo(Double, Pop(b, "i64"));
+      auto* value = b->BitcastTo(Double, Pop(b, "i64"));
       Push(b, "f64", value, pc);
       break;
     }
 
     case Opcode::I64ReinterpretF64: {
-      auto* value = b->ConvertTo(Int64, Pop(b, "f64"));
+      auto* value = b->BitcastTo(Int64, Pop(b, "f64"));
       Push(b, "i64", value, pc);
       break;
     }

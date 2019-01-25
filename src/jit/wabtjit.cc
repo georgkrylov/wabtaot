@@ -82,21 +82,21 @@ JITedFunction loadThunk(interp::Thread* thread, interp::DefinedFunc* fn,
     numCalleeParams++;
     memglcount++;
   }
-  TR::IlType** tv = new TR::IlType*[numCalleeParams];
+  TR::IlType** params = new TR::IlType*[numCalleeParams];
   if(env.GetMemoryCount()>0){
     //tv[0] = types.PointerTo(types.PointerTo(types.toIlType<int64_t>()));
-    tv[0] = types.toIlType<int64_t>();
+    params[0] = types.toIlType<int64_t>();
     if(env.GetGlobalCount()>0)
-      tv[1] = types.toIlType<int64_t>();
+      params[1] = types.toIlType<int64_t>();
   } else if (env.GetGlobalCount()>0){
-    tv[0] = types.toIlType<int64_t>();
+    params[0] = types.toIlType<int64_t>();
   }
   for(int i=memglcount;i<numCalleeParams;i++) {
-    tv[i] = TypeFieldType(env.GetFuncSignature(fn->sig_index)->param_types[i-memglcount]);
-    }
+    params[i] = TypeFieldType(env.GetFuncSignature(fn->sig_index)->param_types[i-memglcount]);
+  }
   
   TR::ThunkBuilder builder(&types,fn->dbg_name_.c_str(),
-			   functionReturnType(fn,env,types),numCalleeParams,tv);
+			   functionReturnType(fn,env,types),numCalleeParams,params);
   uint8_t* function = nullptr;
   if(compileMethodBuilder(&builder,&function)==0) {
     return reinterpret_cast<JITedFunction>(function);
