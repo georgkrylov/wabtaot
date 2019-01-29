@@ -37,7 +37,7 @@ TEST_DIR = os.path.dirname(os.path.abspath(__file__))
 REPO_ROOT_DIR = os.path.dirname(TEST_DIR)
 OUT_DIR = os.path.join(REPO_ROOT_DIR, 'out')
 ROUNDTRIP_PY = os.path.join(TEST_DIR, 'run-roundtrip.py')
-DEFAULT_TIMEOUT = 10  # seconds
+DEFAULT_TIMEOUT = 30  # seconds
 SLOW_TIMEOUT_MULTIPLIER = 2
 
 # default configurations for tests
