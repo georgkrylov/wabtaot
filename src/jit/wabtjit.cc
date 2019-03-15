@@ -19,12 +19,10 @@
 #include "wabtjit.h"
 #include "type-dictionary.h"
 #include "function-builder.h"
-#include "ilgen/ThunkBuilder.hpp"
-#include "ilgen/MethodBuilder.hpp"
-#include "infra/Assert.hpp"
+//#include "infra/Assert.hpp"
 #include <dlfcn.h>
 
-#include "Jit.hpp"
+#include "JitBuilder.hpp"
 
 namespace wabt{
 namespace jit {
@@ -32,7 +30,7 @@ namespace jit {
 JITedFunction compile(interp::Thread* thread, interp::DefinedFunc* fn) {
   TypeDictionary types;
   FunctionBuilder builder(thread, fn, &types);
-  uint8_t* function = nullptr;
+  void* function = nullptr;
   
   if (compileMethodBuilder(&builder, &function) == 0) {
     return reinterpret_cast<JITedFunction>(function);
@@ -82,7 +80,7 @@ JITedFunction loadThunk(interp::Thread* thread, interp::DefinedFunc* fn,
     numCalleeParams++;
     memglcount++;
   }
-  TR::IlType** params = new TR::IlType*[numCalleeParams];
+  OMR::JitBuilder::IlType** params = new OMR::JitBuilder::IlType*[numCalleeParams];
   if(env.GetMemoryCount()>0){
     //tv[0] = types.PointerTo(types.PointerTo(types.toIlType<int64_t>()));
     params[0] = types.toIlType<int64_t>();
@@ -95,17 +93,17 @@ JITedFunction loadThunk(interp::Thread* thread, interp::DefinedFunc* fn,
     params[i] = TypeFieldType(env.GetFuncSignature(fn->sig_index)->param_types[i-memglcount]);
   }
   
-  TR::ThunkBuilder builder(&types,fn->dbg_name_.c_str(),
+  OMR::JitBuilder::ThunkBuilder builder(&types,fn->dbg_name_.c_str(),
 			   functionReturnType(fn,env,types),numCalleeParams,params);
   uint8_t* function = nullptr;
-  if(compileMethodBuilder(&builder,&function)==0) {
+  if(compileMethodBuilder(&builder,(void**)(&function))==0) {
     return reinterpret_cast<JITedFunction>(function);
   }else{
     return nullptr;
   }
 }
 
-TR::IlType* functionReturnType(interp::DefinedFunc* fn,interp::Environment& env,
+OMR::JitBuilder::IlType* functionReturnType(interp::DefinedFunc* fn,interp::Environment& env,
 			       wabt::jit::AOTTypeDictionary &types)
 {
     const auto& result_types = env.GetFuncSignature(fn->sig_index)->result_types;
@@ -117,7 +115,7 @@ TR::IlType* functionReturnType(interp::DefinedFunc* fn,interp::Environment& env,
     }
 }
 
-TR::IlType* TypeFieldType(Type t) {
+OMR::JitBuilder::IlType* TypeFieldType(Type t) {
   AOTTypeDictionary types_;
   switch (t) {
     case Type::I32:
@@ -129,12 +127,12 @@ TR::IlType* TypeFieldType(Type t) {
     case Type::F64:
       return types_.toIlType<double>();
     default:
-      TR_ASSERT_FATAL(false, "Invalid primitive type");
+      //TR_ASSERT_FATAL(false, "Invalid primitive type");
       return nullptr;
   }
 }
 
-TR::IlType* TypeFieldType(const char* t) {
+OMR::JitBuilder::IlType* TypeFieldType(const char* t) {
   AOTTypeDictionary types_;
   if(strcmp(t, "i32") == 0) {
       return types_.toIlType<int32_t>();
@@ -146,7 +144,7 @@ TR::IlType* TypeFieldType(const char* t) {
       return types_.toIlType<double>();
   }
 
-  TR_ASSERT_FATAL(false, "Invalid primitive type");
+  //TR_ASSERT_FATAL(false, "Invalid primitive type");
   return nullptr;
 }
 

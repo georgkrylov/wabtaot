@@ -18,10 +18,7 @@
 #define FUNCTIONBUILDER_HPP
 
 #include "aot-type-dictionary.h"
-#include "ilgen/BytecodeBuilder.hpp"
-#include "ilgen/MethodBuilder.hpp"
-#include "ilgen/VirtualMachineOperandStack.hpp"
-#include "ilgen/VirtualMachineRegister.hpp"
+#include "JitBuilder.hpp"
 
 #include "src/interp.h"
 
@@ -35,15 +32,15 @@ using namespace wabt::interp;
   
 class AOTManager;
  
-class AOTFunctionBuilder : public TR::MethodBuilder {
+class AOTFunctionBuilder : public OMR::JitBuilder::MethodBuilder {
  public:
   AOTFunctionBuilder(interp::Thread*, interp::DefinedFunc*, std::string&&,
 		     AOTTypeDictionary*, Environment&, AOTManager&);
   
   bool buildIL() override;
 
-  TR::IlValue* popReturnValue(TR::IlBuilder*);
-  void pushReturnValue(AOTFunctionBuilder&, TR::IlBuilder*, TR::IlValue*);
+  OMR::JitBuilder::IlValue* popReturnValue(OMR::JitBuilder::IlBuilder*);
+  void pushReturnValue(AOTFunctionBuilder&, OMR::JitBuilder::IlBuilder*, OMR::JitBuilder::IlValue*);
   void pushParams();
   
   virtual ~AOTFunctionBuilder() {}
@@ -54,7 +51,7 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
    * @param type is the name of the field in the Value union corresponding to the type of the value being pushed
    * @param value is the IlValue representing the value being pushed
    */
-  void Push(TR::IlBuilder* b, const char* type, TR::IlValue* value); //, const uint8_t* pc);
+  void Push(OMR::JitBuilder::IlBuilder* b, const char* type, OMR::JitBuilder::IlValue* value); //, const uint8_t* pc);
 
   /**
    * @brief Generate pop from the interpreter stack
@@ -62,7 +59,7 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
    * @param type is the name of the field in the Value union corresponding to the type of the value being popped
    * @return an IlValue representing the popped value
    */
-  TR::IlValue* Pop(TR::IlBuilder* b, const char* type);
+  OMR::JitBuilder::IlValue* Pop(OMR::JitBuilder::IlBuilder* b, const char* type);
 
   /**
    * @brief Drop a number of values from the interpreter stack, optionally keeping the top value of the stack
@@ -70,7 +67,7 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
    * @param drop_count is the number of values to drop from the stack
    * @param keep_count is 1 to keep the top value intact and 0 otherwise
    */
-  void DropKeep(TR::IlBuilder* b, uint32_t drop_count, uint8_t keep_count);
+  void DropKeep(OMR::JitBuilder::IlBuilder* b, uint32_t drop_count, uint8_t keep_count);
 
   /**
    * @brief Generate load of pointer to a vlue on the interpreter stack by an index
@@ -84,7 +81,7 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
    * the union, instead of loading the union directly. This behaviour differs
    * from `Thread::Pick()` and users must take this into account.
    */
-  TR::IlValue* Pick(Index depth);
+  OMR::JitBuilder::IlValue* Pick(Index depth);
   uint32_t pickLocalOffset();
   
   void defineFunction(const std::string&, interp::DefinedFunc*);
@@ -99,59 +96,59 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
 
  private:
   struct BytecodeWorkItem {
-    TR::BytecodeBuilder* builder;
+    OMR::JitBuilder::BytecodeBuilder* builder;
     const uint8_t* pc;
 
-    BytecodeWorkItem(TR::BytecodeBuilder* builder, const uint8_t* pc)
+    BytecodeWorkItem(OMR::JitBuilder::BytecodeBuilder* builder, const uint8_t* pc)
     : builder(builder), pc(pc)
     {}
   };
 
-  TR::IlType* functionReturnType(interp::DefinedFunc*);
+  OMR::JitBuilder::IlType* functionReturnType(interp::DefinedFunc*);
   
   template <typename T>
   const char* TypeFieldName() const;
 
   const char* TypeFieldName(Type) const;
-  TR::IlType* TypeFieldType(Type) const;
-  TR::IlType* TypeFieldType(const char*) const;
+  OMR::JitBuilder::IlType* TypeFieldType(Type) const;
+  OMR::JitBuilder::IlType* TypeFieldType(const char*) const;
 
-  TR::IlValue* Const(TR::IlBuilder* b, const interp::TypedValue* v) const;
-
-  template <typename T, typename TResult = T, typename TOpHandler>
-  void EmitBinaryOp(TR::IlBuilder* b, /* const uint8_t* pc,*/ TOpHandler h);
+  OMR::JitBuilder::IlValue* Const(OMR::JitBuilder::IlBuilder* b, const interp::TypedValue* v) const;
 
   template <typename T, typename TResult = T, typename TOpHandler>
-  void EmitUnaryOp(TR::IlBuilder* b, /* const uint8_t* pc,*/ TOpHandler h);
+  void EmitBinaryOp(OMR::JitBuilder::IlBuilder* b, /* const uint8_t* pc,*/ TOpHandler h);
+
+  template <typename T, typename TResult = T, typename TOpHandler>
+  void EmitUnaryOp(OMR::JitBuilder::IlBuilder* b, /* const uint8_t* pc,*/ TOpHandler h);
 
   template <typename T>
-  void EmitIntDivide(TR::IlBuilder* b);
+  void EmitIntDivide(OMR::JitBuilder::IlBuilder* b);
 
   template <typename T>
-  void EmitIntRemainder(TR::IlBuilder* b);
+  void EmitIntRemainder(OMR::JitBuilder::IlBuilder* b);
 
   template <typename T>
-  TR::IlValue* EmitMemoryPreAccess(TR::IlBuilder* b);
+  OMR::JitBuilder::IlValue* EmitMemoryPreAccess(OMR::JitBuilder::IlBuilder* b);
 
-  void returnWithError(TR::IlBuilder*);
+  void returnWithError(OMR::JitBuilder::IlBuilder*);
   
-  void EmitTrap(TR::IlBuilder* b, interp::Result);
+  void EmitTrap(OMR::JitBuilder::IlBuilder* b, interp::Result);
   // void EmitCheckTrap(TR::IlBuilder* b, TR::IlValue* result);
-  void EmitTrapIf(TR::IlBuilder* b, TR::IlValue* condition, interp::Result);
+  void EmitTrapIf(OMR::JitBuilder::IlBuilder* b, OMR::JitBuilder::IlValue* condition, interp::Result);
 
   template <typename F>
-  TR::IlValue* EmitIsNan(TR::IlBuilder* b, TR::IlValue* value);
+  OMR::JitBuilder::IlValue* EmitIsNan(OMR::JitBuilder::IlBuilder* b, OMR::JitBuilder::IlValue* value);
 
   template <typename ToType, typename FromType>
-  void EmitTruncation(TR::IlBuilder* b);
+  void EmitTruncation(OMR::JitBuilder::IlBuilder* b);
   template <typename ToType, typename FromType>
-  void EmitUnsignedTruncation(TR::IlBuilder* b);
+  void EmitUnsignedTruncation(OMR::JitBuilder::IlBuilder* b);
 
-  TR::IlValue* calculateGlobalIndex(TR::IlBuilder* b, const uint8_t**);
-  TR::IlValue* calculateMemoryIndex(TR::IlBuilder* b, const uint8_t**);
+  OMR::JitBuilder::IlValue* calculateGlobalIndex(OMR::JitBuilder::IlBuilder* b, const uint8_t**);
+  OMR::JitBuilder::IlValue* calculateMemoryIndex(OMR::JitBuilder::IlBuilder* b, const uint8_t**);
   
   template <typename>
-  TR::IlValue* CalculateShiftAmount(TR::IlBuilder* b, TR::IlValue* amount);
+  OMR::JitBuilder::IlValue* CalculateShiftAmount(OMR::JitBuilder::IlBuilder* b, OMR::JitBuilder::IlValue* amount);
 
   using Result_t = std::underlying_type<wabt::interp::Result>::type;
 
@@ -176,33 +173,33 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
   Environment& env_;
   AOTManager& aotManager_;
   
-  TR::IlType* const valueType_;
-  TR::IlType* const pValueType_;
-  TR::IlType* const ppValueType_;
+  OMR::JitBuilder::IlType* const valueType_;
+  OMR::JitBuilder::IlType* const pValueType_;
+  OMR::JitBuilder::IlType* const ppValueType_;
 
-  TR::VirtualMachineOperandStack* stack_;
+  OMR::JitBuilder::VirtualMachineOperandStack* stack_;
   uint32_t stackCount_ = 0;
   uint32_t localsCount_ = 0;
   
-  TR::IlType* returnType_;
+  OMR::JitBuilder::IlType* returnType_;
   
   std::vector<std::string> param_names_;
-  std::vector<TR::IlType*> param_types_;
+  std::vector<OMR::JitBuilder::IlType*> param_types_;
 
   struct PreviousCompilerState {
-    TR::BytecodeBuilder* b;
-    TR::VirtualMachineOperandStack* stack;
+    OMR::JitBuilder::BytecodeBuilder* b;
+    OMR::JitBuilder::VirtualMachineOperandStack* stack;
     const uint8_t* pc;
     uint32_t stack_count;
 
-    PreviousCompilerState(TR::BytecodeBuilder* b, TR::VirtualMachineOperandStack* stack,
+    PreviousCompilerState(OMR::JitBuilder::BytecodeBuilder* b, OMR::JitBuilder::VirtualMachineOperandStack* stack,
 			  const uint8_t* pc, uint32_t stack_count)
      : b(b), stack(stack), pc(pc), stack_count(stack_count) {}
   };
 
   std::vector<PreviousCompilerState> stackOfStacks_;
   
-  bool Emit(TR::BytecodeBuilder* b, const uint8_t* istream, const uint8_t* pc);
+  bool Emit(OMR::JitBuilder::BytecodeBuilder* b, const uint8_t* istream, const uint8_t* pc);
 };
   
 class AOTManager {

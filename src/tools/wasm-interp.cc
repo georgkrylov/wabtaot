@@ -38,7 +38,7 @@
 #include "src/wast-parser.h"
 #include "src/jit/wabtjit.h"
 
-#include "Jit.hpp"
+#include "JitBuilder.hpp"
 
 using namespace wabt;
 using namespace wabt::interp;

@@ -19,12 +19,14 @@
 #include "trap-with.h"
 #include "src/cast.h"
 #include "src/interp.h"
-#include "infra/Assert.hpp"
-#include "ilgen/VirtualMachineState.hpp"
+//#include "/home/petar/wasmjit-omr/third_party/omr/compiler/ilgen/VirtualMachineOperandStack.hpp"
+//#include "infra/Assert.hpp"
+//#include "ilgen/VirtualMachineState.hpp"
 
 #include <cmath>
 #include <limits>
 #include <type_traits>
+#include <string.h>
 
 namespace wabt {
 
@@ -123,7 +125,7 @@ void* AOTFunctionBuilder::MemoryTranslationHelper(interp::Thread* th, uint32_t m
  Build a struct containing the return types of the function, as its fields.
  */
 
-TR::IlType* AOTFunctionBuilder::functionReturnType(interp::DefinedFunc* fn)
+OMR::JitBuilder::IlType* AOTFunctionBuilder::functionReturnType(interp::DefinedFunc* fn)
 {
     const auto& result_types = env_.GetFuncSignature(fn->sig_index)->result_types;
 
@@ -137,7 +139,7 @@ TR::IlType* AOTFunctionBuilder::functionReturnType(interp::DefinedFunc* fn)
 AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFunc* fn,
                                        std::string&& fn_name, AOTTypeDictionary* types,
                                        Environment& env, AOTManager& aotManager)
-  : TR::MethodBuilder(types),
+  : OMR::JitBuilder::MethodBuilder(types),
     types_(types),
     thread_(thread),
     fn_(fn),
@@ -212,7 +214,7 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFu
     sprintf(param, "p%d", arg++);
 
     param_names_.push_back(param);
-    TR::IlType* tt = TypeFieldType(t);
+    OMR::JitBuilder::IlType* tt = TypeFieldType(t);
 
     DefineParameter(param_names_.back().data(), tt);
     param_types_.push_back(tt);
@@ -249,22 +251,22 @@ void AOTFunctionBuilder::defineFunction(const std::string& name, interp::Defined
 {
   if(fn == fn_) return;
 
-  TR::IlType* result_type = fn == fn_ ? returnType_ : functionReturnType(fn);
+  OMR::JitBuilder::IlType* result_type = fn == fn_ ? returnType_ : functionReturnType(fn);
   auto& builder_fn = aotManager_.getFB(fn->offset);
 
   DefineFunction(name.c_str(), __FILE__, "0",
 		 reinterpret_cast<void*>(18), // this is a magic number that makes trampoline lookup work.
 		 result_type,
 		 builder_fn.param_types_.size(),
-		 static_cast<TR::IlType**>(builder_fn.param_types_.data()));
+		 static_cast<OMR::JitBuilder::IlType**>(builder_fn.param_types_.data()));
 }
 
 bool AOTFunctionBuilder::buildIL() {
-  setVMState(new TR::VirtualMachineState());
+  setVMState(new OMR::JitBuilder::VirtualMachineState());
 
   // expects a non-NULL Compilation object to exist, so must be
   // constructed here, at compile time
-  stack_ = new TR::VirtualMachineOperandStack(this, 64, valueType_, nullptr);
+  stack_ = new OMR::JitBuilder::VirtualMachineOperandStack(this, 64, valueType_, nullptr);
 
   pushParams();
 
@@ -313,7 +315,7 @@ bool AOTFunctionBuilder::buildIL() {
  * stack_base_addr[stack_top] = value;
  * *stack_top_addr = stack_top + 1;
  */
-void AOTFunctionBuilder::Push(TR::IlBuilder* b, const char* type, TR::IlValue* value)
+void AOTFunctionBuilder::Push(OMR::JitBuilder::IlBuilder* b, const char* type, OMR::JitBuilder::IlValue* value)
 {
   //TODO: should probably compare to valueType_ here, if that's
   //possible. I'm not sure if a simple pointer comparison will
@@ -332,7 +334,7 @@ void AOTFunctionBuilder::Push(TR::IlBuilder* b, const char* type, TR::IlValue* v
  * *stack_top_addr = new_stack_top;
  * return stack_base_addr[new_stack_top];
  */
-TR::IlValue* AOTFunctionBuilder::Pop(TR::IlBuilder* b, const char* type) {
+OMR::JitBuilder::IlValue* AOTFunctionBuilder::Pop(OMR::JitBuilder::IlBuilder* b, const char* type) {
   auto* value = stack_->Pop(b);
   stackCount_--;
   return strcmp("i64", type) ? b->BitcastTo(TypeFieldType(type), value) : value;
@@ -352,9 +354,9 @@ TR::IlValue* AOTFunctionBuilder::Pop(TR::IlBuilder* b, const char* type) {
  *
  * *stack_top_addr = new_stack_top;
  */
-void AOTFunctionBuilder::DropKeep(TR::IlBuilder* b, uint32_t drop_count, uint8_t keep_count) {
-  TR_ASSERT(keep_count <= 1, "Invalid keep count");
-  TR_ASSERT(stackCount_ >= drop_count + keep_count, "Invalid drop count");
+void AOTFunctionBuilder::DropKeep(OMR::JitBuilder::IlBuilder* b, uint32_t drop_count, uint8_t keep_count) {
+  //TR_ASSERT(keep_count <= 1, "Invalid keep count");
+  //TR_ASSERT(stackCount_ >= drop_count + keep_count, "Invalid drop count");
 
   if(keep_count == 1) {
       auto* top = stack_->Pop(b);
@@ -374,7 +376,7 @@ void AOTFunctionBuilder::DropKeep(TR::IlBuilder* b, uint32_t drop_count, uint8_t
  *
  * return &value_stack_[value_stack_top_ - depth];
  */
-TR::IlValue* AOTFunctionBuilder::Pick(Index depth) {
+OMR::JitBuilder::IlValue* AOTFunctionBuilder::Pick(Index depth) {
   return stack_->Pick(depth-1);
 }
 
@@ -419,12 +421,12 @@ const char* AOTFunctionBuilder::TypeFieldName(Type t) const {
     case Type::F64:
       return TypeFieldName<double>();
     default:
-      TR_ASSERT_FATAL(false, "Invalid primitive type");
+      //TR_ASSERT_FATAL(false, "Invalid primitive type");
       return nullptr;
   }
 }
 
-TR::IlType* AOTFunctionBuilder::TypeFieldType(Type t) const {
+OMR::JitBuilder::IlType* AOTFunctionBuilder::TypeFieldType(Type t) const {
   switch (t) {
     case Type::I32:
       return types_->toIlType<int32_t>();
@@ -435,12 +437,12 @@ TR::IlType* AOTFunctionBuilder::TypeFieldType(Type t) const {
     case Type::F64:
       return types_->toIlType<double>();
     default:
-      TR_ASSERT_FATAL(false, "Invalid primitive type");
+      //TR_ASSERT_FATAL(false, "Invalid primitive type");
       return nullptr;
   }
 }
 
-TR::IlType* AOTFunctionBuilder::TypeFieldType(const char* t) const {
+OMR::JitBuilder::IlType* AOTFunctionBuilder::TypeFieldType(const char* t) const {
   if(strcmp(t, "i32") == 0) {
       return types_->toIlType<int32_t>();
   } else if(strcmp(t, "i64") == 0) {
@@ -451,11 +453,11 @@ TR::IlType* AOTFunctionBuilder::TypeFieldType(const char* t) const {
       return types_->toIlType<double>();
   }
 
-  TR_ASSERT_FATAL(false, "Invalid primitive type");
+  //TR_ASSERT_FATAL(false, "Invalid primitive type");
   return nullptr;
 }
 
-TR::IlValue* AOTFunctionBuilder::Const(TR::IlBuilder* b, const interp::TypedValue* v) const {
+OMR::JitBuilder::IlValue* AOTFunctionBuilder::Const(OMR::JitBuilder::IlBuilder* b, const interp::TypedValue* v) const {
   switch (v->type) {
     case Type::I32:
       return b->ConstInt32(v->value.i32);
@@ -466,13 +468,13 @@ TR::IlValue* AOTFunctionBuilder::Const(TR::IlBuilder* b, const interp::TypedValu
     case Type::F64:
       return b->ConstDouble(Bitcast<double>(v->value.f64_bits));
     default:
-      TR_ASSERT_FATAL(false, "Invalid primitive type");
+      //TR_ASSERT_FATAL(false, "Invalid primitive type");
       return nullptr;
   }
 }
 
 template <typename T, typename TResult, typename TOpHandler>
-void AOTFunctionBuilder::EmitBinaryOp(TR::IlBuilder* b, TOpHandler h) {
+void AOTFunctionBuilder::EmitBinaryOp(OMR::JitBuilder::IlBuilder* b, TOpHandler h) {
   auto* rhs = Pop(b, TypeFieldName<T>());
   auto* lhs = Pop(b, TypeFieldName<T>());
 
@@ -480,16 +482,16 @@ void AOTFunctionBuilder::EmitBinaryOp(TR::IlBuilder* b, TOpHandler h) {
 }
 
 template <typename T, typename TResult, typename TOpHandler>
-void AOTFunctionBuilder::EmitUnaryOp(TR::IlBuilder* b, TOpHandler h) {
+void AOTFunctionBuilder::EmitUnaryOp(OMR::JitBuilder::IlBuilder* b, TOpHandler h) {
   Push(b, TypeFieldName<TResult>(), h(Pop(b, TypeFieldName<T>())));//, pc);
 }
 
 template <typename T>
-void AOTFunctionBuilder::EmitIntDivide(TR::IlBuilder* b) {
+void AOTFunctionBuilder::EmitIntDivide(OMR::JitBuilder::IlBuilder* b) {
   static_assert(std::is_integral<T>::value,
                 "EmitIntDivide only works on integral types");
 
-  EmitBinaryOp<T>(b, [&](TR::IlValue* dividend, TR::IlValue* divisor) {
+  EmitBinaryOp<T>(b, [&](OMR::JitBuilder::IlValue* dividend, OMR::JitBuilder::IlValue* divisor) {
     EmitTrapIf(b,
     b->        EqualTo(divisor, b->Const(static_cast<T>(0))),
 	       interp::Result::TrapIntegerDivideByZero);
@@ -505,18 +507,18 @@ void AOTFunctionBuilder::EmitIntDivide(TR::IlBuilder* b) {
 }
 
 template <typename T>
-void AOTFunctionBuilder::EmitIntRemainder(TR::IlBuilder* b) {//, const uint8_t* pc) {
+void AOTFunctionBuilder::EmitIntRemainder(OMR::JitBuilder::IlBuilder* b) {//, const uint8_t* pc) {
   static_assert(std::is_integral<T>::value,
                 "EmitIntRemainder only works on integral types");
 
-  EmitBinaryOp<T>(b, [&](TR::IlValue* dividend, TR::IlValue* divisor) {
+  EmitBinaryOp<T>(b, [&](OMR::JitBuilder::IlValue* dividend, OMR::JitBuilder::IlValue* divisor) {
     EmitTrapIf(b,
     b->        EqualTo(divisor, b->Const(static_cast<T>(0))),
 	       interp::Result::TrapIntegerDivideByZero);
 
-    TR::IlValue* return_value = b->Const(static_cast<T>(0));
+    OMR::JitBuilder::IlValue* return_value = b->Const(static_cast<T>(0));
 
-    TR::IlBuilder* div_no_ovf_path = nullptr;
+    OMR::JitBuilder::IlBuilder* div_no_ovf_path = nullptr;
     b->IfThen(&div_no_ovf_path,
     b->       Or(
     b->           NotEqualTo(dividend, b->Const(std::numeric_limits<T>::min())),
@@ -528,10 +530,10 @@ void AOTFunctionBuilder::EmitIntRemainder(TR::IlBuilder* b) {//, const uint8_t* 
   });
 }
 
-TR::IlValue* AOTFunctionBuilder::calculateMemoryIndex(TR::IlBuilder* b, const uint8_t** pc)
+OMR::JitBuilder::IlValue* AOTFunctionBuilder::calculateMemoryIndex(OMR::JitBuilder::IlBuilder* b, const uint8_t** pc)
 {
-  TR::IlType *pMemoryType = types_->PointerTo(Int8);
-  TR::IlType *ppMemoryType = types_->PointerTo(pMemoryType);
+  OMR::JitBuilder::IlType *pMemoryType = types_->PointerTo(Int8);
+  OMR::JitBuilder::IlType *ppMemoryType = types_->PointerTo(pMemoryType);
   auto mem_id = b->ConstInt64(static_cast<uint64_t>(ReadU32(pc)));
   auto memory = b->IndexAt(ppMemoryType, b->Load("memories"), mem_id);
   auto offset = b->ConstInt64(static_cast<uint64_t>(ReadU32(pc)));
@@ -544,7 +546,7 @@ TR::IlValue* AOTFunctionBuilder::calculateMemoryIndex(TR::IlBuilder* b, const ui
   return location;
 }
 
-TR::IlValue* AOTFunctionBuilder::calculateGlobalIndex(TR::IlBuilder* b, const uint8_t** pc)
+OMR::JitBuilder::IlValue* AOTFunctionBuilder::calculateGlobalIndex(OMR::JitBuilder::IlBuilder* b, const uint8_t** pc)
 {
   auto glob_id = b->ConstInt64(static_cast<uint64_t>(ReadU32(pc)));
   auto global = b->IndexAt(ppValueType_, b->Load("globals"), glob_id);
@@ -578,7 +580,7 @@ TR::IlValue* AOTFunctionBuilder::EmitMemoryPreAccess(TR::IlBuilder* b) { //, con
 }
 */
 
-void AOTFunctionBuilder::returnWithError(TR::IlBuilder* b) {
+void AOTFunctionBuilder::returnWithError(OMR::JitBuilder::IlBuilder* b) {
   const auto& return_types = env_.GetFuncSignature(fn_->sig_index)->result_types;
 
   if(return_types.empty()) {
@@ -601,7 +603,7 @@ void AOTFunctionBuilder::returnWithError(TR::IlBuilder* b) {
   }
 }
 
-void AOTFunctionBuilder::EmitTrap(TR::IlBuilder* b, interp::Result r) {
+void AOTFunctionBuilder::EmitTrap(OMR::JitBuilder::IlBuilder* b, interp::Result r) {
   b->Call("trapWith", 1, b->Const(static_cast<int32_t>(r)));
   returnWithError(b);
 }
@@ -617,17 +619,17 @@ void AOTFunctionBuilder::EmitCheckTrap(TR::IlBuilder* b, TR::IlValue* result) { 
 }
 */
 
-void AOTFunctionBuilder::EmitTrapIf(TR::IlBuilder* b, TR::IlValue* condition,
+void AOTFunctionBuilder::EmitTrapIf(OMR::JitBuilder::IlBuilder* b, OMR::JitBuilder::IlValue* condition,
 				    interp::Result result)
 { //, const uint8_t* pc) {
-  TR::IlBuilder* trap_handler = nullptr;
+  OMR::JitBuilder::IlBuilder* trap_handler = nullptr;
 
   b->IfThen(&trap_handler, condition);
   EmitTrap(trap_handler, result); //, pc);
 }
 
 template <>
-TR::IlValue* AOTFunctionBuilder::EmitIsNan<float>(TR::IlBuilder* b, TR::IlValue* value) {
+OMR::JitBuilder::IlValue* AOTFunctionBuilder::EmitIsNan<float>(OMR::JitBuilder::IlBuilder* b, OMR::JitBuilder::IlValue* value) {
   return b->GreaterThan(
          b->           And(
          b->               BitcastTo(Int32, value),
@@ -636,7 +638,7 @@ TR::IlValue* AOTFunctionBuilder::EmitIsNan<float>(TR::IlBuilder* b, TR::IlValue*
 }
 
 template <>
-TR::IlValue* AOTFunctionBuilder::EmitIsNan<double>(TR::IlBuilder* b, TR::IlValue* value) {
+OMR::JitBuilder::IlValue* AOTFunctionBuilder::EmitIsNan<double>(OMR::JitBuilder::IlBuilder* b, OMR::JitBuilder::IlValue* value) {
   return b->GreaterThan(
          b->           And(
          b->               BitcastTo(Int64, value),
@@ -645,7 +647,7 @@ TR::IlValue* AOTFunctionBuilder::EmitIsNan<double>(TR::IlBuilder* b, TR::IlValue
 }
 
 template <typename ToType, typename FromType>
-void AOTFunctionBuilder::EmitTruncation(TR::IlBuilder* b) {//, const uint8_t* pc) {
+void AOTFunctionBuilder::EmitTruncation(OMR::JitBuilder::IlBuilder* b) {//, const uint8_t* pc) {
   static_assert(std::is_floating_point<FromType>::value,
 		"FromType in EmitTruncation call must be a floating point type");
 
@@ -685,7 +687,7 @@ void AOTFunctionBuilder::EmitTruncation(TR::IlBuilder* b) {//, const uint8_t* pc
  * the target type.
  */
 template <typename ToType, typename FromType>
-void AOTFunctionBuilder::EmitUnsignedTruncation(TR::IlBuilder* b) { // , const uint8_t* pc) {
+void AOTFunctionBuilder::EmitUnsignedTruncation(OMR::JitBuilder::IlBuilder* b) { // , const uint8_t* pc) {
   static_assert(std::is_floating_point<FromType>::value, "FromType in EmitTruncation call must be a floating point type");
   static_assert(std::is_integral<ToType>::value, "ToType in EmitUnsignedTruncation call must be an integer type");
   static_assert(std::is_unsigned<ToType>::value, "ToType in EmitUnsignedTruncation call must be unsigned");
@@ -713,7 +715,7 @@ void AOTFunctionBuilder::EmitUnsignedTruncation(TR::IlBuilder* b) { // , const u
 }
 
 // return a struct of type (fn_name_ + "_return_type").
-TR::IlValue* AOTFunctionBuilder::popReturnValue(TR::IlBuilder* b) {
+OMR::JitBuilder::IlValue* AOTFunctionBuilder::popReturnValue(OMR::JitBuilder::IlBuilder* b) {
   const auto& result_types = env_.GetFuncSignature(fn_->sig_index)->result_types;
 
   if(result_types.empty())
@@ -723,8 +725,8 @@ TR::IlValue* AOTFunctionBuilder::popReturnValue(TR::IlBuilder* b) {
   }
 }
 
-void AOTFunctionBuilder::pushReturnValue(AOTFunctionBuilder& builder, TR::IlBuilder* b,
-					 TR::IlValue* returnValue)
+void AOTFunctionBuilder::pushReturnValue(AOTFunctionBuilder& builder, OMR::JitBuilder::IlBuilder* b,
+					 OMR::JitBuilder::IlValue* returnValue)
 {
   const auto& result_types = env_.GetFuncSignature(builder.fn_->sig_index)->result_types;
 
@@ -736,21 +738,21 @@ void AOTFunctionBuilder::pushReturnValue(AOTFunctionBuilder& builder, TR::IlBuil
 }
 
 template <typename T>
-TR::IlValue* AOTFunctionBuilder::CalculateShiftAmount(TR::IlBuilder* b, TR::IlValue* amount) {
+OMR::JitBuilder::IlValue* AOTFunctionBuilder::CalculateShiftAmount(OMR::JitBuilder::IlBuilder* b, OMR::JitBuilder::IlValue* amount) {
   return b->UnsignedConvertTo(Int32,
          b->                  And(amount, b->Const(static_cast<T>(sizeof(T) * 8 - 1))));
 }
 
-bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
+bool AOTFunctionBuilder::Emit(OMR::JitBuilder::BytecodeBuilder* b,
 			      const uint8_t* istream,
 			      const uint8_t* pc) {
   Opcode opcode = ReadOpcode(&pc);
-  TR_ASSERT(!opcode.IsInvalid(), "Invalid opcode");
+  //TR_ASSERT(!opcode.IsInvalid(), "Invalid opcode");
 
   switch (opcode) {
     case Opcode::Select: {
-      TR::IlBuilder* true_path = nullptr;
-      TR::IlBuilder* false_path = nullptr;
+      OMR::JitBuilder::IlBuilder* true_path = nullptr;
+      OMR::JitBuilder::IlBuilder* false_path = nullptr;
 
       b->IfThenElse(&true_path, &false_path, Pop(b, "i32"));
       DropKeep(true_path, 1, 0);
@@ -897,7 +899,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
 	auto* fn = meta_it->second.wasm_fn;
 	auto& builder = aotManager_.getFB(fn->offset);
 
-	std::vector<TR::IlValue*> args;
+	std::vector<OMR::JitBuilder::IlValue*> args;
 
 	if(env_.GetMemoryCount() > 0) {
 	  args.push_back(b->Load("memories"));
@@ -1151,19 +1153,19 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
     }
 
     case Opcode::I32Add:
-      EmitBinaryOp<int32_t>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int32_t>(b, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
         return b->Add(lhs, rhs);
       });
       break;
 
     case Opcode::I32Sub:
-      EmitBinaryOp<int32_t>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int32_t>(b, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
         return b->Sub(lhs, rhs);
       });
       break;
 
     case Opcode::I32Mul:
-      EmitBinaryOp<int32_t>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int32_t>(b, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
         return b->Mul(lhs, rhs);
       });
       break;
@@ -1177,43 +1179,43 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
       break;
 
     case Opcode::I32And:
-      EmitBinaryOp<int32_t>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int32_t>(b, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
         return b->And(lhs, rhs);
       });
       break;
 
     case Opcode::I32Or:
-      EmitBinaryOp<int32_t>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int32_t>(b, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
         return b->Or(lhs, rhs);
       });
       break;
 
     case Opcode::I32Xor:
-      EmitBinaryOp<int32_t>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int32_t>(b, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
         return b->Xor(lhs, rhs);
       });
       break;
 
     case Opcode::I32Shl:
-      EmitBinaryOp<int32_t>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int32_t>(b, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
         return b->ShiftL(lhs, CalculateShiftAmount<int32_t>(b, rhs));
       });
       break;
 
     case Opcode::I32ShrS:
-      EmitBinaryOp<int32_t>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int32_t>(b, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
         return b->ShiftR(lhs, CalculateShiftAmount<int32_t>(b, rhs));
       });
       break;
 
     case Opcode::I32ShrU:
-      EmitBinaryOp<int32_t>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int32_t>(b, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
         return b->UnsignedShiftR(lhs, CalculateShiftAmount<int32_t>(b, rhs));
       });
       break;
 
     case Opcode::I32Rotl:
-      EmitBinaryOp<int32_t>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int32_t>(b, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
         auto* amount = CalculateShiftAmount<int32_t>(b, rhs);
 
         return b->Or(
@@ -1223,7 +1225,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
       break;
 
     case Opcode::I32Rotr:
-      EmitBinaryOp<int32_t>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int32_t>(b, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
         auto* amount = CalculateShiftAmount<int32_t>(b, rhs);
 
         return b->Or(
@@ -1233,85 +1235,85 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
       break;
 
     case Opcode::I32Eqz:
-      EmitUnaryOp<int32_t, int>(b, [&](TR::IlValue* val) {
+      EmitUnaryOp<int32_t, int>(b, [&](OMR::JitBuilder::IlValue* val) {
         return b->EqualTo(val, b->ConstInt32(0));
       });
       break;
 
     case Opcode::I32Eq:
-      EmitBinaryOp<int32_t, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int32_t, int>(b, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
         return b->EqualTo(lhs, rhs);
       });
       break;
 
     case Opcode::I32Ne:
-      EmitBinaryOp<int32_t, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int32_t, int>(b, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
         return b->NotEqualTo(lhs, rhs);
       });
       break;
 
     case Opcode::I32LtS:
-      EmitBinaryOp<int32_t, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int32_t, int>(b, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
         return b->LessThan(lhs, rhs);
       });
       break;
 
     case Opcode::I32LtU:
-      EmitBinaryOp<int32_t, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int32_t, int>(b, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
         return b->UnsignedLessThan(lhs, rhs);
       });
       break;
 
     case Opcode::I32GtS:
-      EmitBinaryOp<int32_t, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int32_t, int>(b, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
         return b->GreaterThan(lhs, rhs);
       });
       break;
 
     case Opcode::I32GtU:
-      EmitBinaryOp<int32_t, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int32_t, int>(b, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
         return b->UnsignedGreaterThan(lhs, rhs);
       });
       break;
 
     case Opcode::I32LeS:
-      EmitBinaryOp<int32_t, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int32_t, int>(b, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
         return b->LessOrEqualTo(lhs, rhs);
       });
       break;
 
     case Opcode::I32LeU:
-      EmitBinaryOp<int32_t, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int32_t, int>(b, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
         return b->UnsignedLessOrEqualTo(lhs, rhs);
       });
       break;
 
     case Opcode::I32GeS:
-      EmitBinaryOp<int32_t, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int32_t, int>(b, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
         return b->GreaterOrEqualTo(lhs, rhs);
       });
       break;
 
     case Opcode::I32GeU:
-      EmitBinaryOp<int32_t, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int32_t, int>(b, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
         return b->UnsignedGreaterOrEqualTo(lhs, rhs);
       });
       break;
 
     case Opcode::I64Add:
-        EmitBinaryOp<int64_t>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+        EmitBinaryOp<int64_t>(b, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
           return b->Add(lhs, rhs);
         });
         break;
 
     case Opcode::I64Sub:
-      EmitBinaryOp<int64_t>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int64_t>(b, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
         return b->Sub(lhs, rhs);
       });
       break;
 
     case Opcode::I64Mul:
-      EmitBinaryOp<int64_t>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int64_t>(b, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
         return b->Mul(lhs, rhs);
       });
       break;
@@ -1325,43 +1327,43 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
       break;
 
     case Opcode::I64And:
-      EmitBinaryOp<int64_t>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int64_t>(b, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
         return b->And(lhs, rhs);
       });
       break;
 
     case Opcode::I64Or:
-      EmitBinaryOp<int64_t>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int64_t>(b, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
         return b->Or(lhs, rhs);
       });
       break;
 
     case Opcode::I64Xor:
-      EmitBinaryOp<int64_t>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int64_t>(b, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
         return b->Xor(lhs, rhs);
       });
       break;
 
     case Opcode::I64Shl:
-      EmitBinaryOp<int64_t>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int64_t>(b, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
         return b->ShiftL(lhs, CalculateShiftAmount<int64_t>(b, rhs));
       });
       break;
 
     case Opcode::I64ShrS:
-      EmitBinaryOp<int64_t>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int64_t>(b, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
         return b->ShiftR(lhs, CalculateShiftAmount<int64_t>(b, rhs));
       });
       break;
 
     case Opcode::I64ShrU:
-      EmitBinaryOp<int64_t>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int64_t>(b, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
         return b->UnsignedShiftR(lhs, CalculateShiftAmount<int64_t>(b, rhs));
       });
       break;
 
     case Opcode::I64Rotl:
-      EmitBinaryOp<int64_t>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int64_t>(b, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
         auto* amount = CalculateShiftAmount<int64_t>(b, rhs);
 
         return b->Or(
@@ -1371,7 +1373,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
       break;
 
     case Opcode::I64Rotr:
-      EmitBinaryOp<int64_t>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int64_t>(b, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
         auto* amount = CalculateShiftAmount<int64_t>(b, rhs);
 
         return b->Or(
@@ -1381,78 +1383,78 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
       break;
 
     case Opcode::I64Eqz:
-      EmitUnaryOp<int64_t, int>(b, [&](TR::IlValue* val) {
+      EmitUnaryOp<int64_t, int>(b, [&](OMR::JitBuilder::IlValue* val) {
         return b->EqualTo(val, b->ConstInt64(0));
       });
       break;
 
     case Opcode::I64Eq:
-      EmitBinaryOp<int64_t, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int64_t, int>(b, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
         return b->EqualTo(lhs, rhs);
       });
       break;
 
     case Opcode::I64Ne:
-      EmitBinaryOp<int64_t, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int64_t, int>(b, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
         return b->NotEqualTo(lhs, rhs);
       });
       break;
 
     case Opcode::I64LtS:
-      EmitBinaryOp<int64_t, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int64_t, int>(b, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
         return b->LessThan(lhs, rhs);
       });
       break;
 
     case Opcode::I64LtU:
-      EmitBinaryOp<int64_t, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int64_t, int>(b, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
         return b->UnsignedLessThan(lhs, rhs);
       });
       break;
 
     case Opcode::I64GtS:
-      EmitBinaryOp<int64_t, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int64_t, int>(b, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
         return b->GreaterThan(lhs, rhs);
       });
       break;
 
     case Opcode::I64GtU:
-      EmitBinaryOp<int64_t, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int64_t, int>(b, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
         return b->UnsignedGreaterThan(lhs, rhs);
       });
       break;
 
     case Opcode::I64LeS:
-      EmitBinaryOp<int64_t, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int64_t, int>(b, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
         return b->LessOrEqualTo(lhs, rhs);
       });
       break;
 
     case Opcode::I64LeU:
-      EmitBinaryOp<int64_t, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int64_t, int>(b, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
         return b->UnsignedLessOrEqualTo(lhs, rhs);
       });
       break;
 
     case Opcode::I64GeS:
-      EmitBinaryOp<int64_t, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int64_t, int>(b, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
         return b->GreaterOrEqualTo(lhs, rhs);
       });
       break;
 
     case Opcode::I64GeU:
-      EmitBinaryOp<int64_t, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<int64_t, int>(b, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
         return b->UnsignedGreaterOrEqualTo(lhs, rhs);
       });
       break;
 
     case Opcode::F32Abs:
-      EmitUnaryOp<float>(b, [&](TR::IlValue* value) {
+      EmitUnaryOp<float>(b, [&](OMR::JitBuilder::IlValue* value) {
         auto* return_value = b->Copy(value);
 
-        TR::IlBuilder* zero_path = nullptr;
-        TR::IlBuilder* nonzero_path = nullptr;
-        TR::IlBuilder* neg_path = nullptr;
+        OMR::JitBuilder::IlBuilder* zero_path = nullptr;
+        OMR::JitBuilder::IlBuilder* nonzero_path = nullptr;
+        OMR::JitBuilder::IlBuilder* neg_path = nullptr;
 
         // We have to check explicitly for 0.0, since abs(-0.0) is 0.0.
         b->IfThenElse(&zero_path, &nonzero_path, b->EqualTo(value, b->ConstFloat(0)));
@@ -1469,90 +1471,90 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
       break;
 
     case Opcode::F32Neg:
-      EmitUnaryOp<float>(b, [&](TR::IlValue* value) {
+      EmitUnaryOp<float>(b, [&](OMR::JitBuilder::IlValue* value) {
         return b->Mul(value, b->ConstFloat(-1));
       });
       break;
 
     case Opcode::F32Sqrt:
-      EmitUnaryOp<float>(b, [&](TR::IlValue* value) {
+      EmitUnaryOp<float>(b, [&](OMR::JitBuilder::IlValue* value) {
         return b->Call("sqrtf", 1, value);
       });
       break;
 
     case Opcode::F32Add:
-      EmitBinaryOp<float>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<float>(b, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
         return b->Add(lhs, rhs);
       });
       break;
 
     case Opcode::F32Sub:
-      EmitBinaryOp<float>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<float>(b, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
         return b->Sub(lhs, rhs);
       });
       break;
 
     case Opcode::F32Mul:
-      EmitBinaryOp<float>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<float>(b, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
         return b->Mul(lhs, rhs);
       });
       break;
 
     case Opcode::F32Div:
-      EmitBinaryOp<float>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<float>(b, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
         return b->Div(lhs, rhs);
       });
       break;
 
     case Opcode::F32Copysign:
-      EmitBinaryOp<float>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<float>(b, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
         return b->Call("copysignf", 2, lhs, rhs);
       });
       break;
 
     case Opcode::F32Eq:
-      EmitBinaryOp<float, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<float, int>(b, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
         return b->EqualTo(lhs, rhs);
       });
       break;
 
     case Opcode::F32Ne:
-      EmitBinaryOp<float, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<float, int>(b, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
         return b->NotEqualTo(lhs, rhs);
       });
       break;
 
     case Opcode::F32Lt:
-      EmitBinaryOp<float, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<float, int>(b, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
         return b->LessThan(lhs, rhs);
       });
       break;
 
     case Opcode::F32Le:
-      EmitBinaryOp<float, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<float, int>(b, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
         return b->LessOrEqualTo(lhs, rhs);
       });
       break;
 
     case Opcode::F32Gt:
-      EmitBinaryOp<float, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<float, int>(b, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
         return b->GreaterThan(lhs, rhs);
       });
       break;
 
     case Opcode::F32Ge:
-      EmitBinaryOp<float, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<float, int>(b, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
         return b->GreaterOrEqualTo(lhs, rhs);
       });
       break;
 
     case Opcode::F64Abs:
-      EmitUnaryOp<double>(b, [&](TR::IlValue* value) {
+      EmitUnaryOp<double>(b, [&](OMR::JitBuilder::IlValue* value) {
         auto* return_value = b->Copy(value);
 
-        TR::IlBuilder* zero_path = nullptr;
-        TR::IlBuilder* nonzero_path = nullptr;
-        TR::IlBuilder* neg_path = nullptr;
+        OMR::JitBuilder::IlBuilder* zero_path = nullptr;
+        OMR::JitBuilder::IlBuilder* nonzero_path = nullptr;
+        OMR::JitBuilder::IlBuilder* neg_path = nullptr;
 
         // We have to check explicitly for 0.0, since abs(-0.0) is 0.0.
         b->IfThenElse(&zero_path, &nonzero_path,
@@ -1572,79 +1574,79 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
       break;
 
     case Opcode::F64Neg:
-      EmitUnaryOp<double>(b, [&](TR::IlValue* value) {
+      EmitUnaryOp<double>(b, [&](OMR::JitBuilder::IlValue* value) {
         return b->Mul(value, b->ConstDouble(-1));
       });
       break;
 
     case Opcode::F64Sqrt:
-      EmitUnaryOp<double>(b, [&](TR::IlValue* value) {
+      EmitUnaryOp<double>(b, [&](OMR::JitBuilder::IlValue* value) {
         return b->Call("sqrt", 1, value);
       });
       break;
 
     case Opcode::F64Add:
-      EmitBinaryOp<double>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<double>(b, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
         return b->Add(lhs, rhs);
       });
       break;
 
     case Opcode::F64Sub:
-      EmitBinaryOp<double>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<double>(b, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
         return b->Sub(lhs, rhs);
       });
       break;
 
     case Opcode::F64Mul:
-      EmitBinaryOp<double>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<double>(b, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
         return b->Mul(lhs, rhs);
       });
       break;
 
     case Opcode::F64Div:
-      EmitBinaryOp<double>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<double>(b, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
         return b->Div(lhs, rhs);
       });
       break;
 
     case Opcode::F64Copysign:
-      EmitBinaryOp<double>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<double>(b, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
         return b->Call("copysign", 2, lhs, rhs);
       });
       break;
 
     case Opcode::F64Eq:
-      EmitBinaryOp<double, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<double, int>(b, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
         return b->EqualTo(lhs, rhs);
       });
       break;
 
     case Opcode::F64Ne:
-      EmitBinaryOp<double, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<double, int>(b, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
         return b->NotEqualTo(lhs, rhs);
       });
       break;
 
     case Opcode::F64Lt:
-      EmitBinaryOp<double, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<double, int>(b, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
         return b->LessThan(lhs, rhs);
       });
       break;
 
     case Opcode::F64Le:
-      EmitBinaryOp<double, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<double, int>(b, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
         return b->LessOrEqualTo(lhs, rhs);
       });
       break;
 
     case Opcode::F64Gt:
-      EmitBinaryOp<double, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<double, int>(b, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
         return b->GreaterThan(lhs, rhs);
       });
       break;
 
     case Opcode::F64Ge:
-      EmitBinaryOp<double, int>(b, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+      EmitBinaryOp<double, int>(b, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
         return b->GreaterOrEqualTo(lhs, rhs);
       });
       break;
@@ -1855,7 +1857,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
       b->        Const(static_cast<Result_t>(interp::Result::TrapValueStackExhausted)));
 		 //                 pc);
 
-      TR::IlBuilder* set_zero = nullptr;
+      OMR::JitBuilder::IlBuilder* set_zero = nullptr;
       b->ForLoopUp("i", &set_zero, old_value_stack_top, stack_top, b->Const(1));
       set_zero->StoreIndirect("Value", "i64",
       set_zero->              IndexAt(pValueType_, stack_base_addr,
@@ -1884,7 +1886,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
         b->IfCmpEqualZero(&workItems_[next_index].builder, condition);
       }
 
-      TR::VirtualMachineOperandStack* prev_stack = new TR::VirtualMachineOperandStack(stack_);
+      OMR::JitBuilder::VirtualMachineOperandStack *prev_stack = new OMR::JitBuilder::VirtualMachineOperandStack((void*)(stack_->_impl));
       stackOfStacks_.emplace_back(b, prev_stack, pc, stackCount_);
 
       return true;

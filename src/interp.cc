@@ -30,7 +30,7 @@
 
 #include "src/cast.h"
 #include "src/stream.h"
-#include "ilgen/IlBuilder.hpp"
+#include "JitBuilder.hpp"
 #include <dlfcn.h>
 
 #include "src/jit/wabtjit.h"

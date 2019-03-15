@@ -17,7 +17,7 @@
 #include "aot-type-dictionary.h"
 #include "aot-function-builder.h"
 
-#include "Jit.hpp"
+#include "JitBuilder.hpp"
 
 #include <algorithm>
 #include <iostream>
@@ -84,7 +84,7 @@ wabt::Result compileAOT(interp::Environment& env, DefinedModule* module)
   for(Index i = 0; i < func_count; ++i) {
     if(auto* fn = cast<wabt::interp::DefinedFunc>(env.GetFunc(i))) {
       auto& builder = aotManager.getFB(fn->offset);
-      uint8_t* function = nullptr;
+      void* function = nullptr;
 
       compileMethodBuilder(&builder, &function);
     }

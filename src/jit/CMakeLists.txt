@@ -24,5 +24,5 @@ add_library(wabtjit STATIC
 # Mark JitBuilder include directories as "system" include directories. For most compilers, this
 # suppresses any warnings they would otherwise generate.
 get_property(JITBUILDER_INCLUDE TARGET jitbuilder PROPERTY INTERFACE_INCLUDE_DIRECTORIES)
-target_include_directories(wabtjit SYSTEM PUBLIC "${JITBUILDER_INCLUDE}")
-target_link_libraries(wabtjit PUBLIC jitbuilder)
+target_include_directories(wabtjit SYSTEM PRIVATE "${JITBUILDER_INCLUDE}")
+target_link_libraries(wabtjit PRIVATE jitbuilder)

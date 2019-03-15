@@ -17,7 +17,7 @@
 #include "type-dictionary.h"
 #include "src/interp.h"
 
-wabt::jit::TypeDictionary::TypeDictionary() : TR::TypeDictionary() {
+wabt::jit::TypeDictionary::TypeDictionary() : OMR::JitBuilder::TypeDictionary() {
     using namespace wabt::interp;
     stackElement = DefineUnion("Value");
     UnionField("Value", "i32", toIlType<decltype(Value::i32)>());
@@ -27,7 +27,7 @@ wabt::jit::TypeDictionary::TypeDictionary() : TR::TypeDictionary() {
     CloseUnion("Value");
 }
 
-wabt::jit::AOTTypeDictionary::AOTTypeDictionary() : TR::TypeDictionary() {
+wabt::jit::AOTTypeDictionary::AOTTypeDictionary() : OMR::JitBuilder::TypeDictionary() {
     using namespace wabt::interp;
     /*stackElement = DefineUnion("Value");
     UnionField("Value", "i32", toIlType<decltype(Value::i32)>());

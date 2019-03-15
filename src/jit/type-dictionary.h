@@ -16,40 +16,40 @@
 
 #ifndef TYPEDICTIONARY_HPP
 #define TYPEDICTIONARY_HPP
-
-#include "ilgen/TypeDictionary.hpp"
+#include <stddef.h>
+#include "JitBuilder.hpp"
 
 namespace wabt {
 namespace jit {
 
-class TypeDictionary : public TR::TypeDictionary {
+class TypeDictionary : public OMR::JitBuilder::TypeDictionary {
  public:
   TypeDictionary();
-  TR::IlType *stackElement;
-  TR::IlType *stackElementPtr;
-  //TR::IlType *instruction;
-  //TR::IlType *instructionPtr;
+  OMR::JitBuilder::IlType *stackElement;
+  OMR::JitBuilder::IlType *stackElementPtr;
+  //OMR::JitBuilder::IlType *instruction;
+  //OMR::JitBuilder::IlType *instructionPtr;
 
-  //TR::IlType *operandStack;
-  //TR::IlType *operandStackPtr;
-  TR::IlType *thread;
-  TR::IlType *threadPtr;
-  TR::IlType *stackTop;
+  //OMR::JitBuilder::IlType *operandStack;
+  //OMR::JitBuilder::IlType *operandStackPtr;
+  OMR::JitBuilder::IlType *thread;
+  OMR::JitBuilder::IlType *threadPtr;
+  OMR::JitBuilder::IlType *stackTop;
 };
 
-class AOTTypeDictionary : public TR::TypeDictionary {
+class AOTTypeDictionary : public OMR::JitBuilder::TypeDictionary {
  public:
   AOTTypeDictionary();
-  TR::IlType *stackElement;
-  TR::IlType *stackElementPtr;
+  OMR::JitBuilder::IlType *stackElement;
+  OMR::JitBuilder::IlType *stackElementPtr;
   //TR::IlType *instruction;
   //TR::IlType *instructionPtr;
 
   //TR::IlType *operandStack;
   //TR::IlType *operandStackPtr;
-  TR::IlType *thread;
-  TR::IlType *threadPtr;
-  TR::IlType *stackTop;
+  OMR::JitBuilder::IlType *thread;
+  OMR::JitBuilder::IlType *threadPtr;
+  OMR::JitBuilder::IlType *stackTop;
 };
 
 }

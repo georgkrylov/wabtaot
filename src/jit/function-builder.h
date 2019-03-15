@@ -18,10 +18,6 @@
 #define FUNCTIONBUILDER_HPP
 
 #include "type-dictionary.h"
-#include "ilgen/BytecodeBuilder.hpp"
-#include "ilgen/MethodBuilder.hpp"
-#include "ilgen/VirtualMachineOperandStack.hpp"
-#include "ilgen/ThunkBuilder.hpp"
 
 #include "src/interp.h"
 
@@ -31,7 +27,7 @@
 namespace wabt {
 namespace jit {
 
-class FunctionBuilder : public TR::MethodBuilder {
+class FunctionBuilder : public OMR::JitBuilder::MethodBuilder {
  public:
   FunctionBuilder(interp::Thread* thread, interp::DefinedFunc* fn, TypeDictionary* types);
   bool buildIL() override;
@@ -42,7 +38,7 @@ class FunctionBuilder : public TR::MethodBuilder {
    * @param type is the name of the field in the Value union corresponding to the type of the value being pushed
    * @param value is the IlValue representing the value being pushed
    */
-  void Push(TR::IlBuilder* b, const char* type, TR::IlValue* value, const uint8_t* pc);
+  void Push(OMR::JitBuilder::IlBuilder* b, const char* type, OMR::JitBuilder::IlValue* value, const uint8_t* pc);
 
   /**
    * @brief Generate pop from the interpreter stack
@@ -50,7 +46,7 @@ class FunctionBuilder : public TR::MethodBuilder {
    * @param type is the name of the field in the Value union corresponding to the type of the value being popped
    * @return an IlValue representing the popped value
    */
-  TR::IlValue* Pop(TR::IlBuilder* b, const char* type);
+  OMR::JitBuilder::IlValue* Pop(OMR::JitBuilder::IlBuilder* b, const char* type);
 
   /**
    * @brief Drop a number of values from the interpreter stack, optionally keeping the top value of the stack
@@ -58,7 +54,7 @@ class FunctionBuilder : public TR::MethodBuilder {
    * @param drop_count is the number of values to drop from the stack
    * @param keep_count is 1 to keep the top value intact and 0 otherwise
    */
-  void DropKeep(TR::IlBuilder* b, uint32_t drop_count, uint8_t keep_count);
+  void DropKeep(OMR::JitBuilder::IlBuilder* b, uint32_t drop_count, uint8_t keep_count);
 
   /**
    * @brief Generate load of pointer to a vlue on the interpreter stack by an index
@@ -72,14 +68,14 @@ class FunctionBuilder : public TR::MethodBuilder {
    * the union, instead of loading the union directly. This behaviour differs
    * from `Thread::Pick()` and users must take this into account.
    */
-  TR::IlValue* Pick(TR::IlBuilder* b, Index depth);
+  OMR::JitBuilder::IlValue* Pick(OMR::JitBuilder::IlBuilder* b, Index depth);
 
  private:
   struct BytecodeWorkItem {
-    TR::BytecodeBuilder* builder;
+    OMR::JitBuilder::BytecodeBuilder* builder;
     const uint8_t* pc;
 
-    BytecodeWorkItem(TR::BytecodeBuilder* builder, const uint8_t* pc)
+    BytecodeWorkItem(OMR::JitBuilder::BytecodeBuilder* builder, const uint8_t* pc)
       : builder(builder), pc(pc) {}
   };
 
@@ -88,37 +84,37 @@ class FunctionBuilder : public TR::MethodBuilder {
 
   const char* TypeFieldName(Type t) const;
 
-  TR::IlValue* Const(TR::IlBuilder* b, const interp::TypedValue* v) const;
+  OMR::JitBuilder::IlValue* Const(OMR::JitBuilder::IlBuilder* b, const interp::TypedValue* v) const;
 
   template <typename T, typename TResult = T, typename TOpHandler>
-  void EmitBinaryOp(TR::IlBuilder* b, const uint8_t* pc, TOpHandler h);
+  void EmitBinaryOp(OMR::JitBuilder::IlBuilder* b, const uint8_t* pc, TOpHandler h);
 
   template <typename T, typename TResult = T, typename TOpHandler>
-  void EmitUnaryOp(TR::IlBuilder* b, const uint8_t* pc, TOpHandler h);
+  void EmitUnaryOp(OMR::JitBuilder::IlBuilder* b, const uint8_t* pc, TOpHandler h);
 
   template <typename T>
-  void EmitIntDivide(TR::IlBuilder* b, const uint8_t* pc);
+  void EmitIntDivide(OMR::JitBuilder::IlBuilder* b, const uint8_t* pc);
 
   template <typename T>
-  void EmitIntRemainder(TR::IlBuilder* b, const uint8_t* pc);
+  void EmitIntRemainder(OMR::JitBuilder::IlBuilder* b, const uint8_t* pc);
 
   template <typename T>
-  TR::IlValue* EmitMemoryPreAccess(TR::IlBuilder* b, const uint8_t** pc);
+  OMR::JitBuilder::IlValue* EmitMemoryPreAccess(OMR::JitBuilder::IlBuilder* b, const uint8_t** pc);
 
-  void EmitTrap(TR::IlBuilder* b, TR::IlValue* result, const uint8_t* pc);
-  void EmitCheckTrap(TR::IlBuilder* b, TR::IlValue* result, const uint8_t* pc);
-  void EmitTrapIf(TR::IlBuilder* b, TR::IlValue* condition, TR::IlValue* result, const uint8_t* pc);
+  void EmitTrap(OMR::JitBuilder::IlBuilder* b, OMR::JitBuilder::IlValue* result, const uint8_t* pc);
+  void EmitCheckTrap(OMR::JitBuilder::IlBuilder* b, OMR::JitBuilder::IlValue* result, const uint8_t* pc);
+  void EmitTrapIf(OMR::JitBuilder::IlBuilder* b, OMR::JitBuilder::IlValue* condition, OMR::JitBuilder::IlValue* result, const uint8_t* pc);
 
   template <typename F>
-  TR::IlValue* EmitIsNan(TR::IlBuilder* b, TR::IlValue* value);
+  OMR::JitBuilder::IlValue* EmitIsNan(OMR::JitBuilder::IlBuilder* b, OMR::JitBuilder::IlValue* value);
 
   template <typename ToType, typename FromType>
-  void EmitTruncation(TR::IlBuilder* b, const uint8_t* pc);
+  void EmitTruncation(OMR::JitBuilder::IlBuilder* b, const uint8_t* pc);
   template <typename ToType, typename FromType>
-  void EmitUnsignedTruncation(TR::IlBuilder* b, const uint8_t* pc);
+  void EmitUnsignedTruncation(OMR::JitBuilder::IlBuilder* b, const uint8_t* pc);
 
   template <typename>
-  TR::IlValue* CalculateShiftAmount(TR::IlBuilder* b, TR::IlValue* amount);
+  OMR::JitBuilder::IlValue* CalculateShiftAmount(OMR::JitBuilder::IlBuilder* b, OMR::JitBuilder::IlValue* amount);
 
   using Result_t = std::underlying_type<wabt::interp::Result>::type;
 
@@ -135,17 +131,17 @@ class FunctionBuilder : public TR::MethodBuilder {
   interp::Thread* thread_;
   interp::DefinedFunc* fn_;
 
-  TR::IlType* const valueType_;
-  TR::IlType* const pValueType_;
+  OMR::JitBuilder::IlType* const valueType_;
+  OMR::JitBuilder::IlType* const pValueType_;
 
-  bool Emit(TR::BytecodeBuilder* b, const uint8_t* istream, const uint8_t* pc);
+  bool Emit(OMR::JitBuilder::BytecodeBuilder* b, const uint8_t* istream, const uint8_t* pc);
 };
 
-class FunctionThunkBuilder : public TR::ThunkBuilder {
+class FunctionThunkBuilder : public OMR::JitBuilder::ThunkBuilder {
   public:
-  FunctionThunkBuilder(TR::TypeDictionary *types, const char *name, 
-			  TR::IlType *returnType,uint32_t numCalleeParams, 
-		       TR::IlType **calleeParamTypes) : TR::ThunkBuilder(types, name, returnType, numCalleeParams, calleeParamTypes), fn_name(name)
+  FunctionThunkBuilder(OMR::JitBuilder::TypeDictionary *types, const char *name, 
+			  OMR::JitBuilder::IlType *returnType,uint32_t numCalleeParams, 
+		       OMR::JitBuilder::IlType **calleeParamTypes) : OMR::JitBuilder::ThunkBuilder(types, name, returnType, numCalleeParams, calleeParamTypes), fn_name(name)
             { }
   virtual bool buildIL();
   std::string fn_name;
