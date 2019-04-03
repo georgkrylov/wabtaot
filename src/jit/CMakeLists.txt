@@ -25,4 +25,4 @@ add_library(wabtjit STATIC
 # suppresses any warnings they would otherwise generate.
 get_property(JITBUILDER_INCLUDE TARGET jitbuilder PROPERTY INTERFACE_INCLUDE_DIRECTORIES)
 target_include_directories(wabtjit SYSTEM PRIVATE "${JITBUILDER_INCLUDE}")
-target_link_libraries(wabtjit PRIVATE jitbuilder)
+target_link_libraries(wabtjit jitbuilder omrvmstartup)

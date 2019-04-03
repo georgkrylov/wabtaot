@@ -1,3 +1,4 @@
+
 #
 # Copyright 2016 WebAssembly Community Group participants
 #
@@ -38,7 +39,7 @@ set(OMR_EXAMPLE ON CACHE BOOL "")
 set(OMR_JIT  OFF CACHE BOOL "")
 set(OMR_JITBUILDER ON CACHE BOOL "")
 set(OMR_COMPILER ON CACHE BOOL "")
-set(OMR_GC OFF CACHE BOOL "")
+set(OMR_GC ON CACHE BOOL "")
 set(OMR_PORT ON CACHE BOOL "")
 set(OMR_THREAD ON CACHE BOOL "")
 set(OMR_TEST_COMPILER OFF CACHE BOOL "")
