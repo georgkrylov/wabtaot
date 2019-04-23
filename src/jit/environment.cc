@@ -15,7 +15,7 @@
  */
 
 #include "environment.h"
-#include "Jit.hpp"
+#include "JitBuilder.hpp"
 
 namespace wabt {
 namespace jit {
