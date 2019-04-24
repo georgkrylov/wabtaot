@@ -568,7 +568,7 @@ template <>
 OMR::JitBuilder::IlValue* FunctionBuilder::EmitIsNan<float>(OMR::JitBuilder::IlBuilder* b, OMR::JitBuilder::IlValue* value) {
   return b->GreaterThan(
          b->           And(
-         b->               BitcastTo(Int32, value),
+         b->               ConvertBitsTo(Int32, value),
          b->               ConstInt32(0x7fffffffU)),
          b->           ConstInt32(0x7f800000U));
 }
@@ -577,7 +577,7 @@ template <>
 OMR::JitBuilder::IlValue* FunctionBuilder::EmitIsNan<double>(OMR::JitBuilder::IlBuilder* b, OMR::JitBuilder::IlValue* value) {
   return b->GreaterThan(
          b->           And(
-         b->               BitcastTo(Int64, value),
+         b->               ConvertBitsTo(Int64, value),
          b->               ConstInt64(0x7fffffffffffffffULL)),
          b->           ConstInt64(0x7ff0000000000000ULL));
 }
@@ -608,7 +608,7 @@ void FunctionBuilder::EmitTruncation(OMR::JitBuilder::IlBuilder* b, const uint8_
 
   // this could be optimized using templates or constant expressions,
   // but the compiler should be able to simplify this anyways
-  auto* new_value = std::is_unsigned<ToType>::value ? b->BitcastTo(target_type, value)
+  auto* new_value = std::is_unsigned<ToType>::value ? b->ConvertBitsTo(target_type, value)
                                                     : b->ConvertTo(target_type, value);
 
   Push(b, TypeFieldName<ToType>(), new_value, pc);
@@ -1624,25 +1624,25 @@ bool FunctionBuilder::Emit(OMR::JitBuilder::BytecodeBuilder* b,
     }
 
     case Opcode::F32ReinterpretI32: {
-      auto* value = b->BitcastTo(Float, Pop(b, "i32"));
+      auto* value = b->ConvertBitsTo(Float, Pop(b, "i32"));
       Push(b, "f32", value, pc);
       break;
     }
 
     case Opcode::I32ReinterpretF32: {
-      auto* value = b->BitcastTo(Int32, Pop(b, "f32"));
+      auto* value = b->ConvertBitsTo(Int32, Pop(b, "f32"));
       Push(b, "i32", value, pc);
       break;
     }
 
     case Opcode::F64ReinterpretI64: {
-      auto* value = b->BitcastTo(Double, Pop(b, "i64"));
+      auto* value = b->ConvertBitsTo(Double, Pop(b, "i64"));
       Push(b, "f64", value, pc);
       break;
     }
 
     case Opcode::I64ReinterpretF64: {
-      auto* value = b->BitcastTo(Int64, Pop(b, "f64"));
+      auto* value = b->ConvertBitsTo(Int64, Pop(b, "f64"));
       Push(b, "i64", value, pc);
       break;
     }
