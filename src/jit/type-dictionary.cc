@@ -17,12 +17,32 @@
 #include "type-dictionary.h"
 #include "src/interp.h"
 
-wabt::jit::TypeDictionary::TypeDictionary() : TR::TypeDictionary() {
+wabt::jit::TypeDictionary::TypeDictionary() : OMR::JitBuilder::TypeDictionary() {
     using namespace wabt::interp;
-    DefineUnion("Value");
+    stackElement = DefineUnion("Value");
     UnionField("Value", "i32", toIlType<decltype(Value::i32)>());
     UnionField("Value", "i64", toIlType<decltype(Value::i64)>());
     UnionField("Value", "f32", toIlType<float>());
     UnionField("Value", "f64", toIlType<double>());
     CloseUnion("Value");
+}
+
+wabt::jit::AOTTypeDictionary::AOTTypeDictionary() : OMR::JitBuilder::TypeDictionary() {
+    using namespace wabt::interp;
+    /*stackElement = DefineUnion("Value");
+    UnionField("Value", "i32", toIlType<decltype(Value::i32)>());
+    UnionField("Value", "i64", toIlType<decltype(Value::i64)>());
+    UnionField("Value", "f32", toIlType<float>());
+    UnionField("Value", "f64", toIlType<double>());
+    CloseUnion("Value");*/
+    stackElement = toIlType<decltype(Value::i64)>();
+    stackElementPtr = PointerTo(stackElement);
+  stackTop = PointerTo(stackElementPtr);
+  auto name = "Thread";
+  thread = DefineStruct(name);
+  DefineField(name,"vs_array_",stackElementPtr,
+	      wabt::interp::ThreadOffset::so);
+  DefineField(name,"vs_top_",stackTop,wabt::interp::ThreadOffset::to);
+  CloseStruct(name);
+  threadPtr = PointerTo(thread);
 }

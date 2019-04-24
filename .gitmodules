@@ -9,4 +9,4 @@
 	url = https://github.com/dabeaz/ply
 [submodule "third_party/omr"]
 	path = third_party/omr
-	url = https://bitbucket.org/wasmjitomraot/omr
+	url = http://gitlab.casa.cs.unb.ca/gkrylov/devomr.git

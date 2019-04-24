@@ -18,6 +18,8 @@
 #define WABT_INTERP_H_
 
 #include <stdint.h>
+#include <elf.h>
+#include <stdio.h>
 
 #include <functional>
 #include <memory>
@@ -41,6 +43,74 @@ class AOTFunctionBuilder;
 }
 
 namespace interp {
+  
+class ELFLoader
+{
+public:
+  ELFLoader(char *elfFileName);
+
+  ~ELFLoader();
+  void *getTextSection();
+  Elf64_Sym *getSymbolTable();
+  unsigned int *getCustomSection();
+  void printHeader();
+  void printSymbolTable();
+  
+protected:
+  typedef Elf64_Ehdr ELFEHeader;
+  typedef Elf64_Shdr ELFSectionHeader;
+  typedef Elf64_Phdr ELFProgramHeader;
+  typedef Elf64_Addr ELFAddress;
+  typedef Elf64_Sym  ELFSymbol;
+  typedef Elf64_Rela ELFRela;
+  typedef Elf64_Off  ELFOffset;
+#define ELF_ST_INFO(bind, type) ELF64_ST_INFO(bind,type)
+#define ELF_ST_VISIBILITY(visibility) ELF64_ST_VISIBILITY(visibility)
+#define ELF_R_INFO(bind, type) ELF64_R_INFO(bind, type)
+#define ELFClass ELFCLASS64;
+#define BIT(x,n) (((x)>>(n))&1)
+
+  char       *_elfFileName;
+  FILE       *_elfFile;
+  ELFEHeader *_header;
+  
+  ELFSectionHeader *_zeroSection;
+  char              _zeroSectionName[1];
+  ELFSectionHeader *_textSection;
+  char              _textSectionName[6];
+  ELFSectionHeader *_relaSection;
+  char              _relaSectionName[11];
+  ELFSectionHeader *_dynSymSection;
+  char              _dynSymSectionName[8];
+  ELFSectionHeader *_shStrTabSection;
+  char              _shStrTabSectionName[10];
+  ELFSectionHeader *_dynStrSection;
+  char              _dynStrSectionName[8];
+  ELFSectionHeader *_customSection;
+  char              _customSectionName[8];
+
+  void *_text;
+  Elf64_Sym *_symtab;
+  char *_dynstr;
+  Elf64_Rela *_rela;
+  unsigned int *_custom;
+
+  void initialize();
+  void loadTextSection();
+  void loadSymTab();
+  void loadDynStr();
+  void loadRela();
+  void loadCustom();
+  char *typeString(ELFSectionHeader *);
+  char *flagString(ELFSectionHeader *);
+  char *symTypeString(Elf64_Sym);
+  char *symBindString(Elf64_Sym);
+  char *symVisString(Elf64_Sym);
+  char *symNdxString(Elf64_Sym);
+  char *symNameString(Elf64_Sym);
+  
+}; //class ELFLoader
+
 
 #define FOREACH_INTERP_RESULT(V)                                            \
   V(Ok, "ok")                                                               \
@@ -73,6 +143,7 @@ namespace interp {
   V(TrapHostResultTypeMismatch, "host result type mismatch")                \
   /* we called an import function, but it didn't complete succesfully */    \
   V(TrapHostTrapped, "host function trapped")                               \
+  V(TrapFailedAOTLookup, "AOT lookup failed")                               \
   /* we attempted to JIT compile a function and failed */                   \
   V(TrapFailedJITCompilation, "failed JIT compilation")                     \
   /* we attempted to call a function with the an argument list that doesn't \
@@ -88,6 +159,9 @@ enum class Result : int32_t {
   FOREACH_INTERP_RESULT(V)
 #undef V
 };
+
+extern bool trapFlag;
+extern Result trapResult;
 
 typedef uint32_t IstreamOffset;
 static const IstreamOffset kInvalidIstreamOffset = ~0;
@@ -364,9 +438,13 @@ class Environment {
 
   bool enable_jit = true;
   bool trap_on_failed_comp = false;
+  bool enable_load_from_dlib = false;
+  bool enable_load_thunk = false;
+  char *infile = nullptr;
   uint32_t jit_threshold = 1;
 
   Environment();
+  ~Environment();
 
   OutputBuffer& istream() { return *istream_; }
   void SetIstream(std::unique_ptr<OutputBuffer> istream) {
@@ -475,12 +553,14 @@ class Environment {
 
   void Disassemble(Stream* stream, IstreamOffset from, IstreamOffset to);
   void DisassembleModule(Stream* stream, Module*);
+  void LoadDLib(char *filename);
 
  private:
   friend class Thread;
   friend class wabt::jit::FunctionBuilder;
   friend class wabt::aot::AOTFunctionBuilder;
   using JITedFunction = wabt::interp::Result (*)();
+  using AOTedFunction = uint64_t (*)();
 
   struct JitMeta {
     DefinedFunc* wasm_fn;
@@ -489,10 +569,16 @@ class Environment {
     bool tried_jit = false;
     JITedFunction jit_fn = nullptr;
 
-    JitMeta(DefinedFunc* wasm_fn) : wasm_fn(wasm_fn) {}
+    JitMeta(DefinedFunc* wasm_fn) : wasm_fn(wasm_fn) {
+      wasm_fn->dbg_name_= "func_" + std::to_string(numOfFunction);
+      numOfFunction++;
+    }
+    private:
+    static int numOfFunction;
   };
 
   bool TryJit(Thread* t, IstreamOffset offset, JITedFunction* fn);
+  bool TryJit(Thread* t, IstreamOffset offset, JITedFunction* fn,DefinedFunc *&);
 
   std::vector<std::unique_ptr<Module>> modules_;
   std::vector<FuncSignature> sigs_;
@@ -506,8 +592,11 @@ class Environment {
 
   jit::JitEnvironment jit_env_;
   std::unordered_map<IstreamOffset, JitMeta> jit_meta_;
+  ELFLoader *elfLoader = nullptr;
 };
 
+struct ThreadOffset;
+ 
 class Thread {
  public:
   struct Options {
@@ -536,12 +625,13 @@ class Thread {
 
   void Trace(Stream*);
   Result Run(int num_instructions = 1);
-
+  Result CallThunk(Environment::JITedFunction,DefinedFunc*);
   Result CallHost(HostFunc*);
 
  private:
   friend class wabt::jit::FunctionBuilder;
   friend class wabt::aot::AOTFunctionBuilder;
+  friend class ThreadOffset;
   friend class Executor;
   
   const uint8_t* GetIstream() const { return env_->istream_->data.data(); }
@@ -608,10 +698,17 @@ class Thread {
   Environment* env_ = nullptr;
   std::vector<Value> value_stack_;
   std::vector<IstreamOffset> call_stack_;
+  Value *vs_array_;
+  Value *vs_top_;
   uint32_t value_stack_top_ = 0;
   uint32_t call_stack_top_ = 0;
   uint32_t last_jit_frame_ = 0;
   IstreamOffset pc_ = 0;
+};
+
+struct ThreadOffset {
+  static const std::size_t so = offsetof(Thread,vs_array_);
+  static const std::size_t to = offsetof(Thread,vs_top_);
 };
 
 struct ExecResult {

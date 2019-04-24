@@ -38,7 +38,7 @@
 #include "src/wast-parser.h"
 #include "src/jit/wabtjit.h"
 
-#include "Jit.hpp"
+#include "JitBuilder.hpp"
 
 using namespace wabt;
 using namespace wabt::interp;
@@ -50,6 +50,8 @@ static Stream* s_trace_stream;
 static bool s_run_all_exports;
 static bool s_host_print;
 static bool s_disable_jit;
+static bool s_load_from_dlib;
+static bool s_load_thunk;
 static bool s_trap_on_failed_comp;
 static bool s_no_stack_trace;
 static uint32_t s_jit_threshold = 1;
@@ -116,6 +118,12 @@ static void ParseOptions(int argc, char** argv) {
   parser.AddOption("disable-jit",
                    "Prevent just in time compilation",
                    []() { s_disable_jit = true; });
+  parser.AddOption("load-from-dlib",
+		   "Use dynamic library containing precompiled functions",
+		   []() { s_load_from_dlib = true; });
+  parser.AddOption("load-thunk",
+		   "Load from dynamic library using ThunkBuilder",
+		   []() {s_load_thunk =true; });
   parser.AddOption("trap-on-failed-comp",
                    "Trap if a JIT compilation fails",
                    []() { s_trap_on_failed_comp = true; });
@@ -244,6 +252,10 @@ class WasmInterpHostImportDelegate : public HostImportDelegate {
 };
 
 static void InitEnvironment(Environment* env) {
+  std::string str(s_infile);
+  str.replace(str.end()-4,str.end(),"so");
+  env->infile = new char[str.size()+1];
+  memcpy(env->infile,str.c_str(),str.size()+1);
   if (s_host_print) {
     HostModule* host_module = env->AppendHostModule("host");
     host_module->import_delegate.reset(new WasmInterpHostImportDelegate());
@@ -254,7 +266,13 @@ static void InitEnvironment(Environment* env) {
   if (s_trap_on_failed_comp) {
     env->trap_on_failed_comp = true;
   }
-
+  if (s_load_from_dlib) {
+    env->enable_load_from_dlib = true;
+    //env->LoadDLib("tempmod1.so");
+  }
+  if(s_load_thunk) {
+    env->enable_load_thunk = true;
+  }
   env->jit_threshold = s_jit_threshold;
 }
 

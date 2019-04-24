@@ -19,6 +19,7 @@
 
 #include "src/common.h"
 #include "src/interp.h"
+#include "type-dictionary.h"
 
 namespace wabt {
 namespace jit {
@@ -27,6 +28,14 @@ using JITedFunction = interp::Result (*)();
 
 wabt::Result compileAOT(interp::Thread*, interp::Environment&);
 JITedFunction compile(interp::Thread* thread, interp::DefinedFunc*);
+OMR::JitBuilder::IlType* TypeFieldType(const char* t);
+OMR::JitBuilder::IlType* TypeFieldType(Type t);
+OMR::JitBuilder::IlType* functionReturnType(interp::DefinedFunc* fn,interp::Environment& env,
+			       AOTTypeDictionary &types);
+JITedFunction loadCompiled(interp::Thread* thread, interp::DefinedFunc* fn,
+			   interp::Environment& env);
+JITedFunction loadThunk(interp::Thread* thread, interp::DefinedFunc* fn,
+			   interp::Environment& env);
 
 }
 }

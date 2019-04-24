@@ -1,3 +1,4 @@
+
 #
 # Copyright 2016 WebAssembly Community Group participants
 #
@@ -17,7 +18,7 @@
 cmake_minimum_required(VERSION 2.6)
 project(WABT)
 
-option(BUILD_TESTS "Build GTest-based tests" ON)
+option(BUILD_TESTS "Build GTest-based tests" OFF)
 option(RUN_RE2C "Run re2c" ON)
 option(USE_ASAN "Use address sanitizer" OFF)
 option(USE_MSAN "Use memory sanitizer" OFF)
@@ -31,16 +32,18 @@ list(APPEND CMAKE_MODULE_PATH
 	${CMAKE_CURRENT_LIST_DIR}/third_party/omr/cmake/modules/
 )
 
+set(OMR_CORE_GLUE_TARGET ON CACHE BOOL "")
+set(OMR_RAS_GLUE_TARGET ON CACHE BOOL "")
 set(OMR_DDR OFF CACHE BOOL "Enable DDR")
-set(OMR_EXAMPLE OFF CACHE BOOL "")
-set(OMR_JIT  ON CACHE BOOL "")
+set(OMR_EXAMPLE ON CACHE BOOL "")
+set(OMR_JIT  OFF CACHE BOOL "")
 set(OMR_JITBUILDER ON CACHE BOOL "")
 set(OMR_COMPILER ON CACHE BOOL "")
-set(OMR_GC OFF CACHE BOOL "")
+set(OMR_GC ON CACHE BOOL "")
 set(OMR_PORT ON CACHE BOOL "")
 set(OMR_THREAD ON CACHE BOOL "")
 set(OMR_TEST_COMPILER OFF CACHE BOOL "")
-set(OMR_OMRSIG OFF CACHE BOOL "")
+set(OMR_OMRSIG ON CACHE BOOL "")
 set(OMR_FVTEST OFF CACHE BOOL "")
 set(OMR_GC_SEGREGATED_HEAP OFF CACHE BOOL "")
 set(OMR_GC_MODRON_SCAVENGER OFF CACHE BOOL "")
@@ -50,7 +53,7 @@ set(OMR_NOTIFY_POLICY_CONTROL OFF CACHE BOOL "")
 set(OMR_THR_SPIN_WAKE_CONTROL OFF CACHE BOOL "")
 set(OMR_THR_SPIN_CODE_REFACTOR OFF CACHE BOOL "")
 set(OMR_THR_FORK_SUPPORT OFF CACHE BOOL "")
-set(OMR_WARNINGS_AS_ERRORS OFF CACHE BOOL "")
+set(OMR_WARNINGS_AS_ERRORS ON CACHE BOOL "")
 
 set(OMR_SHARED_CACHE_MODS ON CACHE BOOL "")
 set(WASM_SHARED_CACHE ON CACHE BOOL "")
@@ -279,13 +282,14 @@ function(add_omr)
   # files.
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w")
 
-  add_subdirectory(third_party/omr/example/glue EXCLUDE_FROM_ALL)
-  add_subdirectory(third_party/omr EXCLUDE_FROM_ALL)
+  #add_subdirectory(third_party/omr/example/glue EXCLUDE_FROM_ALL)
+  add_subdirectory(third_party/omr)
 endfunction()
 
 add_omr()
 add_subdirectory(src/jit)
 add_subdirectory(src/aot)
+add_subdirectory(src/mix-aot)
 
 target_link_libraries(libwabt PUBLIC wabtjit)
 

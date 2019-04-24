@@ -17,11 +17,14 @@
 #ifndef JIT_ENVIRONMENT_HPP
 #define JIT_ENVIRONMENT_HPP
 
+#include <vector>
+
 namespace wabt {
 namespace jit {
 
 class JitEnvironment {
 public:
+  std::vector<unsigned int> *offsets = 0;
   JitEnvironment();
   ~JitEnvironment();
 private:

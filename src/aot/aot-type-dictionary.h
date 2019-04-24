@@ -17,7 +17,6 @@
 #ifndef AOTTYPEDICTIONARY_HPP
 #define AOTTYPEDICTIONARY_HPP
 
-#include "ilgen/TypeDictionary.hpp"
 #include "../jit/type-dictionary.h"
 
 namespace wabt {

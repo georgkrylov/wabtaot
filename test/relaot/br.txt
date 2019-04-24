@@ -28,9 +28,9 @@
     i32.const 1
     return)
 
-  (func (export "test_br_2_level") (result i32)
-    call $br_2_level
-    return)
+;;  (func (export "test_br_2_level") (result i32)
+;;    call $br_2_level
+;;    return)
 
   (func $br_exit_loop (result i32)
     block $exit
@@ -42,9 +42,9 @@
     end
     i32.const 1)
 
-  (func (export "test_br_exit_loop") (result i32)
-    call $br_exit_loop
-    return)
+;;  (func (export "test_br_exit_loop") (result i32)
+;;    call $br_exit_loop
+;;    return)
 
 )
 (;; STDOUT ;;;

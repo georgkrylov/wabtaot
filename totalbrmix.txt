@@ -1,0 +1,70 @@
+(module
+  (memory 1)
+
+  (func $brif_always_true (param i32) (result i32)
+    block $exit
+      i32.const 0
+      br_if $exit
+      get_local 0
+      i32.load
+      ;;i32.const 4
+      return
+    end
+    i32.const 3)
+  
+  (func $brif_always_true1 (param i32) (result i32)
+    block $b
+      i32.const 1
+      br_if $b
+      i32.const 2
+      return
+    end
+    get_local 0
+    call $brif_always_true)
+
+  (func (export "test_brif_always_true") (result i32)
+    block $a
+      i32.const 0xff
+      i32.const 4
+      i32.store
+      i32.const 0
+      br_if $a
+      i32.const 0xff
+      call $brif_always_true1
+      return
+    end
+    i32.const 1)
+
+   (func $brif_always_ (param i32)
+    block $exit
+      i32.const 0
+      br_if $exit
+      get_local 0
+      i32.const 6
+      i32.store
+      ;;i32.const 4
+      return
+    end
+    return)
+  
+  (func $brif_always_1 (param i32)
+    block $b
+      i32.const 1
+      br_if $b
+      return
+    end
+    get_local 0
+    call $brif_always_)
+
+  (func (export "test_brif_always_") (result i32)
+    block $a
+      i32.const 0
+      br_if $a
+      i32.const 0xff
+      call $brif_always_1
+      i32.const 0xff
+      i32.load
+      return
+    end
+    i32.const 1)
+)
