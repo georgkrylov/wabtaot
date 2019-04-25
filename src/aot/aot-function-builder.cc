@@ -320,7 +320,7 @@ void AOTFunctionBuilder::Push(OMR::JitBuilder::IlBuilder* b, const char* type, O
   //TODO: should probably compare to valueType_ here, if that's
   //possible. I'm not sure if a simple pointer comparison will
   //work. IlTypes* for primitives might not be singleton values.
-  auto* value_wrapper = strcmp(type, "i64") ? b->BitcastTo(valueType_, value) : value;
+  auto* value_wrapper = strcmp(type, "i64") ? b->ConvertTo(valueType_, value) : value;
   stackCount_++;
   stack_->Push(b, value_wrapper);
 }
@@ -337,7 +337,7 @@ void AOTFunctionBuilder::Push(OMR::JitBuilder::IlBuilder* b, const char* type, O
 OMR::JitBuilder::IlValue* AOTFunctionBuilder::Pop(OMR::JitBuilder::IlBuilder* b, const char* type) {
   auto* value = stack_->Pop(b);
   stackCount_--;
-  return strcmp("i64", type) ? b->BitcastTo(TypeFieldType(type), value) : value;
+  return strcmp("i64", type) ? b->ConvertTo(TypeFieldType(type), value) : value;
 }
 
 /**
@@ -632,7 +632,7 @@ template <>
 OMR::JitBuilder::IlValue* AOTFunctionBuilder::EmitIsNan<float>(OMR::JitBuilder::IlBuilder* b, OMR::JitBuilder::IlValue* value) {
   return b->GreaterThan(
          b->           And(
-         b->               BitcastTo(Int32, value),
+         b->               ConvertTo(Int32, value),
          b->               ConstInt32(0x7fffffffU)),
          b->           ConstInt32(0x7f800000U));
 }
@@ -641,7 +641,7 @@ template <>
 OMR::JitBuilder::IlValue* AOTFunctionBuilder::EmitIsNan<double>(OMR::JitBuilder::IlBuilder* b, OMR::JitBuilder::IlValue* value) {
   return b->GreaterThan(
          b->           And(
-         b->               BitcastTo(Int64, value),
+         b->               ConvertTo(Int64, value),
          b->               ConstInt64(0x7fffffffffffffffULL)),
          b->           ConstInt64(0x7ff0000000000000ULL));
 }
@@ -671,9 +671,9 @@ void AOTFunctionBuilder::EmitTruncation(OMR::JitBuilder::IlBuilder* b) {//, cons
 
   // this could be optimized using templates or constant expressions,
   // but the compiler should be able to simplify this anyways
-  auto* new_value = std::is_unsigned<ToType>::value ? b->BitcastTo(target_type, value)
+  auto* new_value = std::is_unsigned<ToType>::value ? b->ConvertTo(target_type, value)
     : b->ConvertTo(target_type, value);
-  //auto new_value = b->BitcastTo(target_type,value);
+  //auto new_value = b->ConvertTo(target_type,value);
 
   Push(b, TypeFieldName<ToType>(), new_value);
 }
@@ -1770,28 +1770,28 @@ bool AOTFunctionBuilder::Emit(OMR::JitBuilder::BytecodeBuilder* b,
 
     case Opcode::F32ReinterpretI32: {
       //auto* value = b->ConvertTo(Float, Pop(b, "i32"));
-      auto* value = b->BitcastTo(Float, Pop(b, "i32"));
+      auto* value = b->ConvertTo(Float, Pop(b, "i32"));
       Push(b, "f32", value);//, pc);
       break;
     }
 
     case Opcode::I32ReinterpretF32: {
       //auto* value = b->ConvertTo(Int32, Pop(b, "f32"));
-      auto* value = b->BitcastTo(Int32, Pop(b, "f32"));
+      auto* value = b->ConvertTo(Int32, Pop(b, "f32"));
       Push(b, "i32", value);//, pc);
       break;
     }
 
     case Opcode::F64ReinterpretI64: {
       //auto* value = b->ConvertTo(Double, Pop(b, "i64"));
-      auto* value = b->BitcastTo(Double, Pop(b, "i64"));
+      auto* value = b->ConvertTo(Double, Pop(b, "i64"));
       Push(b, "f64", value);//, pc);
       break;
     }
 
     case Opcode::I64ReinterpretF64: {
       //auto* value = b->ConvertTo(Int64, Pop(b, "f64"));
-      auto* value = b->BitcastTo(Int64, Pop(b, "f64"));
+      auto* value = b->ConvertTo(Int64, Pop(b, "f64"));
       Push(b, "i64", value);//, pc);
       break;
     }
