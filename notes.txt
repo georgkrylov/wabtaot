@@ -1,0 +1,5 @@
+JitBuilder.hpp needs functions to save methods to scc
+storeCodeEntry is required to access the CompositeCache instance
+have to add entries to the jitbuilder json file for each new function in JitBuilder.hpp
+code length is only available in compileMethodFromDetails while TR::Compilation compiler exists
+getMethodCodeLength in CompileMethod.cpp is used to get code length from a std::map
