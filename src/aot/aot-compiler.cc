@@ -87,6 +87,7 @@ wabt::Result compileAOT(interp::Environment& env, DefinedModule* module)
       void* function = nullptr;
 
       compileMethodBuilder(&builder, &function);
+      storeCodeEntry((char *)fn->dbg_name_.c_str(),function);
     }
   }
 
