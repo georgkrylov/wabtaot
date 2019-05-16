@@ -6,5 +6,6 @@
 *.user
 /compiledUnits
 *~
-
 /build/*
+.DS_Store
+.vscode

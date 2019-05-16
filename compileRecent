@@ -48,14 +48,14 @@ rm ./compiledUnits/$oFile
 fi
 
 #compile to object file and move to compiled units folder
-./out/gcc/Debug/src/aot/wabtaot $mFile
+./build/src/aot/wabtaot $mFile
 
 mv tempmod.o $oFile
 #link object file, c file and trap object file and move them to compiled units folder
 sFile="${name2}_main.cc"
 
 
-g++ -g $oFile ./out/gcc/Debug/src/aot/CMakeFiles/wabtaot.dir/trap-with.cc.o \
+g++ -g $oFile ./build/src/aot/CMakeFiles/wabtaot.dir/trap-with.cc.o \
  $sFile -o $name2
 mv $name2 ./compiledUnits/$name2
 ./compiledUnits/$name2
