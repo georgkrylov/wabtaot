@@ -324,36 +324,36 @@ if (NOT EMSCRIPTEN)
   wabt_executable(wat2wasm src/tools/wat2wasm.cc)
 
   # wast2json
-  wabt_executable(wast2json src/tools/wast2json.cc)
+ # wabt_executable(wast2json src/tools/wast2json.cc)
 
   # wasm2wat
-  wabt_executable(wasm2wat src/tools/wasm2wat.cc)
+  #wabt_executable(wasm2wat src/tools/wasm2wat.cc)
 
   # wasm-opcodecnt
-  wabt_executable(wasm-opcodecnt
-    src/tools/wasm-opcodecnt.cc src/binary-reader-opcnt.cc)
+ # wabt_executable(wasm-opcodecnt
+  #  src/tools/wasm-opcodecnt.cc src/binary-reader-opcnt.cc)
 
   # wasm-objdump
-  wabt_executable(wasm-objdump
-    src/tools/wasm-objdump.cc src/binary-reader-objdump.cc)
+  #wabt_executable(wasm-objdump
+  #  src/tools/wasm-objdump.cc src/binary-reader-objdump.cc)
 
   # wasm-link
-  wabt_executable(wasm-link src/tools/wasm-link.cc src/binary-reader-linker.cc)
+  #wabt_executable(wasm-link src/tools/wasm-link.cc src/binary-reader-linker.cc)
 
   # wasm-interp
-  wabt_executable(wasm-interp src/tools/wasm-interp.cc)
-  if (COMPILER_IS_CLANG OR COMPILER_IS_GNU)
-    target_link_libraries(wasm-interp m)
-  endif ()
+  #wabt_executable(wasm-interp src/tools/wasm-interp.cc)
+  #if (COMPILER_IS_CLANG OR COMPILER_IS_GNU)
+  #  target_link_libraries(wasm-interp m)
+ # endif ()
 
   # spectest-interp
-  wabt_executable(spectest-interp src/tools/spectest-interp.cc)
-  if (COMPILER_IS_CLANG OR COMPILER_IS_GNU)
-    target_link_libraries(spectest-interp m)
-  endif ()
+  #wabt_executable(spectest-interp src/tools/spectest-interp.cc)
+  #if (COMPILER_IS_CLANG OR COMPILER_IS_GNU)
+  #  target_link_libraries(spectest-interp m)
+  #endif ()
 
   # wat-desugar
-  wabt_executable(wat-desugar src/tools/wat-desugar.cc)
+  #wabt_executable(wat-desugar src/tools/wat-desugar.cc)
 
   find_package(Threads)
   if (BUILD_TESTS)
