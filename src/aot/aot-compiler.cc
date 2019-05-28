@@ -107,7 +107,7 @@ wabt::Result compileAOT(interp::Environment& env, DefinedModule* module)
     }
   }
   relocateCodeEntry(const_cast<char *>(cast<wabt::interp::DefinedFunc>(env.GetFunc(0))->dbg_name_.c_str()),functions[0]);
-  relocateCodeEntry(const_cast<char *>(cast<wabt::interp::DefinedFunc>(env.GetFunc(1))->dbg_name_.c_str()),functions[1]);
+//relocateCodeEntry(const_cast<char *>(cast<wabt::interp::DefinedFunc>(env.GetFunc(1))->dbg_name_.c_str()),functions[1]);
   reinterpret_cast<void(*)()>(functions[0])();
   return wabt::Result::Ok;
 }
