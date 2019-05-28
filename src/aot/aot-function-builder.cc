@@ -911,6 +911,7 @@ bool AOTFunctionBuilder::Emit(OMR::JitBuilder::BytecodeBuilder* b,
 
  	auto* value = b->Call(builder.fn_name_.c_str(), args.size(), args.data());
 	pushReturnValue(builder, b, value);
+	aotManager_.addCallToRegistry(fn_name_,builder.fn_name_);
       } else {
 	throw std::runtime_error("Call: function not found!");
       }

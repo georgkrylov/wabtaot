@@ -85,12 +85,30 @@ wabt::Result compileAOT(interp::Environment& env, DefinedModule* module)
     if(auto* fn = cast<wabt::interp::DefinedFunc>(env.GetFunc(i))) {
       auto& builder = aotManager.getFB(fn->offset);
       void* function = nullptr;
-
+      
       compileMethodBuilder(&builder, &function);
       storeCodeEntry((char *)fn->dbg_name_.c_str(),function);
+//    function = getCodeEntry((char *)fn->dbg_name_.c_str());
+//    if(fn->dbg_name_=="func_1"){
+//	int a = 5;
+//	a = ((int(*)(int))(function))(5);
+//	a++;
+//    }
     }
   }
-
+  auto &callRegistry = aotManager.getCallRegistry();
+  for(auto call:callRegistry){
+    registerCallRelocation(const_cast<char *>(call.first.c_str()),const_cast<char *>(call.second.c_str()));
+  }
+  void *functions[2]{};
+  for(Index i = 0; i < func_count; ++i) {
+    if(auto* fn = cast<wabt::interp::DefinedFunc>(env.GetFunc(i))) {
+      functions[i] = getCodeEntry(const_cast<char *>(fn->dbg_name_.c_str()));
+    }
+  }
+  relocateCodeEntry(const_cast<char *>(cast<wabt::interp::DefinedFunc>(env.GetFunc(0))->dbg_name_.c_str()),functions[0]);
+//relocateCodeEntry(const_cast<char *>(cast<wabt::interp::DefinedFunc>(env.GetFunc(1))->dbg_name_.c_str()),functions[1]);
+  reinterpret_cast<void(*)()>(functions[0])();
   return wabt::Result::Ok;
 }
 
