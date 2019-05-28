@@ -23,6 +23,7 @@
 #include "src/interp.h"
 
 #include <map>
+#include <vector>
 #include <type_traits>
 
 namespace wabt {
@@ -227,10 +228,19 @@ class AOTManager {
       }
     }
   }
+
+  void addCallToRegistry(std::string &caller, std::string &callee) {
+    call_registry_.emplace_back(std::pair<std::string,std::string>{caller,callee});
+  }
+
+  std::vector<std::pair<std::string,std::string>> &getCallRegistry() {
+    return call_registry_;
+  }
  private:
   std::map<uint32_t, std::pair<std::unique_ptr<AOTFunctionBuilder>,
                                std::unique_ptr<AOTTypeDictionary>>>
     func_index_;
+  std::vector<std::pair<std::string,std::string>> call_registry_;
 };
 
 }
