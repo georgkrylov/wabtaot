@@ -7,7 +7,7 @@
 /compiledUnits
 *~
 /build/*
-.DS_Store
-.vscode
+*.DS_Store
+*.vscode
 *trtrace.log
 *tempmod.o
