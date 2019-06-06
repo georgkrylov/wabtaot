@@ -341,10 +341,10 @@ if (NOT EMSCRIPTEN)
   #wabt_executable(wasm-link src/tools/wasm-link.cc src/binary-reader-linker.cc)
 
   # wasm-interp
-  #wabt_executable(wasm-interp src/tools/wasm-interp.cc)
-  #if (COMPILER_IS_CLANG OR COMPILER_IS_GNU)
-  #  target_link_libraries(wasm-interp m)
- # endif ()
+  wabt_executable(wasm-interp src/tools/wasm-interp.cc)
+  if (COMPILER_IS_CLANG OR COMPILER_IS_GNU)
+    target_link_libraries(wasm-interp m)
+  endif ()
 
   # spectest-interp
   #wabt_executable(spectest-interp src/tools/spectest-interp.cc)

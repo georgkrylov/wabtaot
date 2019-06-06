@@ -16,6 +16,7 @@
 
 #include "aot-type-dictionary.h"
 #include "aot-function-builder.h"
+#include "trap-with.h"
 
 #include "JitBuilder.hpp"
 
@@ -97,18 +98,26 @@ wabt::Result compileAOT(interp::Environment& env, DefinedModule* module)
     }
   }
   auto &callRegistry = aotManager.getCallRegistry();
-  for(auto call:callRegistry){
-    registerCallRelocation(const_cast<char *>(call.first.c_str()),const_cast<char *>(call.second.c_str()));
-  }
-  void *functions[2]{};
+//for(auto call:callRegistry){
+//  registerCallRelocation(const_cast<char *>(call.first.c_str()),const_cast<char *>(call.second.c_str()));
+//}
+  void *functions[func_count+1]{};
   for(Index i = 0; i < func_count; ++i) {
     if(auto* fn = cast<wabt::interp::DefinedFunc>(env.GetFunc(i))) {
       functions[i] = getCodeEntry(const_cast<char *>(fn->dbg_name_.c_str()));
     }
   }
-  relocateCodeEntry(const_cast<char *>(cast<wabt::interp::DefinedFunc>(env.GetFunc(0))->dbg_name_.c_str()),functions[0]);
-//relocateCodeEntry(const_cast<char *>(cast<wabt::interp::DefinedFunc>(env.GetFunc(1))->dbg_name_.c_str()),functions[1]);
-  reinterpret_cast<void(*)()>(functions[0])();
+  setCodeEntry("trapWith",reinterpret_cast<void*>(trapWith));
+  for(Index i = 0; i < func_count; ++i) {
+    if(auto* fn = cast<wabt::interp::DefinedFunc>(env.GetFunc(i))) {
+      relocateCodeEntry(const_cast<char *>(cast<wabt::interp::DefinedFunc>(env.GetFunc(i))->dbg_name_.c_str()),functions[i]);
+     
+    }
+  }
+  for(auto exported:module->exports){
+     uint64_t a = reinterpret_cast<uint64_t(*)()>(functions[exported.index])();
+     std::cout<<"Export "<<exported.name<<" : "<<a<<"\n";
+  }
   return wabt::Result::Ok;
 }
 
