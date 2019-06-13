@@ -23,6 +23,7 @@
 #include <algorithm>
 #include <iostream>
 #include <memory>
+#include <math.h>
 
 using namespace wabt;
 using namespace wabt::interp;
@@ -101,13 +102,19 @@ wabt::Result compileAOT(interp::Environment& env, DefinedModule* module)
 //for(auto call:callRegistry){
 //  registerCallRelocation(const_cast<char *>(call.first.c_str()),const_cast<char *>(call.second.c_str()));
 //}
-  void *functions[func_count+1]{};
+  void *functions[func_count]{};
   for(Index i = 0; i < func_count; ++i) {
     if(auto* fn = cast<wabt::interp::DefinedFunc>(env.GetFunc(i))) {
       functions[i] = getCodeEntry(const_cast<char *>(fn->dbg_name_.c_str()));
     }
   }
   setCodeEntry("trapWith",reinterpret_cast<void*>(trapWith));
+  double(*sqr)(double) = sqrt;
+  setCodeEntry("sqrt",reinterpret_cast<void*>(sqr));
+  double(*cpsign)(double,double) = copysign;
+  setCodeEntry("copysign",reinterpret_cast<void*>(cpsign));
+  setCodeEntry("sqrtf",reinterpret_cast<void*>(sqrtf));
+  setCodeEntry("copysignf",reinterpret_cast<void*>(copysignf));
   for(Index i = 0; i < func_count; ++i) {
     if(auto* fn = cast<wabt::interp::DefinedFunc>(env.GetFunc(i))) {
       relocateCodeEntry(const_cast<char *>(cast<wabt::interp::DefinedFunc>(env.GetFunc(i))->dbg_name_.c_str()),functions[i]);
@@ -115,7 +122,7 @@ wabt::Result compileAOT(interp::Environment& env, DefinedModule* module)
     }
   }
   for(auto exported:module->exports){
-     uint64_t a = reinterpret_cast<uint64_t(*)()>(functions[exported.index])();
+     uint32_t a = reinterpret_cast<uint32_t(*)()>(functions[exported.index])();
      std::cout<<"Export "<<exported.name<<" : "<<a<<"\n";
   }
   return wabt::Result::Ok;
