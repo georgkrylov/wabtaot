@@ -115,6 +115,8 @@ wabt::Result compileAOT(interp::Environment& env, DefinedModule* module)
   setCodeEntry("copysign",reinterpret_cast<void*>(cpsign));
   setCodeEntry("sqrtf",reinterpret_cast<void*>(sqrtf));
   setCodeEntry("copysignf",reinterpret_cast<void*>(copysignf));
+  int gl = 5;
+  setCodeEntry("gl_0",&gl);
   for(Index i = 0; i < func_count; ++i) {
     if(auto* fn = cast<wabt::interp::DefinedFunc>(env.GetFunc(i))) {
       relocateCodeEntry(const_cast<char *>(cast<wabt::interp::DefinedFunc>(env.GetFunc(i))->dbg_name_.c_str()),functions[i]);

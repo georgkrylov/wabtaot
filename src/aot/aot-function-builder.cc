@@ -181,7 +181,7 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFu
 		 NoType,
 		 1,
 		 Int32);
-
+  DefineLocal("glbl",Int64);
   returnType_ = functionReturnType(fn_);
 
   auto memories_size = env_.GetMemoryCount();
@@ -842,7 +842,8 @@ bool AOTFunctionBuilder::Emit(OMR::JitBuilder::BytecodeBuilder* b,
       }
       */
       auto* addr = calculateGlobalIndex(b, &pc); // comes out as i64.
-      Push(b, "i64", b->LoadAt(pValueType_, addr));
+//      Push(b, "i64", b->LoadAt(pValueType_, addr));
+      Push(b,"i64",b->Load("glbl"));
 
       break;
     }
@@ -851,7 +852,8 @@ bool AOTFunctionBuilder::Emit(OMR::JitBuilder::BytecodeBuilder* b,
       auto* address = calculateGlobalIndex(b, &pc); 
       //TODO FIX ONLY TYPE, SHOULD BE MORE TYPES
       auto* value = Pop(b, "i64");
-  	  b->StoreAt(address, value);
+//  	  b->StoreAt(address, value);
+      b->Store("glbl",value);
       /*
       interp::Global* g = thread_->env()->GetGlobal(ReadU32(&pc));
       assert(g->mutable_);
