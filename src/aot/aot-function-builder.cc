@@ -181,7 +181,7 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFu
 		 NoType,
 		 1,
 		 Int32);
-  DefineLocal("glbl",Int64);
+//  DefineLocal("glbl",Int64);
   returnType_ = functionReturnType(fn_);
 
   auto memories_size = env_.GetMemoryCount();
@@ -202,10 +202,10 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFu
     param_names_.push_back("memories");
     DefineParameter(param_names_.back().data(), ppValueType_);
   }
-  if(globals_size>0) {
-    param_names_.push_back("globals");
-    DefineParameter(param_names_.back().data(), ppValueType_);
-  }
+//  if(globals_size>0) {
+//    param_names_.push_back("globals");
+//    DefineParameter(param_names_.back().data(), ppValueType_);
+//  }
 
   int arg = 0;
 
@@ -219,6 +219,17 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFu
     DefineParameter(param_names_.back().data(), tt);
     param_types_.push_back(tt);
   }
+  
+  arg = 0;
+  global_names_.reserve(globals_size);
+  for(const auto& g: env_.globals_) {
+    char global_name[6];
+    sprintf(global_name,"g%d",arg);
+    OMR::JitBuilder::IlType *gt = TypeFieldType(g.typed_value.type);
+
+    global_names_.push_back(global_name);
+    DefineGlobal(global_names_.back().data(),gt,arg++);
+  }
 
   DefineReturnType(returnType_);
 }
@@ -230,8 +241,8 @@ void AOTFunctionBuilder::pushParams() {
   int arg = 0;
   if (memories_size > 0)
   		arg++;
-  if (globals_size > 0)
-  		arg++;
+ // if (globals_size > 0)
+ // 		arg++;
   
   for(const auto& t: env_.GetFuncSignature(fn_->sig_index)->param_types) {
     Push(this, TypeFieldName(t), Load(param_names_[arg++].data()));
@@ -841,19 +852,21 @@ bool AOTFunctionBuilder::Emit(OMR::JitBuilder::BytecodeBuilder* b,
         Push(b, type_field, Const(b, &g->typed_value));//, pc);
       }
       */
-      auto* addr = calculateGlobalIndex(b, &pc); // comes out as i64.
+//      auto* addr = calculateGlobalIndex(b, &pc); // comes out as i64.//need this as it moves the wasm bytecode cursor(goes to next instruction)
 //      Push(b, "i64", b->LoadAt(pValueType_, addr));
-      Push(b,"i64",b->Load("glbl"));
+      auto index = ReadU32(&pc);
+      Push(b,TypeFieldName(env_.globals_[index].typed_value.type),b->Load(global_names_[index].data()));
 
       break;
     }
 
     case Opcode::SetGlobal: {
-      auto* address = calculateGlobalIndex(b, &pc); 
+      //auto* address = calculateGlobalIndex(b, &pc); 
       //TODO FIX ONLY TYPE, SHOULD BE MORE TYPES
-      auto* value = Pop(b, "i64");
+      auto index = ReadU32(&pc);
+      auto* value = Pop(b, TypeFieldName(env_.globals_[index].typed_value.type));
 //  	  b->StoreAt(address, value);
-      b->Store("glbl",value);
+      b->Store(global_names_[index].data(),value);
       /*
       interp::Global* g = thread_->env()->GetGlobal(ReadU32(&pc));
       assert(g->mutable_);

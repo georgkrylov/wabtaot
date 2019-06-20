@@ -24,6 +24,7 @@
 #include <iostream>
 #include <memory>
 #include <math.h>
+#include <string>
 
 using namespace wabt;
 using namespace wabt::interp;
@@ -115,8 +116,15 @@ wabt::Result compileAOT(interp::Environment& env, DefinedModule* module)
   setCodeEntry("copysign",reinterpret_cast<void*>(cpsign));
   setCodeEntry("sqrtf",reinterpret_cast<void*>(sqrtf));
   setCodeEntry("copysignf",reinterpret_cast<void*>(copysignf));
-  int gl = 5;
-  setCodeEntry("gl_0",&gl);
+  Value *globals = new Value[env.GetGlobalCount()]();
+  std::vector<std::string> global_names;
+  for(int i=0;i<env.GetGlobalCount();i++) {
+    globals[i] = env.GetGlobal(i)->typed_value.value;
+    char global_name[6];
+    sprintf(global_name,"gl_%d",i);
+    global_names.emplace_back(global_name);
+    setCodeEntry(const_cast<char*>(global_names.back().data()),reinterpret_cast<void*>(globals+i));
+  }
   for(Index i = 0; i < func_count; ++i) {
     if(auto* fn = cast<wabt::interp::DefinedFunc>(env.GetFunc(i))) {
       relocateCodeEntry(const_cast<char *>(cast<wabt::interp::DefinedFunc>(env.GetFunc(i))->dbg_name_.c_str()),functions[i]);
