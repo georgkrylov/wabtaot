@@ -132,8 +132,18 @@ wabt::Result compileAOT(interp::Environment& env, DefinedModule* module)
     }
   }
   for(auto exported:module->exports){
-     uint32_t a = reinterpret_cast<uint32_t(*)()>(functions[exported.index])();
+    if(env.GetFuncSignature(env.GetFunc(exported.index)->sig_index)->result_types.front() == Type::F32) {
+      float a = reinterpret_cast<float(*)()>(functions[exported.index])();
+      std::cout<<"Export "<<exported.name<<" : "<<a<<"\n";
+      }
+    else if(env.GetFuncSignature(env.GetFunc(exported.index)->sig_index)->result_types.front() == Type::F64) {
+      double a = reinterpret_cast<double(*)()>(functions[exported.index])();
+      std::cout<<"Export "<<exported.name<<" : "<<a<<"\n";
+      }
+    else {
+     uint64_t a = reinterpret_cast<uint64_t(*)()>(functions[exported.index])();
      std::cout<<"Export "<<exported.name<<" : "<<a<<"\n";
+    }
   }
   return wabt::Result::Ok;
 }
