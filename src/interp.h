@@ -413,6 +413,7 @@ struct DefinedModule : Module {
   Index start_func_index; /* kInvalidIndex if not defined */
   IstreamOffset istream_start;
   IstreamOffset istream_end;
+  std::vector<void*> compiled_functions;
 };
 
 struct HostModule : Module {

@@ -2,7 +2,7 @@
 add_executable(wabtaot
   trap-with.cc
   reg_addr.cpp
-  aot-compiler.cc
+  aot-cd.cc
   aot-type-dictionary.cc
   aot-function-builder.cc
   ../binary-reader-interp.cc
