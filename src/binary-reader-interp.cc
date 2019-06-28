@@ -690,6 +690,8 @@ wabt::Result BinaryReaderInterp::OnImportFunc(Index import_index,
     func_env_index = env_->GetFuncCount() - 1;
     AppendExport(host_import_module, ExternalKind::Func, func_env_index,
                  import->field_name);
+    func->offset = func_index;
+    env_->AddJitMetadata(func);
   } else {
     Export* export_;
     CHECK_RESULT(GetModuleExport(import_module, import->field_name, &export_));

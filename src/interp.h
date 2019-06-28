@@ -314,26 +314,28 @@ typedef Result (*HostFuncCallback)(const struct HostFunc* func,
 struct Func {
   WABT_DISALLOW_COPY_AND_ASSIGN(Func);
   Func(Index sig_index, bool is_host)
-      : sig_index(sig_index), is_host(is_host) {}
+      : sig_index(sig_index), is_host(is_host),offset(kInvalidIstreamOffset) {}
   virtual ~Func() {}
 
   Index sig_index;
   bool is_host;
+  std::string dbg_name_ = "???";
+  IstreamOffset offset;
 };
 
 struct DefinedFunc : Func {
   DefinedFunc(Index sig_index)
       : Func(sig_index, false),
-        offset(kInvalidIstreamOffset),
+        
         local_decl_count(0),
         local_count(0) {}
 
   static bool classof(const Func* func) { return !func->is_host; }
 
-  std::string dbg_name_ = "???";
+  
   bool has_dbg_name_ = false;
 
-  IstreamOffset offset;
+  
   Index local_decl_count;
   Index local_count;
   
@@ -506,7 +508,7 @@ class Environment {
     return funcs_.back().get();
   }
 
-  void AddJitMetadata(DefinedFunc* fn) {
+  void AddJitMetadata(Func* fn) {
     assert(fn->offset != kInvalidIstreamOffset);
     this->jit_meta_.insert({ fn->offset, JitMeta(fn) });
   }
@@ -564,14 +566,15 @@ class Environment {
   using AOTedFunction = uint64_t (*)();
 
   struct JitMeta {
-    DefinedFunc* wasm_fn;
+    Func* wasm_fn;
     uint32_t num_calls = 0;
 
     bool tried_jit = false;
     JITedFunction jit_fn = nullptr;
 
-    JitMeta(DefinedFunc* wasm_fn) : wasm_fn(wasm_fn) {
-      wasm_fn->dbg_name_= "func_" + std::to_string(numOfFunction);
+    JitMeta(Func* wasm_fn) : wasm_fn(wasm_fn) {
+      //wasm_fn->dbg_name_= "func_" + std::to_string(numOfFunction);
+      // wasm_fn->dbg_name_= "f" + wasm_fn-> +"m"+modules_[0]->name.substr(0,3);
       numOfFunction++;
     }
     private:
@@ -626,7 +629,7 @@ class Thread {
 
   void Trace(Stream*);
   Result Run(int num_instructions = 1);
-  Result CallThunk(Environment::JITedFunction,DefinedFunc*);
+  Result CallThunk(Environment::JITedFunction,Func*);
   Result CallHost(HostFunc*);
 
  private:

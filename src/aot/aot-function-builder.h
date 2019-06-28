@@ -32,7 +32,8 @@ namespace aot {
 using namespace wabt::interp;
   
 class AOTManager;
- 
+class FunctionImport;
+
 class AOTFunctionBuilder : public OMR::JitBuilder::MethodBuilder {
  public:
   AOTFunctionBuilder(interp::Thread*, interp::DefinedFunc*, std::string&&,
@@ -41,7 +42,7 @@ class AOTFunctionBuilder : public OMR::JitBuilder::MethodBuilder {
   bool buildIL() override;
 
   OMR::JitBuilder::IlValue* popReturnValue(OMR::JitBuilder::IlBuilder*);
-  void pushReturnValue(AOTFunctionBuilder&, OMR::JitBuilder::IlBuilder*, OMR::JitBuilder::IlValue*);
+  void pushReturnValue(interp::Func*, OMR::JitBuilder::IlBuilder*, OMR::JitBuilder::IlValue*);
   void pushParams();
   
   virtual ~AOTFunctionBuilder() {}
@@ -86,7 +87,7 @@ class AOTFunctionBuilder : public OMR::JitBuilder::MethodBuilder {
   uint32_t pickLocalOffset();
   
   void defineFunction(const std::string&, interp::DefinedFunc*);
-
+  void defineImportFunction(const std::string& name, FunctionImport &import);
   interp::DefinedFunc* getFn() {
     return fn_;
   }
@@ -105,7 +106,7 @@ class AOTFunctionBuilder : public OMR::JitBuilder::MethodBuilder {
     {}
   };
 
-  OMR::JitBuilder::IlType* functionReturnType(interp::DefinedFunc*);
+  OMR::JitBuilder::IlType* functionReturnType(interp::Func*);
   
   template <typename T>
   const char* TypeFieldName() const;
@@ -204,13 +205,25 @@ class AOTFunctionBuilder : public OMR::JitBuilder::MethodBuilder {
   
   bool Emit(OMR::JitBuilder::BytecodeBuilder* b, const uint8_t* istream, const uint8_t* pc);
 };
-  
+
+class FunctionImport {
+  public:
+    FunctionImport(HostFunc *fn):fn_(fn){}
+
+    std::vector<OMR::JitBuilder::IlType*> param_types_;
+    HostFunc *fn_;
+};
+
 class AOTManager {
  public:
   void push_back_FB(uint32_t offset, std::unique_ptr<AOTFunctionBuilder>&& b,
 		    std::unique_ptr<AOTTypeDictionary>&& t)
   {
     func_index_[offset] = {std::move(b), std::move(t)};
+  }
+
+  void push_back_import(std::string name, interp::Func* fn){
+    import_index_.emplace_back(name,dynamic_cast<HostFunc*>(fn));
   }
   
   AOTFunctionBuilder& getFB(uint32_t i) {
@@ -231,6 +244,14 @@ class AOTManager {
     }
   }
 
+  void broadcastImports() {
+    for(auto& builder: func_index_) {
+      for(auto& import: import_index_) {
+        builder.second.first->defineImportFunction(import.first,import.second);
+      }
+    }
+  }
+
   void addCallToRegistry(std::string &caller, std::string &callee) {
     call_registry_.emplace_back(std::pair<std::string,std::string>{caller,callee});
   }
@@ -243,7 +264,11 @@ class AOTManager {
                                std::unique_ptr<AOTTypeDictionary>>>
     func_index_;
   std::vector<std::pair<std::string,std::string>> call_registry_;
+
+  std::vector<std::pair<std::string,FunctionImport>> import_index_;
 };
+
+
 
 }
 }

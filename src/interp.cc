@@ -1273,7 +1273,7 @@ bool Environment::TryJit(Thread* t, IstreamOffset offset, Environment::JITedFunc
 
       if (meta->num_calls >= jit_threshold) {
 	if(enable_load_thunk){
-	  df = meta->wasm_fn;
+	  df = dynamic_cast<DefinedFunc*>(meta->wasm_fn);
 	  meta->jit_fn = jit::loadThunk(t,meta->wasm_fn,*this);
 	  //meta->tried_jit = true;
 	} else if(enable_load_from_dlib) {
@@ -1291,7 +1291,7 @@ bool Environment::TryJit(Thread* t, IstreamOffset offset, Environment::JITedFunc
       }
     }
     *fn = meta->jit_fn;
-    df = meta->wasm_fn;
+    df = dynamic_cast<DefinedFunc*>(meta->wasm_fn);
     return trap_on_failed_comp || *fn;
   } else {
     *fn = nullptr;
@@ -2960,7 +2960,7 @@ void Thread::Trace(Stream* stream) {
   }
 }
 
-Result Thread::CallThunk(Environment::JITedFunction jit_fn,DefinedFunc *df) {
+Result Thread::CallThunk(Environment::JITedFunction jit_fn,Func *df) {
   void *handle = dlopen(env_->infile,RTLD_LAZY);
   if(!handle)
     return wabt::interp::Result::TrapFailedAOTLookup;

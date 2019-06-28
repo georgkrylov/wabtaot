@@ -27,9 +27,9 @@
 namespace wabt{
 namespace jit {
 
-JITedFunction compile(interp::Thread* thread, interp::DefinedFunc* fn) {
+JITedFunction compile(interp::Thread* thread, interp::Func* fn) {
   TypeDictionary types;
-  FunctionBuilder builder(thread, fn, &types);
+  FunctionBuilder builder(thread, dynamic_cast<interp::DefinedFunc*>(fn), &types);
   void* function = nullptr;
   
   if (compileMethodBuilder(&builder, &function) == 0) {
@@ -39,7 +39,7 @@ JITedFunction compile(interp::Thread* thread, interp::DefinedFunc* fn) {
   }
 }
 
-JITedFunction loadCompiled(interp::Thread* thread, interp::DefinedFunc* fn,
+JITedFunction loadCompiled(interp::Thread* thread, interp::Func* fn,
 			   interp::Environment& env) {
   /*TypeDictionary types;
   //unsigned int numCalleeParams = env.GetFuncSignature(fn->sig_index)->param_types.size();
@@ -67,7 +67,7 @@ JITedFunction loadCompiled(interp::Thread* thread, interp::DefinedFunc* fn,
   return reinterpret_cast<JITedFunction>(funct);
 }
 
-JITedFunction loadThunk(interp::Thread* thread, interp::DefinedFunc* fn,
+JITedFunction loadThunk(interp::Thread* thread, interp::Func* fn,
 			interp::Environment& env) {
   AOTTypeDictionary types;
   unsigned int numCalleeParams = env.GetFuncSignature(fn->sig_index)->param_types.size();
@@ -94,7 +94,7 @@ JITedFunction loadThunk(interp::Thread* thread, interp::DefinedFunc* fn,
   }
   
   OMR::JitBuilder::ThunkBuilder builder(&types,fn->dbg_name_.c_str(),
-			   functionReturnType(fn,env,types),numCalleeParams,params);
+			   functionReturnType(dynamic_cast<interp::DefinedFunc*>(fn),env,types),numCalleeParams,params);
   uint8_t* function = nullptr;
   if(compileMethodBuilder(&builder,(void**)(&function))==0) {
     return reinterpret_cast<JITedFunction>(function);

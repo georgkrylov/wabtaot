@@ -125,7 +125,7 @@ void* AOTFunctionBuilder::MemoryTranslationHelper(interp::Thread* th, uint32_t m
  Build a struct containing the return types of the function, as its fields.
  */
 
-OMR::JitBuilder::IlType* AOTFunctionBuilder::functionReturnType(interp::DefinedFunc* fn)
+OMR::JitBuilder::IlType* AOTFunctionBuilder::functionReturnType(interp::Func* fn)
 {
     const auto& result_types = env_.GetFuncSignature(fn->sig_index)->result_types;
 
@@ -270,6 +270,24 @@ void AOTFunctionBuilder::defineFunction(const std::string& name, interp::Defined
 		 result_type,
 		 builder_fn.param_types_.size(),
 		 static_cast<OMR::JitBuilder::IlType**>(builder_fn.param_types_.data()));
+}
+
+void AOTFunctionBuilder::defineImportFunction(const std::string& name, FunctionImport &import)
+{
+
+  OMR::JitBuilder::IlType* result_type = functionReturnType(import.fn_);
+  for(const auto& t: env_.GetFuncSignature(import.fn_->sig_index)->param_types) {
+    
+    OMR::JitBuilder::IlType* tt = TypeFieldType(t);
+
+    import.param_types_.push_back(tt);
+  }
+
+  DefineFunction(name.c_str(), __FILE__, "0",
+		 reinterpret_cast<void*>(18), // this is a magic number that makes trampoline lookup work.
+		 result_type,
+		 import.param_types_.size(),
+		 static_cast<OMR::JitBuilder::IlType**>(import.param_types_.data()));
 }
 
 bool AOTFunctionBuilder::buildIL() {
@@ -736,10 +754,10 @@ OMR::JitBuilder::IlValue* AOTFunctionBuilder::popReturnValue(OMR::JitBuilder::Il
   }
 }
 
-void AOTFunctionBuilder::pushReturnValue(AOTFunctionBuilder& builder, OMR::JitBuilder::IlBuilder* b,
+void AOTFunctionBuilder::pushReturnValue(Func* builder, OMR::JitBuilder::IlBuilder* b,
 					 OMR::JitBuilder::IlValue* returnValue)
 {
-  const auto& result_types = env_.GetFuncSignature(builder.fn_->sig_index)->result_types;
+  const auto& result_types = env_.GetFuncSignature(builder->sig_index)->result_types;
 
   if(result_types.empty())
     return;
@@ -906,6 +924,7 @@ bool AOTFunctionBuilder::Emit(OMR::JitBuilder::BytecodeBuilder* b,
       break;
     }
 
+    case Opcode::InterpCallHost:
     case Opcode::Call: {
       auto offset = ReadU32(&pc);
       auto meta_it = env_.jit_meta_.find(offset);
@@ -920,13 +939,13 @@ bool AOTFunctionBuilder::Emit(OMR::JitBuilder::BytecodeBuilder* b,
 	  args.push_back(b->Load("memories"));
 	}
 
-	for(const auto& t: env_.GetFuncSignature(builder.fn_->sig_index)->param_types) {
+	for(const auto& t: env_.GetFuncSignature(fn->sig_index)->param_types) {
 	  args.push_back(Pop(b, TypeFieldName(t)));
 	}
 
- 	auto* value = b->Call(builder.fn_name_.c_str(), args.size(), args.data());
-	pushReturnValue(builder, b, value);
-	aotManager_.addCallToRegistry(fn_name_,builder.fn_name_);
+ 	auto* value = b->Call(fn->dbg_name_.c_str(), args.size(), args.data());
+	pushReturnValue(fn, b, value);
+	//aotManager_.addCallToRegistry(fn_name_,builder.fn_name_);
       } else {
 	throw std::runtime_error("Call: function not found!");
       }
@@ -953,22 +972,22 @@ bool AOTFunctionBuilder::Emit(OMR::JitBuilder::BytecodeBuilder* b,
       break;
     }
 
-    case Opcode::InterpCallHost: {
-      throw std::runtime_error("interpreted host calls not supported");
-      //    Index func_index = ReadU32(&pc);
+    // case Opcode::InterpCallHost: {
+    //   throw std::runtime_error("interpreted host calls not supported");
+    //   //    Index func_index = ReadU32(&pc);
 
-      // TODO: again, more of the same.
+    //   // TODO: again, more of the same.
 
-      /*
-      b->Store("result",
-      b->      Call("CallHostHelper", 2,
-      b->           ConstAddress(thread_),
-      b->           ConstInt32(func_index)));
+    //   /*
+    //   b->Store("result",
+    //   b->      Call("CallHostHelper", 2,
+    //   b->           ConstAddress(thread_),
+    //   b->           ConstInt32(func_index)));
 
-      EmitCheckTrap(b, b->Load("result"), nullptr);
-      */
-      break;
-    }
+    //   EmitCheckTrap(b, b->Load("result"), nullptr);
+    //   */
+    //   break;
+    // }
 
     case Opcode::I32Load8S: {
       throw std::runtime_error("linear memory access not supported");
