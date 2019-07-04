@@ -92,15 +92,15 @@ class WasmInterpHostImportDelegate : public HostImportDelegate {
 static wabt::Result ReadModule(const char* module_filename,
                                Environment* env,
                                ErrorHandler* error_handler,
-                               DefinedModule** out_module)
+                               DefinedModule* out_module)
 {
   wabt::Result result;
   std::vector<uint8_t> file_data;
 
-  *out_module = nullptr;
-
   HostModule* host_module = env->AppendHostModule("host");
   host_module->import_delegate.reset(new WasmInterpHostImportDelegate());
+
+  // *out_module = nullptr;
 
   result = ReadFile(module_filename, &file_data);
   if (Succeeded(result)) {
@@ -113,9 +113,9 @@ static wabt::Result ReadModule(const char* module_filename,
     ReadBinaryOptions options(features, log_stream, kReadDebugNames, kStopOnFirstError);
     result = ReadBinaryInterp(env, DataOrNull(file_data), file_data.size(),
                               &options, error_handler, out_module);
-    if((*out_module)->name=="") {
-      (*out_module)->name = std::string(module_filename);
-    }
+    // if((*out_module)->name=="") {
+    //   (*out_module)->name = std::string(module_filename);
+    // }
   }
 
   return result;
@@ -131,11 +131,9 @@ wabt::Result compileAOT(interp::Environment& env, DefinedModule* module)
   
   AOTManager aotManager;
   
-  HostModule* host_module = env.AppendHostModule("host");
-  host_module->import_delegate.reset(new WasmInterpHostImportDelegate());
-
+  
   for(Index i = 0; i < func_count; ++i) {
-    if(!env.GetFunc(i)->is_host) {
+    if(!env.GetFunc(i)->is_compiled) {
       auto* fn = cast<wabt::interp::DefinedFunc>(env.GetFunc(i));
       std::unique_ptr<AOTTypeDictionary> types(new AOTTypeDictionary());
       std::string name = "f" + std::to_string(i) +"m"+module->name.substr(0,3);
@@ -150,19 +148,32 @@ wabt::Result compileAOT(interp::Environment& env, DefinedModule* module)
 
       aotManager.push_back_FB(fn->offset, std::move(builder_ptr), std::move(types));
       
+      env.GetFunc(i)->dbg_name_ = "f" + std::to_string(i) +"m"+module->name.substr(0,3);
+      module->funcs.emplace_back(env.GetFunc(i));
       
     }else{
-      aotManager.push_back_import("f" + std::to_string(i) +"m"+module->name.substr(0,3),env.GetFunc(i));
+      aotManager.push_back_import(env.GetFunc(i)->dbg_name_,env.GetFunc(i));
+        
+      // for(Index j = 0;j<env.GetModuleCount();j++){
+      //   for(auto exp:env.GetModule(j)->exports){
+      //     if(!exp.name.compare(dynamic_cast<HostFunc*>(env.GetFunc(i))->field_name)){
+      //       aotManager.push_back_import("f" + std::to_string(exp.index) +"m"+env.GetModule(j)->name.substr(0,3),env.GetFunc(i));
+      //       env.GetFunc(i)->dbg_name_ = "f" + std::to_string(exp.index) +"m"+env.GetModule(j)->name.substr(0,3),env.GetFunc(i);
+      //     }
+      //   }
+      // }
+      
     }
-    env.GetFunc(i)->dbg_name_ = "f" + std::to_string(i) +"m"+module->name.substr(0,3);
+    
   }
 
   aotManager.broadcastNames();
   aotManager.broadcastImports();
   module->compiled_functions.reserve(func_count);
+  //std::fill(module->compiled_functions.begin(),module->compiled_functions.end(),nullptr);
 
   for(Index i = 0; i < func_count; ++i) {
-    if(!env.GetFunc(i)->is_host) {
+    if(!env.GetFunc(i)->is_compiled) {
       auto* fn = cast<wabt::interp::DefinedFunc>(env.GetFunc(i));
       auto& builder = aotManager.getFB(fn->offset);
       void* function = nullptr;
@@ -172,7 +183,8 @@ wabt::Result compileAOT(interp::Environment& env, DefinedModule* module)
         storeCodeEntry((char *)fn->dbg_name_.c_str(),function);
 	      function = getCodeEntry(const_cast<char*>(fn->dbg_name_.c_str()));
       }
-      module->compiled_functions[i] = function;
+      module->compiled_functions.push_back(function);
+      env.GetFunc(i)->is_compiled = true;
     }
   }
   return wabt::Result::Ok;
@@ -196,8 +208,8 @@ void relocateAOT(interp::Environment& env,DefinedModule *module)
   //     setCodeEntry()
   //   }
   // }
-  setCodeEntry(const_cast<char*>(env.GetFunc(0)->dbg_name_.data()),reinterpret_cast<void*>(print));
-  setCodeEntry(const_cast<char*>(env.GetFunc(1)->dbg_name_.data()),reinterpret_cast<void*>(print1));
+  //setCodeEntry(const_cast<char*>(env.GetFunc(0)->dbg_name_.data()),reinterpret_cast<void*>(print));
+  //setCodeEntry(const_cast<char*>(env.GetFunc(1)->dbg_name_.data()),reinterpret_cast<void*>(print1));
   Value *globals = new Value[env.GetGlobalCount()]();
   std::vector<std::string> global_names;
   for(int i=0;i<env.GetGlobalCount();i++) {
@@ -208,33 +220,49 @@ void relocateAOT(interp::Environment& env,DefinedModule *module)
     setCodeEntry(const_cast<char*>(global_names.back().data()),reinterpret_cast<void*>(globals+i));
   }
   // uint16_t compiled_function_index = 0;
-  for(Index i = 0; i < func_count; ++i) {
-    if(!env.GetFunc(i)->is_host) {
-      auto* fn = cast<wabt::interp::DefinedFunc>(env.GetFunc(i));
-      relocateCodeEntry(const_cast<char *>(cast<wabt::interp::DefinedFunc>(env.GetFunc(i))->dbg_name_.c_str()),
-        module->compiled_functions[i]);
+  for(Index i = 0; i < module->compiled_functions.size(); ++i) {
+    // if(!env.GetFunc(i)->is_host) {
+    if(module->compiled_functions[i]){
+      auto* fn = static_cast<DefinedFunc*>(module->funcs[i]);
+      relocateCodeEntry(const_cast<char *>(fn->dbg_name_.c_str()), module->compiled_functions[i]);
       // compiled_function_index++;
-     
     }
+    // }
   }
 }
 
 void runExports(interp::Environment& env,DefinedModule *module)
 {
+  
   for(auto exported:module->exports){
+    std::string index = std::to_string(exported.index);
+    void *fn = nullptr;
+    for(uint32_t i;i<module->funcs.size();i++){
+      if(!index.compare(module->funcs[i]->dbg_name_.substr(1,index.size())))
+        fn = module->compiled_functions[i];
+    }
+    void *fun = module->compiled_functions[exported.index];
     if(env.GetFuncSignature(env.GetFunc(exported.index)->sig_index)->result_types.front() == Type::F32) {
-      float a = reinterpret_cast<float(*)()>(module->compiled_functions[exported.index])();
+      float a = reinterpret_cast<float(*)()>(fn)();
       std::cout<<"Export "<<exported.name<<" : "<<a<<"\n";
       }
     else if(env.GetFuncSignature(env.GetFunc(exported.index)->sig_index)->result_types.front() == Type::F64) {
-      double a = reinterpret_cast<double(*)()>(module->compiled_functions[exported.index])();
+      double a = reinterpret_cast<double(*)()>(fn)();
       std::cout<<"Export "<<exported.name<<" : "<<a<<"\n";
       }
     else {
-     uint64_t a = reinterpret_cast<uint64_t(*)()>(module->compiled_functions[exported.index])();
+     uint64_t a = reinterpret_cast<uint64_t(*)()>(fn)();
      std::cout<<"Export "<<exported.name<<" : "<<a<<"\n";
     }
   }
+}
+
+void registerModules(const char* module_filename, Environment* env){
+  std::string module_name(module_filename);
+  // env->AppendHostModule(module.substr(0,module.find(".")))->import_delegate.reset(new WasmInterpHostImportDelegate());
+  DefinedModule* module = new DefinedModule();
+  module->name = module_name.substr(0,module_name.find("."));
+  env->AppendDefModule(module);
 }
 
 int main(int argc, char** argv) {
@@ -244,19 +272,27 @@ int main(int argc, char** argv) {
   }
 
   Environment env;
+
+  for(uint32_t i = 1;i<argc;i++) {
+    registerModules(argv[i],&env);
+  }
   
   for(uint32_t i = 1;i<argc;i++) {
     const char* src_filename = argv[i];
    
     DefinedModule* module = nullptr; //new DefinedModule();
     ErrorHandlerFile error_handler(Location::Type::Binary);
-    
-    wabt::Result result = ReadModule(src_filename, &env, &error_handler, &module);
+    module = dynamic_cast<DefinedModule*>(env.GetModule(i-1));
+    wabt::Result result = ReadModule(src_filename, &env, &error_handler, module);
 
     if(Succeeded(result)) {
       compileAOT(env, module);
-      relocateAOT(env, module);
-      runExports(env, module);
     }
   }
+
+  for(uint32_t i = 1;i<argc;i++) {
+    relocateAOT(env, dynamic_cast<DefinedModule*>(env.GetModule(i-1)));
+  }
+  runExports(env,dynamic_cast<DefinedModule*>(env.GetModule(1)));
+  //runExports(env, module);
 }

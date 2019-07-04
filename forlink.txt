@@ -1,0 +1,11 @@
+(module
+	(func (export "aha") (result i64)
+	i64.const 1
+	return)
+	(func (export "print") (param i32)
+	i32.const 1
+	return)
+	(func (export "print1") (param i32 i32)
+	i32.const 2
+	return)
+)

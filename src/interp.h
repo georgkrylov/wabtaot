@@ -319,6 +319,7 @@ struct Func {
 
   Index sig_index;
   bool is_host;
+  bool is_compiled = false;
   std::string dbg_name_ = "???";
   IstreamOffset offset;
 };
@@ -330,7 +331,9 @@ struct DefinedFunc : Func {
         local_decl_count(0),
         local_count(0) {}
 
-  static bool classof(const Func* func) { return !func->is_host; }
+  static bool classof(const Func* func) { //return !func->is_host; 
+    return true;
+  }
 
   
   bool has_dbg_name_ = false;
@@ -416,6 +419,7 @@ struct DefinedModule : Module {
   IstreamOffset istream_start;
   IstreamOffset istream_end;
   std::vector<void*> compiled_functions;
+  std::vector<Func*> funcs;
 };
 
 struct HostModule : Module {
@@ -548,6 +552,7 @@ class Environment {
   }
 
   HostModule* AppendHostModule(string_view name);
+  void AppendDefModule(DefinedModule*);
 
   bool FuncSignaturesAreEqual(Index sig_index_0, Index sig_index_1) const;
 

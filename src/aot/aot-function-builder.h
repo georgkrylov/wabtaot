@@ -208,10 +208,10 @@ class AOTFunctionBuilder : public OMR::JitBuilder::MethodBuilder {
 
 class FunctionImport {
   public:
-    FunctionImport(HostFunc *fn):fn_(fn){}
+    FunctionImport(interp::Func *fn):fn_(fn){}
 
     std::vector<OMR::JitBuilder::IlType*> param_types_;
-    HostFunc *fn_;
+    interp::Func *fn_;
 };
 
 class AOTManager {
@@ -223,7 +223,7 @@ class AOTManager {
   }
 
   void push_back_import(std::string name, interp::Func* fn){
-    import_index_.emplace_back(name,dynamic_cast<HostFunc*>(fn));
+    import_index_.emplace_back(name,fn);
   }
   
   AOTFunctionBuilder& getFB(uint32_t i) {

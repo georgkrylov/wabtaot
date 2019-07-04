@@ -702,7 +702,6 @@ wabt::Result BinaryReaderInterp::OnImportFunc(Index import_index,
       PrintError("import signature mismatch");
       return wabt::Result::Error;
     }
-
     func_env_index = export_->index;
   }
   func_index_mapping_.push_back(func_env_index);
@@ -1567,16 +1566,16 @@ wabt::Result ReadBinaryInterp(Environment* env,
                               size_t size,
                               const ReadBinaryOptions* options,
                               ErrorHandler* error_handler,
-                              DefinedModule** out_module) {
+                              DefinedModule* module) {
   // Need to mark before taking ownership of env->istream.
   Environment::MarkPoint mark = env->Mark();
 
   std::unique_ptr<OutputBuffer> istream = env->ReleaseIstream();
   IstreamOffset istream_offset = istream->size();
-  DefinedModule* module = new DefinedModule();
+  //DefinedModule* module = new DefinedModule();
 
   BinaryReaderInterp reader(env, module, std::move(istream), error_handler);
-  env->EmplaceBackModule(module);
+  //env->EmplaceBackModule(module);
 
   wabt::Result result = ReadBinary(data, size, &reader, options);
   env->SetIstream(reader.ReleaseOutputBuffer());
@@ -1584,10 +1583,10 @@ wabt::Result ReadBinaryInterp(Environment* env,
   if (Succeeded(result)) {
     module->istream_start = istream_offset;
     module->istream_end = env->istream().size();
-    *out_module = module;
+    //*out_module = module;
   } else {
     env->ResetToMarkPoint(mark);
-    *out_module = nullptr;
+    //*out_module = nullptr;
   }
   return result;
 }

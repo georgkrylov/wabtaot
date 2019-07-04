@@ -207,7 +207,8 @@ DefinedModule::DefinedModule()
     : Module(false),
       start_func_index(kInvalidIndex),
       istream_start(kInvalidIstreamOffset),
-      istream_end(kInvalidIstreamOffset) {}
+      istream_end(kInvalidIstreamOffset) {
+      }
 
 HostModule::HostModule(string_view name) : Module(name, true) {}
 
@@ -256,6 +257,12 @@ HostModule* Environment::AppendHostModule(string_view name) {
   registered_module_bindings_.emplace(name.to_string(),
                                       Binding(modules_.size() - 1));
   return module;
+}
+
+void Environment::AppendDefModule(DefinedModule *module){
+  modules_.emplace_back(module);
+  registered_module_bindings_.emplace(module->name,
+                                      Binding(modules_.size() - 1));
 }
 
 uint32_t ToRep(bool x) { return x ? 1 : 0; }
