@@ -351,7 +351,9 @@ struct HostFunc : Func {
   HostFunc(string_view module_name, string_view field_name, Index sig_index)
       : Func(sig_index, true),
         module_name(module_name.to_string()),
-        field_name(field_name.to_string()) {}
+        field_name(field_name.to_string()) {
+          is_compiled = true;
+        }
 
   static bool classof(const Func* func) { return func->is_host; }
 

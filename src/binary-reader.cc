@@ -1756,7 +1756,6 @@ Result BinaryReader::ReadModule() {
   ERROR_UNLESS(version == WABT_BINARY_VERSION,
                "bad wasm file version: %#x (expected %#x)", version,
                WABT_BINARY_VERSION);
-
   CALLBACK(BeginModule, version);
   CHECK_RESULT(ReadSections());
   CALLBACK0(EndModule);

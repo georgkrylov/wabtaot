@@ -25,6 +25,7 @@
 #include <memory>
 #include <math.h>
 #include <string>
+#include <dlfcn.h>
 
 using namespace wabt;
 using namespace wabt::interp;
@@ -131,7 +132,6 @@ wabt::Result compileAOT(interp::Environment& env, DefinedModule* module)
   
   AOTManager aotManager;
   
-  
   for(Index i = 0; i < func_count; ++i) {
     if(!env.GetFunc(i)->is_compiled) {
       auto* fn = cast<wabt::interp::DefinedFunc>(env.GetFunc(i));
@@ -210,6 +210,23 @@ void relocateAOT(interp::Environment& env,DefinedModule *module)
   // }
   //setCodeEntry(const_cast<char*>(env.GetFunc(0)->dbg_name_.data()),reinterpret_cast<void*>(print));
   //setCodeEntry(const_cast<char*>(env.GetFunc(1)->dbg_name_.data()),reinterpret_cast<void*>(print1));
+  //setCodeEntry("print1",reinterpret_cast<void*>(print1));
+  for(int i=0;i<env.GetFuncCount();i++){
+    interp::Func *func = env.GetFunc(i);
+    if(func->is_host){
+      void *handle = dlopen("libc.so.6",RTLD_LAZY);
+      if(!handle){
+        std::cerr<<"Cannot open libc!"<<"\n";
+        exit(-1);
+      }
+      void *cfunc = dlsym(handle,func->dbg_name_.c_str());
+      if(!cfunc){
+        std::cerr<<"Cannot find "<<func->dbg_name_<<"\n";
+        exit(-1);
+      }
+      setCodeEntry(const_cast<char*>(func->dbg_name_.data()),cfunc);
+    }
+  }
   Value *globals = new Value[env.GetGlobalCount()]();
   std::vector<std::string> global_names;
   for(int i=0;i<env.GetGlobalCount();i++) {
@@ -237,22 +254,26 @@ void runExports(interp::Environment& env,DefinedModule *module)
   for(auto exported:module->exports){
     std::string index = std::to_string(exported.index);
     void *fn = nullptr;
-    for(uint32_t i;i<module->funcs.size();i++){
-      if(!index.compare(module->funcs[i]->dbg_name_.substr(1,index.size())))
+    for(uint32_t i = 0;i<module->funcs.size();i++){
+      if(!index.compare(module->funcs[i]->dbg_name_.substr(1,index.size()))){
         fn = module->compiled_functions[i];
+        break;
+      }
     }
-    void *fun = module->compiled_functions[exported.index];
-    if(env.GetFuncSignature(env.GetFunc(exported.index)->sig_index)->result_types.front() == Type::F32) {
-      float a = reinterpret_cast<float(*)()>(fn)();
+    // void *fun = module->compiled_functions[exported.index];
+    if(env.GetFuncSignature(env.GetFunc(exported.index)->sig_index)->result_types.size()){
+      if(env.GetFuncSignature(env.GetFunc(exported.index)->sig_index)->result_types.front() == Type::F32) {
+        float a = reinterpret_cast<float(*)()>(fn)();
+        std::cout<<"Export "<<exported.name<<" : "<<a<<"\n";
+        }
+      else if(env.GetFuncSignature(env.GetFunc(exported.index)->sig_index)->result_types.front() == Type::F64) {
+        double a = reinterpret_cast<double(*)()>(fn)();
+        std::cout<<"Export "<<exported.name<<" : "<<a<<"\n";
+        }
+      else {
+      uint64_t a = reinterpret_cast<uint64_t(*)()>(fn)();
       std::cout<<"Export "<<exported.name<<" : "<<a<<"\n";
       }
-    else if(env.GetFuncSignature(env.GetFunc(exported.index)->sig_index)->result_types.front() == Type::F64) {
-      double a = reinterpret_cast<double(*)()>(fn)();
-      std::cout<<"Export "<<exported.name<<" : "<<a<<"\n";
-      }
-    else {
-     uint64_t a = reinterpret_cast<uint64_t(*)()>(fn)();
-     std::cout<<"Export "<<exported.name<<" : "<<a<<"\n";
     }
   }
 }
@@ -261,7 +282,8 @@ void registerModules(const char* module_filename, Environment* env){
   std::string module_name(module_filename);
   // env->AppendHostModule(module.substr(0,module.find(".")))->import_delegate.reset(new WasmInterpHostImportDelegate());
   DefinedModule* module = new DefinedModule();
-  module->name = module_name.substr(0,module_name.find("."));
+  // module->name = module_name.substr(module_name.find_last_of('/'),module_name.find_last_of('.'));
+  module->name = module_name.substr(module_name.find_last_of('/')+1,3);
   env->AppendDefModule(module);
 }
 
@@ -270,7 +292,6 @@ int main(int argc, char** argv) {
     std::cout << "usage: wabtaot <filename>\n";
     return -1;
   }
-
   Environment env;
 
   for(uint32_t i = 1;i<argc;i++) {
@@ -278,8 +299,16 @@ int main(int argc, char** argv) {
   }
   
   for(uint32_t i = 1;i<argc;i++) {
-    const char* src_filename = argv[i];
-   
+    // const char* ffi = strrchr(argv[i],'/');
+    // printf("%s\n",ffi);
+    // char* src_filename;
+    // if(ffi){
+    //   src_filename = reinterpret_cast<char*>(calloc(strlen(ffi),1));
+    //   strcpy(src_filename,ffi+1);
+    // } else{
+    char * src_filename = argv[i];
+    // }
+
     DefinedModule* module = nullptr; //new DefinedModule();
     ErrorHandlerFile error_handler(Location::Type::Binary);
     module = dynamic_cast<DefinedModule*>(env.GetModule(i-1));
@@ -287,12 +316,16 @@ int main(int argc, char** argv) {
 
     if(Succeeded(result)) {
       compileAOT(env, module);
+    }else{
+      std::cout<<"read failure\n";
     }
   }
 
   for(uint32_t i = 1;i<argc;i++) {
     relocateAOT(env, dynamic_cast<DefinedModule*>(env.GetModule(i-1)));
   }
-  runExports(env,dynamic_cast<DefinedModule*>(env.GetModule(1)));
+  for(uint32_t i = 1;i<argc;i++) {
+    runExports(env,dynamic_cast<DefinedModule*>(env.GetModule(i-1)));
+  }
   //runExports(env, module);
 }

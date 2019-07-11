@@ -692,6 +692,7 @@ wabt::Result BinaryReaderInterp::OnImportFunc(Index import_index,
                  import->field_name);
     func->offset = func_index;
     env_->AddJitMetadata(func);
+    func->dbg_name_.assign(field_name.to_string());
   } else {
     Export* export_;
     CHECK_RESULT(GetModuleExport(import_module, import->field_name, &export_));
@@ -1311,13 +1312,13 @@ wabt::Result BinaryReaderInterp::OnCallExpr(Index func_index) {
   FuncSignature* sig = env_->GetFuncSignature(func->sig_index);
   CHECK_RESULT(typechecker_.OnCall(&sig->param_types, &sig->result_types));
 
-  if (func->is_host) {
-    CHECK_RESULT(EmitOpcode(Opcode::InterpCallHost));
-    CHECK_RESULT(EmitI32(TranslateFuncIndexToEnv(func_index)));
-  } else {
+  // if (func->is_host) {
+  //   CHECK_RESULT(EmitOpcode(Opcode::InterpCallHost));
+  //   CHECK_RESULT(EmitI32(TranslateFuncIndexToEnv(func_index)));
+  // } else {
     CHECK_RESULT(EmitOpcode(Opcode::Call));
     CHECK_RESULT(EmitFuncOffset(cast<DefinedFunc>(func), func_index));
-  }
+  // }
 
   return wabt::Result::Ok;
 }
@@ -1579,7 +1580,6 @@ wabt::Result ReadBinaryInterp(Environment* env,
 
   wabt::Result result = ReadBinary(data, size, &reader, options);
   env->SetIstream(reader.ReleaseOutputBuffer());
-
   if (Succeeded(result)) {
     module->istream_start = istream_offset;
     module->istream_end = env->istream().size();
