@@ -1083,7 +1083,7 @@ static wabt::Result ReadModule(const char* module_filename,
     ReadBinaryOptions options(s_features, s_log_stream.get(), kReadDebugNames,
                               kStopOnFirstError);
     result = ReadBinaryInterp(env, DataOrNull(file_data), file_data.size(),
-                              &options, error_handler, out_module);
+                              &options, error_handler, *out_module);
 
     if (Succeeded(result)) {
       if (s_verbose)

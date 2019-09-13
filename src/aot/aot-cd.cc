@@ -232,7 +232,7 @@ void relocateAOT(interp::Environment& env,DefinedModule *module)
   for(int i=0;i<env.GetGlobalCount();i++) {
     globals[i] = env.GetGlobal(i)->typed_value.value;
     char global_name[6];
-    sprintf(global_name,"gl_%d",i);
+    sprintf(global_name,"g%d",i);
     global_names.emplace_back(global_name);
     setCodeEntry(const_cast<char*>(global_names.back().data()),reinterpret_cast<void*>(globals+i));
   }

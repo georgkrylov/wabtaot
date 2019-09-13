@@ -224,11 +224,11 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFu
   global_names_.reserve(globals_size);
   for(const auto& g: env_.globals_) {
     char global_name[6];
-    sprintf(global_name,"g%d",arg);
+    sprintf(global_name,"g%d",arg++);
     OMR::JitBuilder::IlType *gt = TypeFieldType(g.typed_value.type);
 
     global_names_.push_back(global_name);
-    DefineGlobal(global_names_.back().data(),gt,arg++);
+    DefineGlobal(global_names_.back().data(),gt,reinterpret_cast<void*>(&(env_.globals_.data()[arg-1].typed_value.value)));
   }
 
   DefineReturnType(returnType_);
