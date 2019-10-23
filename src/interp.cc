@@ -3482,6 +3482,15 @@ void Environment::LoadDLib(char *filename) {
   elfLoader = new ELFLoader(filename);
 }
 
+void Environment::FillMemories(){
+  if(mems==nullptr) {
+     mems = new char*[GetMemoryCount()];
+     for(int j=0;j<memories_.size();j++){
+       	mems[j] = memories_[j].data.data();
+     }
+  }
+}
+
 static void PrintCallFrame(Stream* s, Environment* e, IstreamOffset pc) {
   DefinedFunc* best_fn = nullptr;
 

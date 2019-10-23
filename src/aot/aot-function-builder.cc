@@ -195,13 +195,13 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFu
   		total_size++;
   param_names_.reserve(total_size);
 
-  if(memories_size > 0) {
+//if(memories_size > 0) {
     // reserve to prevent a reallocation if the vector grows, and its
     // data area is too small, causing the data within to be relocated
     // (relocations are not made known to the MethodBuilder)
-    param_names_.push_back("memories");
-    DefineParameter(param_names_.back().data(), ppValueType_);
-  }
+//  param_names_.push_back("memories");
+//  DefineParameter(param_names_.back().data(), ppValueType_);
+//}
 //  if(globals_size>0) {
 //    param_names_.push_back("globals");
 //    DefineParameter(param_names_.back().data(), ppValueType_);
@@ -230,6 +230,17 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFu
     global_names_.push_back(global_name);
     DefineGlobal(global_names_.back().data(),gt,reinterpret_cast<void*>(&(env_.globals_.data()[arg-1].typed_value.value)));
   }
+  arg = 0;
+  mem_names_.reserve(memories_size);
+  for(const auto& m: env_.memories_) {
+    char mem_name[6];
+    sprintf(mem_name,"m%d",arg++);
+//    OMR::JitBuilder::IlType *mt = TypeFieldType(ppValue);
+
+    mem_names_.push_back(mem_name);
+    DefineGlobal(mem_names_.back().data(),types_->PointerTo(Int8),reinterpret_cast<void*>(env_.mems+arg-1));
+    //it must be a pointer to the value, as in globals
+  }
 
   DefineReturnType(returnType_);
 }
@@ -239,8 +250,8 @@ void AOTFunctionBuilder::pushParams() {
   auto memories_size = env_.GetMemoryCount();
   auto globals_size = env_.GetGlobalCount();
   int arg = 0;
-  if (memories_size > 0)
-  		arg++;
+//if (memories_size > 0)
+//		arg++;
  // if (globals_size > 0)
  // 		arg++;
   
@@ -933,23 +944,25 @@ bool AOTFunctionBuilder::Emit(OMR::JitBuilder::BytecodeBuilder* b,
 	auto* fn = meta_it->second.wasm_fn;
 	auto& builder = aotManager_.getFB(fn->offset);
 
-	std::vector<OMR::JitBuilder::IlValue*> args;
+	//std::vector<OMR::JitBuilder::IlValue*> args;
+	int size = env_.GetFuncSignature(fn->sig_index)->param_types.size();
+	OMR::JitBuilder::IlValue **args = new OMR::JitBuilder::IlValue*[size]();
 
-	if(env_.GetMemoryCount() > 0) {
-	  args.push_back(b->Load("memories"));
+	//for(const auto& t: env_.GetFuncSignature(fn->sig_index)->param_types) {
+	int i= size;
+	for(auto t = env_.GetFuncSignature(fn->sig_index)->param_types.rbegin();
+	    t!=env_.GetFuncSignature(fn->sig_index)->param_types.rend(); t++) {
+	  args[--i] = Pop(b, TypeFieldName(*t));
 	}
 
-	for(const auto& t: env_.GetFuncSignature(fn->sig_index)->param_types) {
-	  args.push_back(Pop(b, TypeFieldName(t)));
-	}
-
- 	auto* value = b->Call(fn->dbg_name_.c_str(), args.size(), args.data());
+ 	auto* value = b->Call(fn->dbg_name_.c_str(), size, args);
 	pushReturnValue(fn, b, value);
+	delete args;
 	//aotManager_.addCallToRegistry(fn_name_,builder.fn_name_);
       } else {
 	throw std::runtime_error("Call: function not found!");
       }
-
+      
       break;
     }
 
@@ -1127,9 +1140,16 @@ bool AOTFunctionBuilder::Emit(OMR::JitBuilder::BytecodeBuilder* b,
     case Opcode::I64Load:
     case Opcode::F32Load:
     case Opcode::F64Load: {
-      auto* addr = calculateMemoryIndex(b, &pc); // comes out as i64.
-      Push(b, "i64", b->LoadAt(pValueType_, addr));
-
+      //auto* addr = calculateMemoryIndex(b, &pc); // comes out as i64.
+      //Push(b, "i64", b->LoadAt(pValueType_, addr));
+      auto index = ReadU32(&pc);
+      auto *mem = b->Load(mem_names_[index].data());
+      auto offset = b->ConstInt64(static_cast<uint64_t>(ReadU32(&pc)));
+      auto address = b->Add(Pop(b, "i64"), offset);
+      auto location = b->IndexAt(types_->PointerTo(Int8), mem, address);
+      EmitTrapIf(b,b->EqualTo(location,b->ConstAddress(nullptr)),
+	     interp::Result::TrapMemoryAccessOutOfBounds);
+      Push(b, "i64", b->LoadAt(pValueType_, location));
       break;
     }
 
@@ -1182,8 +1202,18 @@ bool AOTFunctionBuilder::Emit(OMR::JitBuilder::BytecodeBuilder* b,
     case Opcode::I64Store:
     case Opcode::F32Store:
     case Opcode::F64Store: {
-      auto* value = Pop(b, "i64");
-      b->StoreAt(calculateMemoryIndex(b, &pc), value);
+//      auto* value = Pop(b, "i64");
+//      b->StoreAt(calculateMemoryIndex(b, &pc), value);
+      auto index = ReadU32(&pc);
+      auto *value = Pop(b,"i64"); 
+      auto *mem = b->Load(mem_names_[index].data());
+      auto offset = b->ConstInt64(static_cast<uint64_t>(ReadU32(&pc)));
+      auto address = b->Add(Pop(b, "i64"), offset);
+      //auto *value = Pop(b,"i64");
+      auto location = b->IndexAt(types_->PointerTo(Int8), mem, address);
+      EmitTrapIf(b,b->EqualTo(location,b->ConstAddress(nullptr)),
+           interp::Result::TrapMemoryAccessOutOfBounds);
+      b->StoreAt(location, value);
       break;
     }
 

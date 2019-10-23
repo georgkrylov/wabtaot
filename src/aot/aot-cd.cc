@@ -26,6 +26,7 @@
 #include <math.h>
 #include <string>
 #include <dlfcn.h>
+#include <time.h>
 
 using namespace wabt;
 using namespace wabt::interp;
@@ -131,14 +132,13 @@ wabt::Result compileAOT(interp::Environment& env, DefinedModule* module)
   auto func_count = env.GetFuncCount();
   
   AOTManager aotManager;
-  
+  env.FillMemories();
   for(Index i = 0; i < func_count; ++i) {
     if(!env.GetFunc(i)->is_compiled) {
       auto* fn = cast<wabt::interp::DefinedFunc>(env.GetFunc(i));
       std::unique_ptr<AOTTypeDictionary> types(new AOTTypeDictionary());
       std::string name = "f" + std::to_string(i) +"m"+module->name.substr(0,3);
       
-
       AOTFunctionBuilder* builder = new AOTFunctionBuilder(&thread, fn,
 							   std::move(name),
 							   types.get(),
@@ -236,6 +236,14 @@ void relocateAOT(interp::Environment& env,DefinedModule *module)
     global_names.emplace_back(global_name);
     setCodeEntry(const_cast<char*>(global_names.back().data()),reinterpret_cast<void*>(globals+i));
   }
+  env.FillMemories();
+  char memory_name[6];
+  for(int i=0;i<env.GetMemoryCount();i++) {
+    
+    sprintf(memory_name,"m%d",i);
+    //global_names.emplace_back(global_name);
+    setCodeEntry(const_cast<char*>(memory_name),reinterpret_cast<void*>(env.GetMems()+i));
+  }
   // uint16_t compiled_function_index = 0;
   for(Index i = 0; i < module->compiled_functions.size(); ++i) {
     // if(!env.GetFunc(i)->is_host) {
@@ -270,10 +278,12 @@ void runExports(interp::Environment& env,DefinedModule *module)
         double a = reinterpret_cast<double(*)()>(fn)();
         std::cout<<"Export "<<exported.name<<" : "<<a<<"\n";
         }
-      else {
+      else {	
       uint64_t a = reinterpret_cast<uint64_t(*)()>(fn)();
       std::cout<<"Export "<<exported.name<<" : "<<a<<"\n";
       }
+    }else{
+      reinterpret_cast<void(*)()>(fn)();
     }
   }
 }

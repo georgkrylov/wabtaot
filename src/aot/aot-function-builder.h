@@ -189,6 +189,7 @@ class AOTFunctionBuilder : public OMR::JitBuilder::MethodBuilder {
   std::vector<OMR::JitBuilder::IlType*> param_types_;
 
   std::vector<std::string> global_names_;
+  std::vector<std::string> mem_names_;
 
   struct PreviousCompilerState {
     OMR::JitBuilder::BytecodeBuilder* b;

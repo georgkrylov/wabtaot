@@ -553,6 +553,9 @@ class Environment {
     registered_module_bindings_.emplace(std::forward<Args>(args)...);
   }
 
+  uint64_t memoriesLoc(){ return reinterpret_cast<uint64_t>(memories_[0].data.data()); }
+  char **GetMems() {return mems;}
+
   HostModule* AppendHostModule(string_view name);
   void AppendDefModule(DefinedModule*);
 
@@ -564,6 +567,7 @@ class Environment {
   void Disassemble(Stream* stream, IstreamOffset from, IstreamOffset to);
   void DisassembleModule(Stream* stream, Module*);
   void LoadDLib(char *filename);
+  void FillMemories();
 
  private:
   friend class Thread;
@@ -604,6 +608,7 @@ class Environment {
   jit::JitEnvironment jit_env_;
   std::unordered_map<IstreamOffset, JitMeta> jit_meta_;
   ELFLoader *elfLoader = nullptr;
+  char **mems = nullptr;
 };
 
 struct ThreadOffset;
