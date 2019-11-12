@@ -102,6 +102,12 @@ static wabt::Result ReadModule(const char* module_filename,
   HostModule* host_module = env->AppendHostModule("host");
   host_module->import_delegate.reset(new WasmInterpHostImportDelegate());
 
+  HostModule *wasi = env->AppendHostModule("wasi_unstable");
+  wasi->import_delegate.reset(new WasmInterpHostImportDelegate());
+
+  HostModule *envi = env->AppendHostModule("env");
+  envi->import_delegate.reset(new WasmInterpHostImportDelegate());
+
   // *out_module = nullptr;
 
   result = ReadFile(module_filename, &file_data);
@@ -292,8 +298,9 @@ void registerModules(const char* module_filename, Environment* env){
   std::string module_name(module_filename);
   // env->AppendHostModule(module.substr(0,module.find(".")))->import_delegate.reset(new WasmInterpHostImportDelegate());
   DefinedModule* module = new DefinedModule();
-  // module->name = module_name.substr(module_name.find_last_of('/'),module_name.find_last_of('.'));
-  module->name = module_name.substr(module_name.find_last_of('/')+1,3);
+  module->name = module_name.substr(module_name.find_last_of('/')+1,module_name.find_last_of('.')-module_name.find_last_of('/')-1);
+  //module->name = module_name.substr(0,module_name.find_last_of('.'));
+  //module->name = module_name;//.substr(module_name.find_last_of('/')+1,3);
   env->AppendDefModule(module);
 }
 
