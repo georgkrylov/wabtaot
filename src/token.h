@@ -17,127 +17,28 @@
 #ifndef WABT_TOKEN_H_
 #define WABT_TOKEN_H_
 
-#include <string>
-
 #include "src/literal.h"
 #include "src/opcode.h"
+#include "src/string-view.h"
 
 namespace wabt {
 
 struct Literal {
   Literal() = default;
-  Literal(LiteralType type, const std::string& text) : type(type), text(text) {}
+  Literal(LiteralType type, string_view text) : type(type), text(text) {}
 
   LiteralType type;
-  std::string text;
+  string_view text;
 };
 
 enum class TokenType {
-  // Tokens with no additional data (i.e. bare).
-  Invalid,
-  Anyfunc,
-  AssertExhaustion,
-  AssertInvalid,
-  AssertMalformed,
-  AssertReturn,
-  AssertReturnArithmeticNan,
-  AssertReturnCanonicalNan,
-  AssertTrap,
-  AssertUnlinkable,
-  Bin,
-  Data,
-  Elem,
-  Eof,
-  Except,
-  Export,
-  Func,
-  Get,
-  Global,
-  Import,
-  Invoke,
-  Local,
-  Lpar,
-  Memory,
-  Module,
-  Mut,
-  Offset,
-  Param,
-  Quote,
-  Register,
-  Result,
-  Rpar,
-  Shared,
-  Start,
-  Table,
-  Then,
-  Type,
-  First_Bare = Invalid,
-  Last_Bare = Type,
-
-  // Tokens with Literal data.
-  Float,
-  Int,
-  Nat,
-  First_Literal = Float,
-  Last_Literal = Nat,
-
-  // Tokens with Opcode data.
-  AtomicLoad,
-  AtomicRmw,
-  AtomicRmwCmpxchg,
-  AtomicStore,
-  Binary,
-  Block,
-  Br,
-  BrIf,
-  BrTable,
-  Call,
-  CallIndirect,
-  Catch,
-  CatchAll,
-  Compare,
-  Const,
-  Convert,
-  CurrentMemory,
-  Drop,
-  Else,
-  End,
-  GetGlobal,
-  GetLocal,
-  GrowMemory,
-  If,
-  Load,
-  Loop,
-  Nop,
-  Rethrow,
-  Return,
-  Select,
-  SetGlobal,
-  SetLocal,
-  Store,
-  TeeLocal,
-  Throw,
-  Try,
-  Unary,
-  Unreachable,
-  Wait,
-  Wake,
-  First_Opcode = AtomicLoad,
-  Last_Opcode = Wake,
-
-  // Tokens with string data.
-  AlignEqNat,
-  OffsetEqNat,
-  Reserved,
-  Text,
-  Var,
-  First_String = AlignEqNat,
-  Last_String = Var,
-
-  // Tokens with Type data.
-  ValueType,
-  First_Type = ValueType,
-  Last_Type = ValueType,
+#define WABT_TOKEN(name, string) name,
+#define WABT_TOKEN_FIRST(group, first) First_##group = first,
+#define WABT_TOKEN_LAST(group, last) Last_##group = last,
+#include "token.def"
+#undef WABT_TOKEN
+#undef WABT_TOKEN_FIRST
+#undef WABT_TOKEN_LAST
 
   First = First_Bare,
   Last = Last_Type,
@@ -173,14 +74,9 @@ struct Token {
   Token() : token_type_(TokenType::Invalid) {}
   Token(Location, TokenType);
   Token(Location, TokenType, Type);
-  Token(Location, TokenType, const std::string&);
+  Token(Location, TokenType, string_view);
   Token(Location, TokenType, Opcode);
   Token(Location, TokenType, const Literal&);
-  Token(const Token&);
-  Token(Token&&);
-  Token& operator=(const Token&);
-  Token& operator=(Token&&);
-  ~Token();
 
   Location loc;
 
@@ -191,14 +87,20 @@ struct Token {
   bool HasOpcode() const { return IsTokenTypeOpcode(token_type_); }
   bool HasLiteral() const { return IsTokenTypeLiteral(token_type_); }
 
-  const std::string& text() const {
+  string_view text() const {
     assert(HasText());
     return text_;
   }
 
-  Type type() const { assert(HasType()); return type_; }
+  Type type() const {
+    assert(HasType());
+    return type_;
+  }
 
-  Opcode opcode() const { assert(HasOpcode()); return opcode_; }
+  Opcode opcode() const {
+    assert(HasOpcode());
+    return opcode_;
+  }
 
   const Literal& literal() const {
     assert(HasLiteral());
@@ -209,12 +111,10 @@ struct Token {
   std::string to_string_clamp(size_t max_length) const;
 
  private:
-  void Destroy();
-
   TokenType token_type_;
 
   union {
-    std::string text_;
+    string_view text_;
     Type type_;
     Opcode opcode_;
     Literal literal_;
@@ -223,4 +123,4 @@ struct Token {
 
 }  // namespace wabt
 
-#endif // WABT_TOKEN_H_
+#endif  // WABT_TOKEN_H_

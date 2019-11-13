@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#include <cstddef>
+
 #include "environment.h"
 #include "JitBuilder.hpp"
 

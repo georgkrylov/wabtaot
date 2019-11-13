@@ -19,10 +19,19 @@ add_library(wabtjit STATIC
   type-dictionary.cc
   function-builder.cc
   wabtjit.cc
+  stack.cc
+  vms_hack.cc
 )
 
 # Mark JitBuilder include directories as "system" include directories. For most compilers, this
 # suppresses any warnings they would otherwise generate.
+set(JITBUILDER_EXTRA_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/../../third_party/omr/compiler ${CMAKE_CURRENT_SOURCE_DIR}/../../third_party/omr)
 get_property(JITBUILDER_INCLUDE TARGET jitbuilder PROPERTY INTERFACE_INCLUDE_DIRECTORIES)
-target_include_directories(wabtjit SYSTEM PRIVATE "${JITBUILDER_INCLUDE}")
-target_link_libraries(wabtjit jitbuilder omrvmstartup)
+
+#target_include_directories(wabtjit SYSTEM PRIVATE "${JITBUILDER_INCLUDE}")
+#target_link_libraries(wabtjit jitbuilder omrvmstartup)
+
+target_include_directories(wabtjit SYSTEM PUBLIC "${JITBUILDER_INCLUDE}")
+target_include_directories(wabtjit SYSTEM PUBLIC "${JITBUILDER_EXTRA_INCLUDE}")
+target_link_libraries(wabtjit PUBLIC jitbuilder)
+

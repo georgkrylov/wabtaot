@@ -18,8 +18,8 @@
 #define WABTJIT_HPP
 
 #include "src/common.h"
-#include "src/interp.h"
-#include "type-dictionary.h"
+//#include "type-dictionary.h"
+#include "src/interp/interp.h"
 
 namespace wabt {
 namespace jit {

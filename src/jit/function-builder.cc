@@ -17,66 +17,18 @@
 #include "function-builder.h"
 #include "wabtjit.h"
 #include "src/cast.h"
-#include "src/interp.h"
-//#include "VirtualMachineState.hpp"
-//#include "infra/Assert.hpp"
+#include "src/interp/interp.h"
+#include "src/interp/interp-internal.h"
+#include "ilgen/VirtualMachineState.hpp"
+#include "infra/Assert.hpp"
 
 #include <cmath>
 #include <limits>
 #include <type_traits>
-#include <dlfcn.h>
 
 namespace wabt {
 
 namespace jit {
-
-// The following functions are required to be able to properly parse opcodes. However, their
-// original definitions are defined with static linkage in src/interp.cc. Because of this, the only
-// way to use them is to simply copy their definitions here.
-
-template <typename T>
-inline T ReadUxAt(const uint8_t* pc) {
-  T result;
-  memcpy(&result, pc, sizeof(T));
-  return result;
-}
-
-template <typename T>
-inline T ReadUx(const uint8_t** pc) {
-  T result = ReadUxAt<T>(*pc);
-  *pc += sizeof(T);
-  return result;
-}
-
-inline uint8_t ReadU8(const uint8_t** pc) {
-  return ReadUx<uint8_t>(pc);
-}
-
-inline uint32_t ReadU32(const uint8_t** pc) {
-  return ReadUx<uint32_t>(pc);
-}
-
-inline uint64_t ReadU64(const uint8_t** pc) {
-  return ReadUx<uint64_t>(pc);
-}
-
-inline Opcode ReadOpcode(const uint8_t** pc) {
-  uint8_t value = ReadU8(pc);
-  if (Opcode::IsPrefixByte(value)) {
-    // For now, assume all instructions are encoded with just one extra byte
-    // so we don't have to decode LEB128 here.
-    uint32_t code = ReadU8(pc);
-    return Opcode::FromCode(value, code);
-  } else {
-    // TODO(binji): Optimize if needed; Opcode::FromCode does a log2(n) lookup
-    // from the encoding.
-    return Opcode::FromCode(value);
-  }
-}
-
-inline Opcode ReadOpcodeAt(const uint8_t* pc) {
-  return ReadOpcode(&pc);
-}
 
 #define CHECK_TRAP_IN_HELPER(...)                \
   do {                                           \
@@ -94,62 +46,32 @@ inline Opcode ReadOpcodeAt(const uint8_t* pc) {
   } while (0)
 
 FunctionBuilder::Result_t FunctionBuilder::CallHelper(wabt::interp::Thread* th, wabt::interp::IstreamOffset offset, uint8_t* current_pc) {
-  // no need to check if JIT was enabled since we can only get here it was
-  auto meta_it = th->env_->jit_meta_.find(offset);
+  CHECK_TRAP_IN_HELPER(th->PushCall(current_pc, true));
+  th->set_pc(offset);
 
-  auto call_interp = [&]() {
-    th->set_pc(offset);
+  JITedFunction jit_fn;
+
+  if (th->env_->TryJit(th, offset, &jit_fn)) {
+    TRAP_IF(!jit_fn, FailedJITCompilation);
+    CHECK_TRAP_IN_HELPER(jit_fn());
+  } else {
+    th->in_jit_ = false;
+
     auto last_jit_frame = th->last_jit_frame_;
     th->last_jit_frame_ = th->call_stack_top_;
-    wabt::interp::Result result = wabt::interp::Result::Ok;
+
+    interp::Result result = interp::Result::Ok;
     while (result == wabt::interp::Result::Ok) {
       result = th->Run(1000);
     }
     th->last_jit_frame_ = last_jit_frame;
-    return result;
-  };
 
-  CHECK_TRAP_IN_HELPER(th->PushCall(current_pc));
-  if (meta_it != th->env_->jit_meta_.end()) {
-    auto meta = &meta_it->second;
-    if (!meta->tried_jit) {
-      meta->num_calls++;
-
-      if (meta->num_calls >= th->env_->jit_threshold) {
-        meta->jit_fn = jit::loadThunk(th, meta->wasm_fn,*th->env_);
-
-        if (th->env_->trap_on_failed_comp && meta->jit_fn == nullptr)
-          return static_cast<Result_t>(wabt::interp::Result::TrapFailedJITCompilation);
-      }
-    }
-
-    if (meta->jit_fn) {
-      wabt::interp::Result result = th->CallThunk(meta->jit_fn,meta->wasm_fn); 
-      if (result != wabt::interp::Result::Ok && result != wabt::interp::Result::TrapFailedAOTLookup) {    
-	return static_cast<Result_t>(result);      
-      }                                            
-      
-      if(result == wabt::interp::Result::TrapFailedAOTLookup) {     
-        meta->jit_fn = jit::compile(th, meta->wasm_fn);
-        meta->tried_jit = true;
-	if (meta->jit_fn) {
-	  CHECK_TRAP_IN_HELPER(meta->jit_fn());
-	} else {
-	  auto result = call_interp();
-	  if (result != wabt::interp::Result::Returned)
-	    return static_cast<Result_t>(result);
-	}
-      }
-    } else {
-      auto result = call_interp();
-      if (result != wabt::interp::Result::Returned)
-        return static_cast<Result_t>(result);
-    }
-  } else {
-    auto result = call_interp();
-    if (result != wabt::interp::Result::Returned)
+    if (result != interp::Result::Returned)
       return static_cast<Result_t>(result);
+
+    th->in_jit_ = true;
   }
+
   th->PopCall();
 
   return static_cast<Result_t>(wabt::interp::Result::Ok);
@@ -158,6 +80,9 @@ FunctionBuilder::Result_t FunctionBuilder::CallHelper(wabt::interp::Thread* th, 
 FunctionBuilder::Result_t FunctionBuilder::CallIndirectHelper(wabt::interp::Thread* th, Index table_index, Index sig_index, Index entry_index, uint8_t* current_pc) {
   using namespace wabt::interp;
   auto* env = th->env_;
+
+  th->set_pc(current_pc - th->GetIstream());
+
   Table* table = &env->tables_[table_index];
   TRAP_IF(entry_index >= table->func_indexes.size(), UndefinedTableIndex);
   Index func_index = table->func_indexes[entry_index];
@@ -192,7 +117,7 @@ void* FunctionBuilder::MemoryTranslationHelper(interp::Thread* th, uint32_t memo
 }
 
 FunctionBuilder::FunctionBuilder(interp::Thread* thread, interp::DefinedFunc* fn, TypeDictionary* types)
-    : OMR::JitBuilder::MethodBuilder(types),
+    : TR::MethodBuilder(types),
       thread_(thread),
       fn_(fn),
       valueType_(types->LookupUnion("Value")),
@@ -201,176 +126,196 @@ FunctionBuilder::FunctionBuilder(interp::Thread* thread, interp::DefinedFunc* fn
   DefineFile(__FILE__);
   DefineName(fn->dbg_name_.c_str());
 
-  DefineReturnType(types->toIlType<Result_t>());
+  DefineReturnType(toIlType<Result_t>(types));
 
   DefineFunction("f32_sqrt", __FILE__, "0",
                  reinterpret_cast<void*>(static_cast<float (*)(float)>(std::sqrt)),
                  Float,
                  1,
                  Float);
-  DefineFunction("f32_copysign", __FILE__, "0",
-                 reinterpret_cast<void*>(static_cast<float (*)(float, float)>(std::copysign)),
-                 Float,
-                 2,
-                 Float,
-                 Float);
   DefineFunction("f64_sqrt", __FILE__, "0",
                  reinterpret_cast<void*>(static_cast<double (*)(double)>(std::sqrt)),
                  Double,
                  1,
                  Double);
-  DefineFunction("f64_copysign", __FILE__, "0",
-                 reinterpret_cast<void*>(static_cast<double (*)(double, double)>(std::copysign)),
-                 Double,
-                 2,
-                 Double,
-                 Double);
   DefineFunction("CallHelper", __FILE__, "0",
                  reinterpret_cast<void*>(CallHelper),
-                 types->toIlType<Result_t>(),
+                 toIlType<Result_t>(types),
                  3,
-                 types->toIlType<void*>(),
-                 types->toIlType<wabt::interp::IstreamOffset>(),
+                 toIlType<void*>(types),
+                 toIlType<wabt::interp::IstreamOffset>(types),
                  types->PointerTo(Int8));
   DefineFunction("CallIndirectHelper", __FILE__, "0",
                  reinterpret_cast<void*>(CallIndirectHelper),
-                 types->toIlType<Result_t>(),
+                 toIlType<Result_t>(types),
                  5,
-                 types->toIlType<void*>(),
-                 types->toIlType<Index>(),
-                 types->toIlType<Index>(),
-                 types->toIlType<Index>(),
+                 toIlType<void*>(types),
+                 toIlType<Index>(types),
+                 toIlType<Index>(types),
+                 toIlType<Index>(types),
                  types->PointerTo(Int8));
   DefineFunction("CallHostHelper", __FILE__, "0",
                  reinterpret_cast<void*>(CallHostHelper),
-                 types->toIlType<Result_t>(),
+                 toIlType<Result_t>(types),
                  2,
-                 types->toIlType<void*>(),
-                 types->toIlType<Index>());
+                 toIlType<void*>(types),
+                 toIlType<Index>(types));
   DefineFunction("MemoryTranslationHelper", __FILE__, "0",
                  reinterpret_cast<void*>(MemoryTranslationHelper),
-                 types->toIlType<void*>(),
+                 toIlType<void*>(types),
                  4,
-                 types->toIlType<void*>(),
-                 types->toIlType<uint32_t>(),
-                 types->toIlType<uint64_t>(),
-                 types->toIlType<uint32_t>());
+                 toIlType<void*>(types),
+                 toIlType<uint32_t>(types),
+                 toIlType<uint64_t>(types),
+                 toIlType<uint32_t>(types));
 }
 
 bool FunctionBuilder::buildIL() {
-  setVMState(new OMR::JitBuilder::VirtualMachineState());
-
   const uint8_t* istream = thread_->GetIstream();
+  const uint8_t* pc = &istream[fn_->offset];
+  auto* state = new WabtState();
 
-  workItems_.emplace_back(OrphanBytecodeBuilder(0, const_cast<char*>(ReadOpcodeAt(&istream[fn_->offset]).GetName())),
-                          &istream[fn_->offset]);
+  SetUpLocals(this, &pc, &state->stack);
+  setVMState(state);
+
+  workItems_.emplace_back(OrphanBytecodeBuilder(0, const_cast<char*>(interp::ReadOpcodeAt(pc).GetName())),
+                          pc);
   AppendBuilder(workItems_[0].builder);
 
   int32_t next_index;
 
   while ((next_index = GetNextBytecodeFromWorklist()) != -1) {
     auto& work_item = workItems_[next_index];
+    state = static_cast<WabtState*>(work_item.builder->vmState());
 
-    if (!Emit(work_item.builder, istream, work_item.pc))
+    if (!Emit(work_item.builder, istream, work_item.pc, state->stack))
       return false;
   }
 
   return true;
 }
 
-/**
- * @brief Generate push to the interpreter stack
- *
- * The generated code should be equivalent to:
- *
- * auto stack_top = *stack_top_addr;
- * stack_base_addr[stack_top] = value;
- * *stack_top_addr = stack_top + 1;
- */
-void FunctionBuilder::Push(OMR::JitBuilder::IlBuilder* b, const char* type, OMR::JitBuilder::IlValue* value, const uint8_t* pc) {
+void FunctionBuilder::SetUpLocals(TR::IlBuilder* b, const uint8_t** pc, VirtualStack* stack) {
+  // Add placeholders onto the virtual stack. These values should never be actually read, but will
+  // eventually be dropped using drop or drop_keep in the function epilogue.
+  for (size_t i = 0; i < fn_->param_and_local_types.size(); i++) {
+    stack->Push(nullptr);
+  }
+
+  if (fn_->local_count == 0) return;
+
+  Opcode opcode = interp::ReadOpcode(pc);
+  TR_ASSERT_FATAL(opcode == Opcode::InterpAlloca, "Function with locals is missing alloca");
+
+  auto alloc_num = interp::ReadU32(pc);
+  TR_ASSERT_FATAL(alloc_num == fn_->local_count,
+                  "Function has wrong alloca size (%u != %u)",
+                  alloc_num, fn_->local_count);
+
+  auto pInt32 = typeDictionary()->PointerTo(Int32);
+  auto* stack_top_addr = b->ConstAddress(&thread_->value_stack_top_);
+  auto* stack_base_addr = b->ConstAddress(thread_->value_stack_.data());
+
+  auto* old_value_stack_top = b->LoadAt(pInt32, stack_top_addr);
+  auto* count = b->ConstInt32(fn_->local_count);
+  auto* stack_top = b->Add(old_value_stack_top, count);
+  b->StoreAt(stack_top_addr, stack_top);
+
+  TR::IlBuilder* overflow_handler = nullptr;
+
+  b->IfThen(&overflow_handler,
+  b->       UnsignedGreaterOrEqualTo(
+                stack_top,
+  b->           Const(static_cast<int32_t>(thread_->value_stack_.size()))));
+  overflow_handler->Return(
+  overflow_handler->    Const(static_cast<Result_t>(interp::Result::TrapValueStackExhausted)));
+
+  TR::IlBuilder* set_zero = nullptr;
+  b->ForLoopUp("i", &set_zero, old_value_stack_top, stack_top, b->Const(1));
+  set_zero->StoreIndirect("Value", "i64",
+  set_zero->              IndexAt(pValueType_, stack_base_addr,
+  set_zero->                      Load("i")),
+  set_zero->              ConstInt64(0));
+}
+
+void FunctionBuilder::TearDownLocals(TR::IlBuilder* b) {
+  if (fn_->param_and_local_types.size() == 0) return;
+
+  auto pInt32 = typeDictionary()->PointerTo(Int32);
+  auto* stack_top_addr = b->ConstAddress(&thread_->value_stack_top_);
+
+  auto* old_stack_top = b->LoadAt(pInt32, stack_top_addr);
+  auto* count = b->ConstInt32(fn_->param_and_local_types.size());
+
+  b->StoreAt(stack_top_addr, b->Sub(old_stack_top, count));
+}
+
+uint32_t FunctionBuilder::GetLocalOffset(VirtualStack* stack, Type* type, uint32_t depth) {
+  uint32_t i = stack->Depth() - depth;
+  TR_ASSERT_FATAL(i < fn_->param_and_local_types.size(), "Attempt to access invalid local 0x%x", i);
+
+  if (type != nullptr) {
+    *type = fn_->param_and_local_types[i];
+  }
+
+  return fn_->param_and_local_types.size() - i;
+}
+
+void FunctionBuilder::MoveToPhysStack(TR::IlBuilder* b, const uint8_t* pc, VirtualStack* stack, uint32_t depth) {
+  if (depth == 0)
+    return;
+
   auto pInt32 = typeDictionary()->PointerTo(Int32);
   auto* stack_top_addr = b->ConstAddress(&thread_->value_stack_top_);
   auto* stack_base_addr = b->ConstAddress(thread_->value_stack_.data());
 
   auto* stack_top = b->LoadAt(pInt32, stack_top_addr);
+  auto* new_stack_top = b->Add(stack_top, b->ConstInt32(depth));
 
   EmitTrapIf(b,
-  b->        UnsignedGreaterOrEqualTo(
-                 stack_top,
-  b->            Const(static_cast<int32_t>(thread_->value_stack_.size()))),
+  b->        Or(
+  b->            UnsignedGreaterThan(
+                     new_stack_top,
+  b->                Const(static_cast<int32_t>(thread_->value_stack_.size()))),
+  b->            UnsignedLessThan(
+                     new_stack_top,
+                     stack_top)),
   b->        Const(static_cast<Result_t>(interp::Result::TrapValueStackExhausted)),
-	     pc);
+             pc);
 
-  b->StoreIndirect("Value", type,
-  b->              IndexAt(pValueType_,
-                           stack_base_addr,
-                           stack_top),
-                   value);
-  b->StoreAt(stack_top_addr,
-  b->        Add(
-                 stack_top,
-  b->            Const(1)));
-}
+  for (size_t i = 0; i < depth; i++) {
+    auto* val = stack->Pick(depth - i - 1);
 
-/**
- * @brief Generate pop from the interpreter stack
- *
- * The generated code should be equivalent to:
- *
- * auto new_stack_top = *stack_top_addr - 1;
- * *stack_top_addr = new_stack_top;
- * return stack_base_addr[new_stack_top];
- */
-OMR::JitBuilder::IlValue* FunctionBuilder::Pop(OMR::JitBuilder::IlBuilder* b, const char* type) {
-  auto pInt32 = typeDictionary()->PointerTo(Int32);
-  auto* stack_top_addr = b->ConstAddress(&thread_->value_stack_top_);
-  auto* stack_base_addr = b->ConstAddress(thread_->value_stack_.data());
+    b->StoreIndirect("Value", TypeFieldName(val->getDataType()),
+    b->              IndexAt(pValueType_,
+                             stack_base_addr,
+    b->                      Add(stack_top, b->ConstInt32(i))),
+                     val);
+  }
 
-  auto* new_stack_top = b->Sub(
-                        b->    LoadAt(pInt32, stack_top_addr),
-                        b->    Const(1));
+  stack->DropKeep(depth, 0);
+
   b->StoreAt(stack_top_addr, new_stack_top);
-  return b->LoadIndirect("Value", type,
-         b->             IndexAt(pValueType_,
-                                 stack_base_addr,
-                                 new_stack_top));
 }
 
-/**
- * @brief Generate a drop-x from the interpreter stack, optionally keeping the top value
- *
- * The generated code should be equivalent to:
- *
- * auto stack_top = *stack_top_addr;
- * auto new_stack_top = stack_top - drop_count;
- *
- * if (keep_count == 1) {
- *   stack_base_addr[new_stack_top - 1] = stack_base_addr[stack_top - 1];
- * }
- *
- * *stack_top_addr = new_stack_top;
- */
-void FunctionBuilder::DropKeep(OMR::JitBuilder::IlBuilder* b, uint32_t drop_count, uint8_t keep_count) {
-//  TR_ASSERT(keep_count <= 1, "Invalid keep count");
+void FunctionBuilder::MoveFromPhysStack(TR::IlBuilder* b, VirtualStack* stack, const std::vector<Type>& types) {
+  if (types.size() == 0)
+    return;
 
   auto pInt32 = typeDictionary()->PointerTo(Int32);
   auto* stack_top_addr = b->ConstAddress(&thread_->value_stack_top_);
   auto* stack_base_addr = b->ConstAddress(thread_->value_stack_.data());
 
   auto* stack_top = b->LoadAt(pInt32, stack_top_addr);
-  auto* new_stack_top = b->Sub(stack_top, b->Const(static_cast<int32_t>(drop_count)));
+  auto* new_stack_top = b->Sub(stack_top, b->ConstInt32(types.size()));
 
-  if (keep_count == 1) {
-    auto* old_top_value = b->LoadAt(pValueType_,
-                          b->       IndexAt(pValueType_,
-                                            stack_base_addr,
-                          b->               Sub(stack_top, b->Const(1))));
+  for (size_t i = 0; i < types.size(); i++) {
+    auto* val = b->LoadIndirect("Value", TypeFieldName(types[i]),
+    b->                         IndexAt(pValueType_,
+                                        stack_base_addr,
+    b->                                 Add(new_stack_top, b->ConstInt32(i))));
 
-    b->StoreAt(
-    b->        IndexAt(pValueType_,
-                       stack_base_addr,
-    b->                Sub(new_stack_top, b->Const(1))),
-               old_top_value);
+    stack->Push(val);
   }
 
   b->StoreAt(stack_top_addr, new_stack_top);
@@ -383,7 +328,7 @@ void FunctionBuilder::DropKeep(OMR::JitBuilder::IlBuilder* b, uint32_t drop_coun
  *
  * return &value_stack_[value_stack_top_ - depth];
  */
-OMR::JitBuilder::IlValue* FunctionBuilder::Pick(OMR::JitBuilder::IlBuilder* b, Index depth) {
+TR::IlValue* FunctionBuilder::PickPhys(TR::IlBuilder* b, uint32_t depth) {
   auto pInt32 = typeDictionary()->PointerTo(Int32);
   auto* stack_top_addr = b->ConstAddress(&thread_->value_stack_top_);
   auto* stack_base_addr = b->ConstAddress(thread_->value_stack_.data());
@@ -437,12 +382,28 @@ const char* FunctionBuilder::TypeFieldName(Type t) const {
     case Type::F64:
       return TypeFieldName<double>();
     default:
-     // OMR::JitBuilder_ASSERT_FATAL(false, "Invalid primitive type");
+      TR_ASSERT_FATAL(false, "Invalid primitive type");
       return nullptr;
   }
 }
 
-OMR::JitBuilder::IlValue* FunctionBuilder::Const(OMR::JitBuilder::IlBuilder* b, const interp::TypedValue* v) const {
+const char* FunctionBuilder::TypeFieldName(TR::DataType dt) const {
+  switch (dt.getDataType()) {
+    case TR::Int32:
+      return TypeFieldName<int32_t>();
+    case TR::Int64:
+      return TypeFieldName<int64_t>();
+    case TR::Float:
+      return TypeFieldName<float>();
+    case TR::Double:
+      return TypeFieldName<double>();
+    default:
+      TR_ASSERT_FATAL(false, "Invalid primitive type %s", dt.toString());
+      return nullptr;
+  }
+}
+
+TR::IlValue* FunctionBuilder::Const(TR::IlBuilder* b, const interp::TypedValue* v) const {
   switch (v->type) {
     case Type::I32:
       return b->ConstInt32(v->value.i32);
@@ -453,30 +414,30 @@ OMR::JitBuilder::IlValue* FunctionBuilder::Const(OMR::JitBuilder::IlBuilder* b, 
     case Type::F64:
       return b->ConstDouble(Bitcast<double>(v->value.f64_bits));
     default:
-      //TR_ASSERT_FATAL(false, "Invalid primitive type");
+      TR_ASSERT_FATAL(false, "Invalid primitive type");
       return nullptr;
   }
 }
 
 template <typename T, typename TResult, typename TOpHandler>
-void FunctionBuilder::EmitBinaryOp(OMR::JitBuilder::IlBuilder* b, const uint8_t* pc, TOpHandler h) {
-  auto* rhs = Pop(b, TypeFieldName<T>());
-  auto* lhs = Pop(b, TypeFieldName<T>());
+void FunctionBuilder::EmitBinaryOp(TR::IlBuilder* b, const uint8_t* pc, VirtualStack* stack, TOpHandler h) {
+  auto* rhs = stack->Pop();
+  auto* lhs = stack->Pop();
 
-  Push(b, TypeFieldName<TResult>(), h(lhs, rhs), pc);
+  stack->Push(h(lhs, rhs));
 }
 
 template <typename T, typename TResult, typename TOpHandler>
-void FunctionBuilder::EmitUnaryOp(OMR::JitBuilder::IlBuilder* b, const uint8_t* pc, TOpHandler h) {
-  Push(b, TypeFieldName<TResult>(), h(Pop(b, TypeFieldName<T>())), pc);
+void FunctionBuilder::EmitUnaryOp(TR::IlBuilder* b, const uint8_t* pc, VirtualStack* stack, TOpHandler h) {
+  stack->Push(h(stack->Pop()));
 }
 
 template <typename T>
-void FunctionBuilder::EmitIntDivide(OMR::JitBuilder::IlBuilder* b, const uint8_t* pc) {
+void FunctionBuilder::EmitIntDivide(TR::IlBuilder* b, const uint8_t* pc, VirtualStack* stack) {
   static_assert(std::is_integral<T>::value,
                 "EmitIntDivide only works on integral types");
 
-  EmitBinaryOp<T>(b, pc, [&](OMR::JitBuilder::IlValue* dividend, OMR::JitBuilder::IlValue* divisor) {
+  EmitBinaryOp<T>(b, pc, stack, [&](TR::IlValue* dividend, TR::IlValue* divisor) {
     EmitTrapIf(b,
     b->        EqualTo(divisor, b->Const(static_cast<T>(0))),
     b->        Const(static_cast<Result_t>(interp::Result::TrapIntegerDivideByZero)),
@@ -494,19 +455,19 @@ void FunctionBuilder::EmitIntDivide(OMR::JitBuilder::IlBuilder* b, const uint8_t
 }
 
 template <typename T>
-void FunctionBuilder::EmitIntRemainder(OMR::JitBuilder::IlBuilder* b, const uint8_t* pc) {
+void FunctionBuilder::EmitIntRemainder(TR::IlBuilder* b, const uint8_t* pc, VirtualStack* stack) {
   static_assert(std::is_integral<T>::value,
                 "EmitIntRemainder only works on integral types");
 
-  EmitBinaryOp<T>(b, pc, [&](OMR::JitBuilder::IlValue* dividend, OMR::JitBuilder::IlValue* divisor) {
+  EmitBinaryOp<T>(b, pc, stack, [&](TR::IlValue* dividend, TR::IlValue* divisor) {
     EmitTrapIf(b,
     b->        EqualTo(divisor, b->Const(static_cast<T>(0))),
     b->        Const(static_cast<Result_t>(interp::Result::TrapIntegerDivideByZero)),
                pc);
 
-    OMR::JitBuilder::IlValue* return_value = b->Const(static_cast<T>(0));
+    TR::IlValue* return_value = b->Const(static_cast<T>(0));
 
-    OMR::JitBuilder::IlBuilder* div_no_ovf_path = nullptr;
+    TR::IlBuilder* div_no_ovf_path = nullptr;
     b->IfThen(&div_no_ovf_path,
     b->       Or(
     b->           NotEqualTo(dividend, b->Const(std::numeric_limits<T>::min())),
@@ -519,16 +480,16 @@ void FunctionBuilder::EmitIntRemainder(OMR::JitBuilder::IlBuilder* b, const uint
 }
 
 template <typename T>
-OMR::JitBuilder::IlValue* FunctionBuilder::EmitMemoryPreAccess(OMR::JitBuilder::IlBuilder* b, const uint8_t** pc) {
+TR::IlValue* FunctionBuilder::EmitMemoryPreAccess(TR::IlBuilder* b, const uint8_t** pc, VirtualStack* stack) {
   auto th_addr = b->ConstAddress(thread_);
-  auto mem_id = b->ConstInt32(ReadU32(pc));
-  auto offset = b->ConstInt64(static_cast<uint64_t>(ReadU32(pc)));
+  auto mem_id = b->ConstInt32(interp::ReadU32(pc));
+  auto offset = b->ConstInt64(static_cast<uint64_t>(interp::ReadU32(pc)));
 
   auto address = b->Call("MemoryTranslationHelper",
                          4,
                          th_addr,
                          mem_id,
-                         b->Add(b->UnsignedConvertTo(Int64, Pop(b, "i32")), offset),
+                         b->Add(b->UnsignedConvertTo(Int64, stack->Pop()), offset),
                          b->ConstInt32(sizeof(T)));
 
   EmitTrapIf(b,
@@ -539,7 +500,7 @@ OMR::JitBuilder::IlValue* FunctionBuilder::EmitMemoryPreAccess(OMR::JitBuilder::
   return address;
 }
 
-void FunctionBuilder::EmitTrap(OMR::JitBuilder::IlBuilder* b, OMR::JitBuilder::IlValue* result, const uint8_t* pc) {
+void FunctionBuilder::EmitTrap(TR::IlBuilder* b, TR::IlValue* result, const uint8_t* pc) {
   if (pc != nullptr) {
     b->StoreAt(b->ConstAddress(&thread_->pc_),
                b->ConstInt32(pc - thread_->GetIstream()));
@@ -548,8 +509,8 @@ void FunctionBuilder::EmitTrap(OMR::JitBuilder::IlBuilder* b, OMR::JitBuilder::I
   b->Return(result);
 }
 
-void FunctionBuilder::EmitCheckTrap(OMR::JitBuilder::IlBuilder* b, OMR::JitBuilder::IlValue* result, const uint8_t* pc) {
-  OMR::JitBuilder::IlBuilder* trap_handler = nullptr;
+void FunctionBuilder::EmitCheckTrap(TR::IlBuilder* b, TR::IlValue* result, const uint8_t* pc) {
+  TR::IlBuilder* trap_handler = nullptr;
 
   b->IfThen(&trap_handler,
   b->       NotEqualTo(result, b->Const(static_cast<Result_t>(interp::Result::Ok))));
@@ -557,36 +518,38 @@ void FunctionBuilder::EmitCheckTrap(OMR::JitBuilder::IlBuilder* b, OMR::JitBuild
   EmitTrap(trap_handler, result, pc);
 }
 
-void FunctionBuilder::EmitTrapIf(OMR::JitBuilder::IlBuilder* b, OMR::JitBuilder::IlValue* condition, OMR::JitBuilder::IlValue* result, const uint8_t* pc) {
-  OMR::JitBuilder::IlBuilder* trap_handler = nullptr;
+void FunctionBuilder::EmitTrapIf(TR::IlBuilder* b, TR::IlValue* condition, TR::IlValue* result, const uint8_t* pc) {
+  TR::IlBuilder* trap_handler = nullptr;
 
   b->IfThen(&trap_handler, condition);
   EmitTrap(trap_handler, result, pc);
 }
 
 template <>
-OMR::JitBuilder::IlValue* FunctionBuilder::EmitIsNan<float>(OMR::JitBuilder::IlBuilder* b, OMR::JitBuilder::IlValue* value) {
+TR::IlValue* FunctionBuilder::EmitIsNan<float>(TR::IlBuilder* b, TR::IlValue* value) {
   return b->GreaterThan(
          b->           And(
-         b->               BitcastTo(Int32, value),
+         b->               ConvertBitsTo(Int32, value),
          b->               ConstInt32(0x7fffffffU)),
          b->           ConstInt32(0x7f800000U));
 }
 
 template <>
-OMR::JitBuilder::IlValue* FunctionBuilder::EmitIsNan<double>(OMR::JitBuilder::IlBuilder* b, OMR::JitBuilder::IlValue* value) {
+TR::IlValue* FunctionBuilder::EmitIsNan<double>(TR::IlBuilder* b, TR::IlValue* value) {
   return b->GreaterThan(
          b->           And(
-         b->               BitcastTo(Int64, value),
+         b->               ConvertBitsTo(Int64, value),
          b->               ConstInt64(0x7fffffffffffffffULL)),
          b->           ConstInt64(0x7ff0000000000000ULL));
 }
 
 template <typename ToType, typename FromType>
-void FunctionBuilder::EmitTruncation(OMR::JitBuilder::IlBuilder* b, const uint8_t* pc) {
+void FunctionBuilder::EmitTruncation(TR::IlBuilder* b, const uint8_t* pc, VirtualStack* stack) {
   static_assert(std::is_floating_point<FromType>::value, "FromType in EmitTruncation call must be a floating point type");
+  static_assert(std::is_integral<ToType>::value, "ToType in EmitTruncation call must be an integer type");
+  static_assert(std::is_signed<ToType>::value, "ToType in EmitTruncation call must be signed");
 
-  auto* value = Pop(b, TypeFieldName<FromType>());
+  auto* value = stack->Pop();
 
   // TRAP_IF is NaN
   EmitTrapIf(b,
@@ -604,14 +567,14 @@ void FunctionBuilder::EmitTruncation(OMR::JitBuilder::IlBuilder* b, const uint8_
   b->        Const(static_cast<Result_t>(interp::Result::TrapIntegerOverflow)),
              pc);
 
-  auto* target_type = b->typeDictionary()->toIlType<ToType>();
+  auto* target_type = toIlType<ToType>(b->typeDictionary());
 
   // this could be optimized using templates or constant expressions,
   // but the compiler should be able to simplify this anyways
-  auto* new_value = std::is_unsigned<ToType>::value ? b->BitcastTo(target_type, value)
+  auto* new_value = std::is_unsigned<ToType>::value ? b->UnsignedConvertTo(target_type, value)
                                                     : b->ConvertTo(target_type, value);
 
-  Push(b, TypeFieldName<ToType>(), new_value, pc);
+  stack->Push(new_value);
 }
 
 /**
@@ -623,12 +586,12 @@ void FunctionBuilder::EmitTruncation(OMR::JitBuilder::IlBuilder* b, const uint8_
  * the target type.
  */
 template <typename ToType, typename FromType>
-void FunctionBuilder::EmitUnsignedTruncation(OMR::JitBuilder::IlBuilder* b, const uint8_t* pc) {
-  static_assert(std::is_floating_point<FromType>::value, "FromType in EmitTruncation call must be a floating point type");
+void FunctionBuilder::EmitUnsignedTruncation(TR::IlBuilder* b, const uint8_t* pc, VirtualStack* stack) {
+  static_assert(std::is_floating_point<FromType>::value, "FromType in EmitUnsignedTruncation call must be a floating point type");
   static_assert(std::is_integral<ToType>::value, "ToType in EmitUnsignedTruncation call must be an integer type");
   static_assert(std::is_unsigned<ToType>::value, "ToType in EmitUnsignedTruncation call must be unsigned");
 
-  auto* value = Pop(b, TypeFieldName<FromType>());
+  auto* value = stack->Pop();
 
   // TRAP_IF is NaN
   EmitTrapIf(b,
@@ -646,37 +609,121 @@ void FunctionBuilder::EmitUnsignedTruncation(OMR::JitBuilder::IlBuilder* b, cons
   b->        Const(static_cast<Result_t>(interp::Result::TrapIntegerOverflow)),
              pc);
 
-  auto* target_type = b->typeDictionary()->toIlType<ToType>();
+  auto* target_type = toIlType<ToType>(b->typeDictionary());
   auto* new_value = b->UnsignedConvertTo(target_type, b->ConvertTo(Int64, value));
 
-  Push(b, TypeFieldName<ToType>(), new_value, pc);
+  stack->Push(new_value);
+}
+
+template <typename ToType, typename FromType>
+void FunctionBuilder::EmitSaturatingTruncation(TR::IlBuilder* b, VirtualStack* stack) {
+  static_assert(std::is_floating_point<FromType>::value, "FromType in EmitTruncation call must be a floating point type");
+  static_assert(std::is_integral<ToType>::value, "ToType in EmitTruncation call must be an integer type");
+  static_assert(std::is_signed<ToType>::value, "ToType in EmitTruncation call must be signed");
+
+  auto* value = stack->Pop();
+  auto* result = b->Const(static_cast<ToType>(0));
+
+  TR::IlBuilder* non_nan_path = nullptr;
+
+  b->IfThen(&non_nan_path, b->EqualTo(EmitIsNan<FromType>(b, value), b->ConstInt32(0)));
+
+  TR::IlBuilder* too_high_path = nullptr;
+  TR::IlBuilder* not_too_high_path = nullptr;
+
+  non_nan_path->IfThenElse(&too_high_path, &not_too_high_path,
+  non_nan_path->           GreaterThan(value,
+  non_nan_path->                       Const(static_cast<FromType>(std::numeric_limits<ToType>::max()))));
+  too_high_path->StoreOver(result, too_high_path->Const(std::numeric_limits<ToType>::max()));
+
+  TR::IlBuilder* too_low_path = nullptr;
+  TR::IlBuilder* not_too_low_path = nullptr;
+
+  not_too_high_path->IfThenElse(&too_low_path, &not_too_low_path,
+  not_too_high_path->           LessThan(value,
+  not_too_high_path->                    Const(static_cast<FromType>(std::numeric_limits<ToType>::lowest()))));
+  too_low_path->StoreOver(result, too_low_path->Const(std::numeric_limits<ToType>::lowest()));
+
+  auto* target_type = toIlType<ToType>(b->typeDictionary());
+
+  // this could be optimized using templates or constant expressions,
+  // but the compiler should be able to simplify this anyways
+  auto* new_value = std::is_unsigned<ToType>::value ? not_too_low_path->UnsignedConvertTo(target_type, value)
+                                                    : not_too_low_path->ConvertTo(target_type, value);
+  not_too_low_path->StoreOver(result, new_value);
+
+  stack->Push(result);
+}
+
+template <typename ToType, typename FromType>
+void FunctionBuilder::EmitUnsignedSaturatingTruncation(TR::IlBuilder* b, VirtualStack* stack) {
+  static_assert(std::is_floating_point<FromType>::value, "FromType in EmitTruncation call must be a floating point type");
+  static_assert(std::is_integral<ToType>::value, "ToType in EmitUnsignedTruncation call must be an integer type");
+  static_assert(std::is_unsigned<ToType>::value, "ToType in EmitUnsignedTruncation call must be unsigned");
+
+  using ToTypeSigned = typename std::make_signed<ToType>::type;
+
+  auto* value = stack->Pop();
+  auto* result = b->Const(static_cast<ToTypeSigned>(0));
+
+  TR::IlBuilder* non_nan_path = nullptr;
+
+  b->IfThen(&non_nan_path, b->EqualTo(EmitIsNan<FromType>(b, value), b->ConstInt32(0)));
+
+  TR::IlBuilder* too_high_path = nullptr;
+  TR::IlBuilder* not_too_high_path = nullptr;
+
+  non_nan_path->IfThenElse(&too_high_path, &not_too_high_path,
+  non_nan_path->           GreaterThan(value,
+  non_nan_path->                       Const(static_cast<FromType>(std::numeric_limits<ToType>::max()))));
+  too_high_path->StoreOver(result, too_high_path->Const(static_cast<ToTypeSigned>(std::numeric_limits<ToType>::max())));
+
+  TR::IlBuilder* too_low_path = nullptr;
+  TR::IlBuilder* not_too_low_path = nullptr;
+
+  not_too_high_path->IfThenElse(&too_low_path, &not_too_low_path,
+  not_too_high_path->           LessThan(value,
+  not_too_high_path->                    Const(static_cast<FromType>(std::numeric_limits<ToType>::lowest()))));
+  too_low_path->StoreOver(result, too_low_path->Const(static_cast<ToTypeSigned>(std::numeric_limits<ToType>::lowest())));
+
+  auto* target_type = toIlType<ToType>(b->typeDictionary());
+
+  auto* new_value = not_too_low_path->UnsignedConvertTo(target_type, not_too_low_path->ConvertTo(Int64, value));
+  not_too_low_path->StoreOver(result, new_value);
+
+  stack->Push(result);
 }
 
 template <typename T>
-OMR::JitBuilder::IlValue* FunctionBuilder::CalculateShiftAmount(OMR::JitBuilder::IlBuilder* b, OMR::JitBuilder::IlValue* amount) {
+TR::IlValue* FunctionBuilder::CalculateShiftAmount(TR::IlBuilder* b, TR::IlValue* amount) {
   return b->UnsignedConvertTo(Int32,
          b->                  And(amount, b->Const(static_cast<T>(sizeof(T) * 8 - 1))));
 }
 
-bool FunctionBuilder::Emit(OMR::JitBuilder::BytecodeBuilder* b,
+bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
                            const uint8_t* istream,
-                           const uint8_t* pc) {
-  Opcode opcode = ReadOpcode(&pc);
-  //TR_ASSERT(!opcode.IsInvalid(), "Invalid opcode");
+                           const uint8_t* pc,
+                           VirtualStack& stack) {
+  Opcode opcode = interp::ReadOpcode(&pc);
+  TR_ASSERT(!opcode.IsInvalid(), "Invalid opcode");
 
   switch (opcode) {
     case Opcode::Select: {
-      OMR::JitBuilder::IlBuilder* true_path = nullptr;
-      OMR::JitBuilder::IlBuilder* false_path = nullptr;
+      auto* sel = stack.Pop();
+      auto* false_value = stack.Pop();
+      auto* true_value = stack.Pop();
 
-      b->IfThenElse(&true_path, &false_path, Pop(b, "i32"));
-      DropKeep(true_path, 1, 0);
-      DropKeep(false_path, 1, 1);
+      TR::IlBuilder* true_path = nullptr;
+
+      b->IfThen(&true_path, sel);
+      true_path->StoreOver(false_value, true_value);
+
+      stack.Push(false_value);
       break;
     }
 
     case Opcode::Br: {
-      auto target = &istream[ReadU32(&pc)];
+      auto target = &istream[interp::ReadU32(&pc)];
       auto it = std::find_if(workItems_.cbegin(), workItems_.cend(), [&](const BytecodeWorkItem& b) {
         return target == b.pc;
       });
@@ -685,7 +732,7 @@ bool FunctionBuilder::Emit(OMR::JitBuilder::BytecodeBuilder* b,
       } else {
         int32_t next_index = static_cast<int32_t>(workItems_.size());
         workItems_.emplace_back(OrphanBytecodeBuilder(next_index,
-                                                      const_cast<char*>(ReadOpcodeAt(target).GetName())),
+                                                      const_cast<char*>(interp::ReadOpcodeAt(target).GetName())),
                                 target);
         b->AddFallThroughBuilder(workItems_[next_index].builder);
       }
@@ -696,6 +743,8 @@ bool FunctionBuilder::Emit(OMR::JitBuilder::BytecodeBuilder* b,
     // transformed into a BrUnless. So, there's no need to handle it.
 
     case Opcode::Return:
+      TearDownLocals(b);
+      MoveToPhysStack(b, pc, &stack, stack.Depth());
       b->Return(b->Const(static_cast<Result_t>(interp::Result::Ok)));
       return true;
 
@@ -704,31 +753,27 @@ bool FunctionBuilder::Emit(OMR::JitBuilder::BytecodeBuilder* b,
       return true;
 
     case Opcode::I32Const: {
-      auto* val = b->ConstInt32(ReadU32(&pc));
-      Push(b, "i32", val, pc);
+      stack.Push(b->ConstInt32(interp::ReadU32(&pc)));
       break;
     }
 
     case Opcode::I64Const: {
-      auto* val = b->ConstInt64(ReadU64(&pc));
-      Push(b, "i64", val, pc);
+      stack.Push(b->ConstInt64(interp::ReadU64(&pc)));
       break;
     }
 
     case Opcode::F32Const: {
-      auto* val = b->ConstFloat(ReadUx<float>(&pc));
-      Push(b, "f32", val, pc);
+      stack.Push(b->ConstFloat(interp::ReadUx<float>(&pc)));
       break;
     }
 
     case Opcode::F64Const: {
-      auto* val = b->ConstDouble(ReadUx<double>(&pc));
-      Push(b, "f64", val, pc);
+      stack.Push(b->ConstDouble(interp::ReadUx<double>(&pc)));
       break;
     }
 
-    case Opcode::GetGlobal: {
-      interp::Global* g = thread_->env()->GetGlobal(ReadU32(&pc));
+    case Opcode::GlobalGet: {
+      interp::Global* g = thread_->env()->GetGlobal(interp::ReadU32(&pc));
 
       // The type of value stored in a global will never change, so we're safe
       // to use the current type of the global.
@@ -737,18 +782,18 @@ bool FunctionBuilder::Emit(OMR::JitBuilder::BytecodeBuilder* b,
       if (g->mutable_) {
         // TODO(thomasbc): Can the address of a Global change at runtime?
         auto* addr = b->Const(&g->typed_value.value);
-        Push(b, type_field, b->LoadIndirect("Value", type_field, addr), pc);
+        stack.Push(b->LoadIndirect("Value", type_field, addr));
       } else {
         // With immutable globals, we can just substitute their actual value as
         // a constant at compile-time.
-        Push(b, type_field, Const(b, &g->typed_value), pc);
+        stack.Push(Const(b, &g->typed_value));
       }
 
       break;
     }
 
-    case Opcode::SetGlobal: {
-      interp::Global* g = thread_->env()->GetGlobal(ReadU32(&pc));
+    case Opcode::GlobalSet: {
+      interp::Global* g = thread_->env()->GetGlobal(interp::ReadU32(&pc));
       assert(g->mutable_);
 
       // See note for get_global
@@ -757,63 +802,99 @@ bool FunctionBuilder::Emit(OMR::JitBuilder::BytecodeBuilder* b,
       // TODO(thomasbc): Can the address of a Global change at runtime?
       auto* addr = b->Const(&g->typed_value.value);
 
-      b->StoreIndirect("Value", type_field, addr, Pop(b, type_field));
+      b->StoreIndirect("Value", type_field, addr, stack.Pop());
       break;
     }
 
-    case Opcode::GetLocal: {
-      // note: to work around JitBuilder's lack of support unions as value types,
-      // just copy a field that's the size of the entire union
-      auto* local_addr = Pick(b, ReadU32(&pc));
-      Push(b, "i64", b->LoadIndirect("Value", "i64", local_addr), pc);
+    case Opcode::LocalGet: {
+      Type t;
+      uint32_t off = GetLocalOffset(&stack, &t, interp::ReadU32(&pc));
+
+      if (t == Type::V128)
+        return false;
+
+      stack.Push(b->LoadIndirect("Value", TypeFieldName(t), PickPhys(b, off)));
       break;
     }
 
-    case Opcode::SetLocal: {
-      // see note for GetLocal
-      auto* value = Pop(b, "i64");
-      auto* local_addr = Pick(b, ReadU32(&pc));
-      b->StoreIndirect("Value", "i64", local_addr, value);
+    case Opcode::LocalSet: {
+      auto* value = stack.Pop();
+      uint32_t off = GetLocalOffset(&stack, nullptr, interp::ReadU32(&pc));
+
+      b->StoreIndirect("Value", TypeFieldName(value->getDataType()), PickPhys(b, off), value);
       break;
     }
 
-    case Opcode::TeeLocal:
-      // see note for GetLocal
-      b->StoreIndirect("Value", "i64", Pick(b, ReadU32(&pc)), b->LoadIndirect("Value", "i64", Pick(b, 1)));
+    case Opcode::LocalTee: {
+      auto* value = stack.Top();
+      uint32_t off = GetLocalOffset(&stack, nullptr, interp::ReadU32(&pc));
+
+      b->StoreIndirect("Value", TypeFieldName(value->getDataType()), PickPhys(b, off), value);
       break;
+    }
 
     case Opcode::Call: {
       auto th_addr = b->ConstAddress(thread_);
-      auto offset = b->ConstInt32(ReadU32(&pc));
-      auto current_pc = b->Const((void*)pc);
+      auto offset = interp::ReadU32(&pc);
+      auto current_pc = b->Const(pc);
+
+      auto meta_it = thread_->env()->jit_meta_.find(offset);
+      TR_ASSERT_FATAL(meta_it != thread_->env()->jit_meta_.end(),
+                      "Found call to unknown function at offset %u", offset);
+
+      auto* meta = &meta_it->second;
+      auto* sig = thread_->env()->GetFuncSignature(meta->wasm_fn->sig_index);
+
+      MoveToPhysStack(b, pc, &stack, sig->param_types.size());
 
       b->Store("result",
-      b->      Call("CallHelper", 3, th_addr, offset, current_pc));
+      b->      Call("CallHelper", 3, th_addr, b->ConstInt32(offset), current_pc));
 
       // Don't pass the pc since a trap in a called function should not update the thread's pc
       EmitCheckTrap(b, b->Load("result"), nullptr);
+
+      for (Type t : sig->result_types) {
+        if (t == Type::V128)
+          return false;
+      }
+
+      MoveFromPhysStack(b, &stack, sig->result_types);
 
       break;
     }
 
     case Opcode::CallIndirect: {
       auto th_addr = b->ConstAddress(thread_);
-      auto table_index = b->ConstInt32(ReadU32(&pc));
-      auto sig_index = b->ConstInt32(ReadU32(&pc));
-      auto entry_index = Pop(b, "i32");
-      auto current_pc = b->Const((void*)pc);
+      auto table_index = b->ConstInt32(interp::ReadU32(&pc));
+      auto sig_index = interp::ReadU32(&pc);
+      auto entry_index = stack.Pop();
+      auto current_pc = b->Const(pc);
+
+      auto* sig = thread_->env()->GetFuncSignature(sig_index);
+
+      MoveToPhysStack(b, pc, &stack, sig->param_types.size());
 
       b->Store("result",
-      b->      Call("CallIndirectHelper", 5, th_addr, table_index, sig_index, entry_index, current_pc));
+      b->      Call("CallIndirectHelper", 5, th_addr, table_index, b->ConstInt32(sig_index), entry_index, current_pc));
 
       // Don't pass the pc since a trap in a called function should not update the thread's pc
       EmitCheckTrap(b, b->Load("result"), nullptr);
+
+      for (Type t : sig->result_types) {
+        if (t == Type::V128)
+          return false;
+      }
+
+      MoveFromPhysStack(b, &stack, sig->result_types);
 
       break;
     }
 
     case Opcode::InterpCallHost: {
-      Index func_index = ReadU32(&pc);
+      Index func_index = interp::ReadU32(&pc);
+      auto* sig = thread_->env()->GetFuncSignature(thread_->env()->GetFunc(func_index)->sig_index);
+
+      MoveToPhysStack(b, pc, &stack, sig->param_types.size());
 
       b->Store("result",
       b->      Call("CallHostHelper", 2,
@@ -822,263 +903,238 @@ bool FunctionBuilder::Emit(OMR::JitBuilder::BytecodeBuilder* b,
 
       EmitCheckTrap(b, b->Load("result"), pc);
 
+      for (Type t : sig->result_types) {
+        if (t == Type::V128)
+          return false;
+      }
+
+      MoveFromPhysStack(b, &stack, sig->result_types);
+
       break;
     }
 
     case Opcode::I32Load8S: {
-      auto* addr = EmitMemoryPreAccess<int8_t>(b, &pc);
-      Push(b,
-           "i32",
-      b->  ConvertTo(Int32,
-      b->            LoadAt(typeDictionary()->PointerTo(Int8), addr)),
-           pc);
+      auto* addr = EmitMemoryPreAccess<int8_t>(b, &pc, &stack);
+      stack.Push(
+      b-> ConvertTo(Int32,
+      b->           LoadAt(typeDictionary()->PointerTo(Int8), addr)));
       break;
     }
 
     case Opcode::I32Load8U: {
-      auto* addr = EmitMemoryPreAccess<int8_t>(b, &pc);
-      Push(b,
-           "i32",
-      b->  UnsignedConvertTo(Int32,
-      b->                    LoadAt(typeDictionary()->PointerTo(Int8), addr)),
-           pc);
+      auto* addr = EmitMemoryPreAccess<int8_t>(b, &pc, &stack);
+      stack.Push(
+      b-> UnsignedConvertTo(Int32,
+      b->                   LoadAt(typeDictionary()->PointerTo(Int8), addr)));
       break;
     }
 
     case Opcode::I32Load16S: {
-      auto* addr = EmitMemoryPreAccess<int16_t>(b, &pc);
-      Push(b,
-           "i32",
-      b->  ConvertTo(Int32,
-      b->            LoadAt(typeDictionary()->PointerTo(Int16), addr)),
-           pc);
+      auto* addr = EmitMemoryPreAccess<int16_t>(b, &pc, &stack);
+      stack.Push(
+      b-> ConvertTo(Int32,
+      b->           LoadAt(typeDictionary()->PointerTo(Int16), addr)));
       break;
     }
 
     case Opcode::I32Load16U: {
-      auto* addr = EmitMemoryPreAccess<int16_t>(b, &pc);
-      Push(b,
-           "i32",
-      b->  UnsignedConvertTo(Int32,
-      b->                    LoadAt(typeDictionary()->PointerTo(Int16), addr)),
-           pc);
+      auto* addr = EmitMemoryPreAccess<int16_t>(b, &pc, &stack);
+      stack.Push(
+      b-> UnsignedConvertTo(Int32,
+      b->                   LoadAt(typeDictionary()->PointerTo(Int16), addr)));
       break;
     }
 
     case Opcode::I64Load8S: {
-      auto* addr = EmitMemoryPreAccess<int8_t>(b, &pc);
-      Push(b,
-           "i64",
-      b->  ConvertTo(Int64,
-      b->            LoadAt(typeDictionary()->PointerTo(Int8), addr)),
-           pc);
+      auto* addr = EmitMemoryPreAccess<int8_t>(b, &pc, &stack);
+      stack.Push(
+      b-> ConvertTo(Int64,
+      b->           LoadAt(typeDictionary()->PointerTo(Int8), addr)));
       break;
     }
 
     case Opcode::I64Load8U: {
-      auto* addr = EmitMemoryPreAccess<int8_t>(b, &pc);
-      Push(b,
-           "i64",
-      b->  UnsignedConvertTo(Int64,
-      b->                    LoadAt(typeDictionary()->PointerTo(Int8), addr)),
-           pc);
+      auto* addr = EmitMemoryPreAccess<int8_t>(b, &pc, &stack);
+      stack.Push(
+      b-> UnsignedConvertTo(Int64,
+      b->                   LoadAt(typeDictionary()->PointerTo(Int8), addr)));
       break;
     }
 
     case Opcode::I64Load16S: {
-      auto* addr = EmitMemoryPreAccess<int16_t>(b, &pc);
-      Push(b,
-           "i64",
-      b->  ConvertTo(Int64,
-      b->            LoadAt(typeDictionary()->PointerTo(Int16), addr)),
-           pc);
+      auto* addr = EmitMemoryPreAccess<int16_t>(b, &pc, &stack);
+      stack.Push(
+      b-> ConvertTo(Int64,
+      b->           LoadAt(typeDictionary()->PointerTo(Int16), addr)));
       break;
     }
 
     case Opcode::I64Load16U: {
-      auto* addr = EmitMemoryPreAccess<int16_t>(b, &pc);
-      Push(b,
-           "i64",
-      b->  UnsignedConvertTo(Int64,
-      b->                    LoadAt(typeDictionary()->PointerTo(Int16), addr)),
-           pc);
+      auto* addr = EmitMemoryPreAccess<int16_t>(b, &pc, &stack);
+      stack.Push(
+      b-> UnsignedConvertTo(Int64,
+      b->                   LoadAt(typeDictionary()->PointerTo(Int16), addr)));
       break;
     }
 
     case Opcode::I64Load32S: {
-      auto* addr = EmitMemoryPreAccess<int32_t>(b, &pc);
-      Push(b,
-           "i64",
-      b->  ConvertTo(Int64,
-      b->            LoadAt(typeDictionary()->PointerTo(Int32), addr)),
-           pc);
+      auto* addr = EmitMemoryPreAccess<int32_t>(b, &pc, &stack);
+      stack.Push(
+      b-> ConvertTo(Int64,
+      b->           LoadAt(typeDictionary()->PointerTo(Int32), addr)));
       break;
     }
 
     case Opcode::I64Load32U: {
-      auto* addr = EmitMemoryPreAccess<int32_t>(b, &pc);
-      Push(b,
-           "i64",
-      b->  UnsignedConvertTo(Int64,
-      b->                    LoadAt(typeDictionary()->PointerTo(Int32), addr)),
-           pc);
+      auto* addr = EmitMemoryPreAccess<int32_t>(b, &pc, &stack);
+      stack.Push(
+      b-> UnsignedConvertTo(Int64,
+      b->                   LoadAt(typeDictionary()->PointerTo(Int32), addr)));
       break;
     }
 
     case Opcode::I32Load: {
-      auto* addr = EmitMemoryPreAccess<int32_t>(b, &pc);
-      Push(b,
-           "i32",
-      b->  LoadAt(typeDictionary()->PointerTo(Int32), addr),
-           pc);
+      auto* addr = EmitMemoryPreAccess<int32_t>(b, &pc, &stack);
+      stack.Push(b->LoadAt(typeDictionary()->PointerTo(Int32), addr));
       break;
     }
 
     case Opcode::I64Load: {
-      auto* addr = EmitMemoryPreAccess<int64_t>(b, &pc);
-      Push(b,
-           "i64",
-      b->  LoadAt(typeDictionary()->PointerTo(Int64), addr),
-           pc);
+      auto* addr = EmitMemoryPreAccess<int64_t>(b, &pc, &stack);
+      stack.Push(b->LoadAt(typeDictionary()->PointerTo(Int64), addr));
       break;
     }
 
     case Opcode::F32Load: {
-      auto* addr = EmitMemoryPreAccess<float>(b, &pc);
-      Push(b,
-           "f32",
-      b->  LoadAt(typeDictionary()->PointerTo(Float), addr),
-           pc);
+      auto* addr = EmitMemoryPreAccess<float>(b, &pc, &stack);
+      stack.Push(b->LoadAt(typeDictionary()->PointerTo(Float), addr));
       break;
     }
 
     case Opcode::F64Load: {
-      auto* addr = EmitMemoryPreAccess<double>(b, &pc);
-      Push(b,
-           "f64",
-      b->  LoadAt(typeDictionary()->PointerTo(Double), addr),
-           pc);
+      auto* addr = EmitMemoryPreAccess<double>(b, &pc, &stack);
+      stack.Push(b->LoadAt(typeDictionary()->PointerTo(Double), addr));
       break;
     }
 
     case Opcode::I32Store8: {
-      auto value = b->ConvertTo(Int8, Pop(b, "i32"));
-      b->StoreAt(EmitMemoryPreAccess<int8_t>(b, &pc), value);
+      auto value = b->ConvertTo(Int8, stack.Pop());
+      b->StoreAt(EmitMemoryPreAccess<int8_t>(b, &pc, &stack), value);
       break;
     }
 
     case Opcode::I32Store16: {
-      auto value = b->ConvertTo(Int16, Pop(b, "i32"));
-      b->StoreAt(EmitMemoryPreAccess<int16_t>(b, &pc), value);
+      auto value = b->ConvertTo(Int16, stack.Pop());
+      b->StoreAt(EmitMemoryPreAccess<int16_t>(b, &pc, &stack), value);
       break;
     }
 
     case Opcode::I64Store8: {
-      auto value = b->ConvertTo(Int8, Pop(b, "i64"));
-      b->StoreAt(EmitMemoryPreAccess<int8_t>(b, &pc), value);
+      auto value = b->ConvertTo(Int8, stack.Pop());
+      b->StoreAt(EmitMemoryPreAccess<int8_t>(b, &pc, &stack), value);
       break;
     }
 
     case Opcode::I64Store16: {
-      auto value = b->ConvertTo(Int16, Pop(b, "i64"));
-      b->StoreAt(EmitMemoryPreAccess<int16_t>(b, &pc), value);
+      auto value = b->ConvertTo(Int16, stack.Pop());
+      b->StoreAt(EmitMemoryPreAccess<int16_t>(b, &pc, &stack), value);
       break;
     }
 
     case Opcode::I64Store32: {
-      auto value = b->ConvertTo(Int32, Pop(b, "i64"));
-      b->StoreAt(EmitMemoryPreAccess<int32_t>(b, &pc), value);
+      auto value = b->ConvertTo(Int32, stack.Pop());
+      b->StoreAt(EmitMemoryPreAccess<int32_t>(b, &pc, &stack), value);
       break;
     }
 
     case Opcode::I32Store: {
-      auto value = Pop(b, "i32");
-      b->StoreAt(EmitMemoryPreAccess<int32_t>(b, &pc), value);
+      auto value = stack.Pop();
+      b->StoreAt(EmitMemoryPreAccess<int32_t>(b, &pc, &stack), value);
       break;
     }
 
     case Opcode::I64Store: {
-      auto value = Pop(b, "i64");
-      b->StoreAt(EmitMemoryPreAccess<int64_t>(b, &pc), value);
+      auto value = stack.Pop();
+      b->StoreAt(EmitMemoryPreAccess<int64_t>(b, &pc, &stack), value);
       break;
     }
 
     case Opcode::F32Store: {
-      auto value = Pop(b, "f32");
-      b->StoreAt(EmitMemoryPreAccess<float>(b, &pc), value);
+      auto value = stack.Pop();
+      b->StoreAt(EmitMemoryPreAccess<float>(b, &pc, &stack), value);
       break;
     }
 
     case Opcode::F64Store: {
-      auto value = Pop(b, "f64");
-      b->StoreAt(EmitMemoryPreAccess<double>(b, &pc), value);
+      auto value = stack.Pop();
+      b->StoreAt(EmitMemoryPreAccess<double>(b, &pc, &stack), value);
       break;
     }
 
     case Opcode::I32Add:
-      EmitBinaryOp<int32_t>(b, pc, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
+      EmitBinaryOp<int32_t>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->Add(lhs, rhs);
       });
       break;
 
     case Opcode::I32Sub:
-      EmitBinaryOp<int32_t>(b, pc, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
+      EmitBinaryOp<int32_t>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->Sub(lhs, rhs);
       });
       break;
 
     case Opcode::I32Mul:
-      EmitBinaryOp<int32_t>(b, pc, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
+      EmitBinaryOp<int32_t>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->Mul(lhs, rhs);
       });
       break;
 
     case Opcode::I32DivS:
-      EmitIntDivide<int32_t>(b, pc);
+      EmitIntDivide<int32_t>(b, pc, &stack);
       break;
 
     case Opcode::I32RemS:
-      EmitIntRemainder<int32_t>(b, pc);
+      EmitIntRemainder<int32_t>(b, pc, &stack);
       break;
 
     case Opcode::I32And:
-      EmitBinaryOp<int32_t>(b, pc, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
+      EmitBinaryOp<int32_t>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->And(lhs, rhs);
       });
       break;
 
     case Opcode::I32Or:
-      EmitBinaryOp<int32_t>(b, pc, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
+      EmitBinaryOp<int32_t>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->Or(lhs, rhs);
       });
       break;
 
     case Opcode::I32Xor:
-      EmitBinaryOp<int32_t>(b, pc, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
+      EmitBinaryOp<int32_t>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->Xor(lhs, rhs);
       });
       break;
 
     case Opcode::I32Shl:
-      EmitBinaryOp<int32_t>(b, pc, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
+      EmitBinaryOp<int32_t>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->ShiftL(lhs, CalculateShiftAmount<int32_t>(b, rhs));
       });
       break;
 
     case Opcode::I32ShrS:
-      EmitBinaryOp<int32_t>(b, pc, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
+      EmitBinaryOp<int32_t>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->ShiftR(lhs, CalculateShiftAmount<int32_t>(b, rhs));
       });
       break;
 
     case Opcode::I32ShrU:
-      EmitBinaryOp<int32_t>(b, pc, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
+      EmitBinaryOp<int32_t>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->UnsignedShiftR(lhs, CalculateShiftAmount<int32_t>(b, rhs));
       });
       break;
 
     case Opcode::I32Rotl:
-      EmitBinaryOp<int32_t>(b, pc, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
+      EmitBinaryOp<int32_t>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         auto* amount = CalculateShiftAmount<int32_t>(b, rhs);
 
         return b->Or(
@@ -1088,7 +1144,7 @@ bool FunctionBuilder::Emit(OMR::JitBuilder::BytecodeBuilder* b,
       break;
 
     case Opcode::I32Rotr:
-      EmitBinaryOp<int32_t>(b, pc, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
+      EmitBinaryOp<int32_t>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         auto* amount = CalculateShiftAmount<int32_t>(b, rhs);
 
         return b->Or(
@@ -1098,135 +1154,135 @@ bool FunctionBuilder::Emit(OMR::JitBuilder::BytecodeBuilder* b,
       break;
 
     case Opcode::I32Eqz:
-      EmitUnaryOp<int32_t, int>(b, pc, [&](OMR::JitBuilder::IlValue* val) {
+      EmitUnaryOp<int32_t, int>(b, pc, &stack, [&](TR::IlValue* val) {
         return b->EqualTo(val, b->ConstInt32(0));
       });
       break;
 
     case Opcode::I32Eq:
-      EmitBinaryOp<int32_t, int>(b, pc, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
+      EmitBinaryOp<int32_t, int>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->EqualTo(lhs, rhs);
       });
       break;
 
     case Opcode::I32Ne:
-      EmitBinaryOp<int32_t, int>(b, pc, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
+      EmitBinaryOp<int32_t, int>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->NotEqualTo(lhs, rhs);
       });
       break;
 
     case Opcode::I32LtS:
-      EmitBinaryOp<int32_t, int>(b, pc, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
+      EmitBinaryOp<int32_t, int>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->LessThan(lhs, rhs);
       });
       break;
 
     case Opcode::I32LtU:
-      EmitBinaryOp<int32_t, int>(b, pc, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
+      EmitBinaryOp<int32_t, int>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->UnsignedLessThan(lhs, rhs);
       });
       break;
 
     case Opcode::I32GtS:
-      EmitBinaryOp<int32_t, int>(b, pc, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
+      EmitBinaryOp<int32_t, int>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->GreaterThan(lhs, rhs);
       });
       break;
 
     case Opcode::I32GtU:
-      EmitBinaryOp<int32_t, int>(b, pc, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
+      EmitBinaryOp<int32_t, int>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->UnsignedGreaterThan(lhs, rhs);
       });
       break;
 
     case Opcode::I32LeS:
-      EmitBinaryOp<int32_t, int>(b, pc, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
+      EmitBinaryOp<int32_t, int>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->LessOrEqualTo(lhs, rhs);
       });
       break;
 
     case Opcode::I32LeU:
-      EmitBinaryOp<int32_t, int>(b, pc, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
+      EmitBinaryOp<int32_t, int>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->UnsignedLessOrEqualTo(lhs, rhs);
       });
       break;
 
     case Opcode::I32GeS:
-      EmitBinaryOp<int32_t, int>(b, pc, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
+      EmitBinaryOp<int32_t, int>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->GreaterOrEqualTo(lhs, rhs);
       });
       break;
 
     case Opcode::I32GeU:
-      EmitBinaryOp<int32_t, int>(b, pc, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
+      EmitBinaryOp<int32_t, int>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->UnsignedGreaterOrEqualTo(lhs, rhs);
       });
       break;
 
     case Opcode::I64Add:
-        EmitBinaryOp<int64_t>(b, pc, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
+        EmitBinaryOp<int64_t>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
           return b->Add(lhs, rhs);
         });
         break;
 
     case Opcode::I64Sub:
-      EmitBinaryOp<int64_t>(b, pc, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
+      EmitBinaryOp<int64_t>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->Sub(lhs, rhs);
       });
       break;
 
     case Opcode::I64Mul:
-      EmitBinaryOp<int64_t>(b, pc, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
+      EmitBinaryOp<int64_t>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->Mul(lhs, rhs);
       });
       break;
 
     case Opcode::I64DivS:
-      EmitIntDivide<int64_t>(b, pc);
+      EmitIntDivide<int64_t>(b, pc, &stack);
       break;
 
     case Opcode::I64RemS:
-      EmitIntRemainder<int64_t>(b, pc);
+      EmitIntRemainder<int64_t>(b, pc, &stack);
       break;
 
     case Opcode::I64And:
-      EmitBinaryOp<int64_t>(b, pc, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
+      EmitBinaryOp<int64_t>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->And(lhs, rhs);
       });
       break;
 
     case Opcode::I64Or:
-      EmitBinaryOp<int64_t>(b, pc, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
+      EmitBinaryOp<int64_t>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->Or(lhs, rhs);
       });
       break;
 
     case Opcode::I64Xor:
-      EmitBinaryOp<int64_t>(b, pc, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
+      EmitBinaryOp<int64_t>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->Xor(lhs, rhs);
       });
       break;
 
     case Opcode::I64Shl:
-      EmitBinaryOp<int64_t>(b, pc, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
+      EmitBinaryOp<int64_t>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->ShiftL(lhs, CalculateShiftAmount<int64_t>(b, rhs));
       });
       break;
 
     case Opcode::I64ShrS:
-      EmitBinaryOp<int64_t>(b, pc, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
+      EmitBinaryOp<int64_t>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->ShiftR(lhs, CalculateShiftAmount<int64_t>(b, rhs));
       });
       break;
 
     case Opcode::I64ShrU:
-      EmitBinaryOp<int64_t>(b, pc, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
+      EmitBinaryOp<int64_t>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->UnsignedShiftR(lhs, CalculateShiftAmount<int64_t>(b, rhs));
       });
       break;
 
     case Opcode::I64Rotl:
-      EmitBinaryOp<int64_t>(b, pc, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
+      EmitBinaryOp<int64_t>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         auto* amount = CalculateShiftAmount<int64_t>(b, rhs);
 
         return b->Or(
@@ -1236,7 +1292,7 @@ bool FunctionBuilder::Emit(OMR::JitBuilder::BytecodeBuilder* b,
       break;
 
     case Opcode::I64Rotr:
-      EmitBinaryOp<int64_t>(b, pc, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
+      EmitBinaryOp<int64_t>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         auto* amount = CalculateShiftAmount<int64_t>(b, rhs);
 
         return b->Or(
@@ -1246,480 +1302,574 @@ bool FunctionBuilder::Emit(OMR::JitBuilder::BytecodeBuilder* b,
       break;
 
     case Opcode::I64Eqz:
-      EmitUnaryOp<int64_t, int>(b, pc, [&](OMR::JitBuilder::IlValue* val) {
+      EmitUnaryOp<int64_t, int>(b, pc, &stack, [&](TR::IlValue* val) {
         return b->EqualTo(val, b->ConstInt64(0));
       });
       break;
 
     case Opcode::I64Eq:
-      EmitBinaryOp<int64_t, int>(b, pc, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
+      EmitBinaryOp<int64_t, int>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->EqualTo(lhs, rhs);
       });
       break;
 
     case Opcode::I64Ne:
-      EmitBinaryOp<int64_t, int>(b, pc, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
+      EmitBinaryOp<int64_t, int>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->NotEqualTo(lhs, rhs);
       });
       break;
 
     case Opcode::I64LtS:
-      EmitBinaryOp<int64_t, int>(b, pc, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
+      EmitBinaryOp<int64_t, int>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->LessThan(lhs, rhs);
       });
       break;
 
     case Opcode::I64LtU:
-      EmitBinaryOp<int64_t, int>(b, pc, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
+      EmitBinaryOp<int64_t, int>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->UnsignedLessThan(lhs, rhs);
       });
       break;
 
     case Opcode::I64GtS:
-      EmitBinaryOp<int64_t, int>(b, pc, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
+      EmitBinaryOp<int64_t, int>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->GreaterThan(lhs, rhs);
       });
       break;
 
     case Opcode::I64GtU:
-      EmitBinaryOp<int64_t, int>(b, pc, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
+      EmitBinaryOp<int64_t, int>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->UnsignedGreaterThan(lhs, rhs);
       });
       break;
 
     case Opcode::I64LeS:
-      EmitBinaryOp<int64_t, int>(b, pc, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
+      EmitBinaryOp<int64_t, int>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->LessOrEqualTo(lhs, rhs);
       });
       break;
 
     case Opcode::I64LeU:
-      EmitBinaryOp<int64_t, int>(b, pc, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
+      EmitBinaryOp<int64_t, int>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->UnsignedLessOrEqualTo(lhs, rhs);
       });
       break;
 
     case Opcode::I64GeS:
-      EmitBinaryOp<int64_t, int>(b, pc, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
+      EmitBinaryOp<int64_t, int>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->GreaterOrEqualTo(lhs, rhs);
       });
       break;
 
     case Opcode::I64GeU:
-      EmitBinaryOp<int64_t, int>(b, pc, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
+      EmitBinaryOp<int64_t, int>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->UnsignedGreaterOrEqualTo(lhs, rhs);
       });
       break;
 
     case Opcode::F32Abs:
-      EmitUnaryOp<float>(b, pc, [&](OMR::JitBuilder::IlValue* value) {
-        auto* return_value = b->Copy(value);
-
-        OMR::JitBuilder::IlBuilder* zero_path = nullptr;
-        OMR::JitBuilder::IlBuilder* nonzero_path = nullptr;
-        OMR::JitBuilder::IlBuilder* neg_path = nullptr;
-
-        // We have to check explicitly for 0.0, since abs(-0.0) is 0.0.
-        b->IfThenElse(&zero_path, &nonzero_path, b->EqualTo(value, b->ConstFloat(0)));
-        zero_path->StoreOver(return_value, zero_path->ConstFloat(0));
-
-        nonzero_path->IfThen(&neg_path, nonzero_path->LessThan(value, nonzero_path->ConstFloat(0)));
-        neg_path->StoreOver(return_value, neg_path->Mul(value, neg_path->ConstFloat(-1)));
-
-        return return_value;
+      EmitUnaryOp<float>(b, pc, &stack, [&](TR::IlValue* value) {
+        return b->ConvertBitsTo(Float,
+        b->                     And(
+        b->                         ConvertBitsTo(Int32, value),
+        b->                         ConstInt32(0x7fffffff)));
       });
       break;
 
     case Opcode::F32Neg:
-      EmitUnaryOp<float>(b, pc, [&](OMR::JitBuilder::IlValue* value) {
+      EmitUnaryOp<float>(b, pc, &stack, [&](TR::IlValue* value) {
         return b->Mul(value, b->ConstFloat(-1));
       });
       break;
 
     case Opcode::F32Sqrt:
-      EmitUnaryOp<float>(b, pc, [&](OMR::JitBuilder::IlValue* value) {
+      EmitUnaryOp<float>(b, pc, &stack, [&](TR::IlValue* value) {
         return b->Call("f32_sqrt", 1, value);
       });
       break;
 
     case Opcode::F32Add:
-      EmitBinaryOp<float>(b, pc, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
+      EmitBinaryOp<float>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->Add(lhs, rhs);
       });
       break;
 
     case Opcode::F32Sub:
-      EmitBinaryOp<float>(b, pc, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
+      EmitBinaryOp<float>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->Sub(lhs, rhs);
       });
       break;
 
     case Opcode::F32Mul:
-      EmitBinaryOp<float>(b, pc, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
+      EmitBinaryOp<float>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->Mul(lhs, rhs);
       });
       break;
 
     case Opcode::F32Div:
-      EmitBinaryOp<float>(b, pc, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
+      EmitBinaryOp<float>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->Div(lhs, rhs);
       });
       break;
 
     case Opcode::F32Copysign:
-      EmitBinaryOp<float>(b, pc, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
-        return b->Call("f32_copysign", 2, lhs, rhs);
+      EmitBinaryOp<float>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+        return b->ConvertBitsTo(Float,
+        b->                     Or(
+        b->                        And(
+        b->                            ConvertBitsTo(Int32, lhs),
+        b->                            ConstInt32(0x7fffffff)),
+        b->                        And(
+        b->                            ConvertBitsTo(Int32, rhs),
+        b->                            ConstInt32(0x80000000))));
       });
       break;
 
     case Opcode::F32Eq:
-      EmitBinaryOp<float, int>(b, pc, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
+      EmitBinaryOp<float, int>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->EqualTo(lhs, rhs);
       });
       break;
 
     case Opcode::F32Ne:
-      EmitBinaryOp<float, int>(b, pc, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
+      EmitBinaryOp<float, int>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->NotEqualTo(lhs, rhs);
       });
       break;
 
     case Opcode::F32Lt:
-      EmitBinaryOp<float, int>(b, pc, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
+      EmitBinaryOp<float, int>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->LessThan(lhs, rhs);
       });
       break;
 
     case Opcode::F32Le:
-      EmitBinaryOp<float, int>(b, pc, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
+      EmitBinaryOp<float, int>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->LessOrEqualTo(lhs, rhs);
       });
       break;
 
     case Opcode::F32Gt:
-      EmitBinaryOp<float, int>(b, pc, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
+      EmitBinaryOp<float, int>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->GreaterThan(lhs, rhs);
       });
       break;
 
     case Opcode::F32Ge:
-      EmitBinaryOp<float, int>(b, pc, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
+      EmitBinaryOp<float, int>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->GreaterOrEqualTo(lhs, rhs);
       });
       break;
 
+    case Opcode::F32Min:
+      EmitBinaryOp<float>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+        auto* result = b->ConstFloat(0.0f);
+
+        TR::IlBuilder* eq_path = nullptr;
+        TR::IlBuilder* ne_path = nullptr;
+        TR::IlBuilder* lt_path = nullptr;
+        TR::IlBuilder* gt_path = nullptr;
+
+        b->IfThenElse(&eq_path, &ne_path, b->EqualTo(lhs, rhs));
+
+        // Using bitwise OR here ensures that min(-0.0, 0.0) = -0.0
+        eq_path->StoreOver(result,
+        eq_path->          ConvertBitsTo(Float,
+        eq_path->                        Or(
+        eq_path->                           ConvertBitsTo(Int32, lhs),
+        eq_path->                           ConvertBitsTo(Int32, rhs))));
+
+        // We need to explicitly check if lhs is nan, since we must return lhs in that case
+        ne_path->IfThenElse(&lt_path,
+                            &gt_path,
+        ne_path->           Or(
+        ne_path->              NotEqualTo(lhs, lhs),
+        ne_path->              LessThan(lhs, rhs)));
+        lt_path->StoreOver(result, lhs);
+        gt_path->StoreOver(result, rhs);
+
+        return result;
+      });
+      break;
+
+    case Opcode::F32Max:
+      EmitBinaryOp<float>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+        auto* result = b->ConstFloat(0.0f);
+
+        TR::IlBuilder* eq_path = nullptr;
+        TR::IlBuilder* ne_path = nullptr;
+        TR::IlBuilder* lt_path = nullptr;
+        TR::IlBuilder* gt_path = nullptr;
+
+        b->IfThenElse(&eq_path, &ne_path, b->EqualTo(lhs, rhs));
+
+        // Using bitwise AND here ensures that max(-0.0, 0.0) = 0.0
+        eq_path->StoreOver(result,
+        eq_path->          ConvertBitsTo(Float,
+        eq_path->                        And(
+        eq_path->                            ConvertBitsTo(Int32, lhs),
+        eq_path->                            ConvertBitsTo(Int32, rhs))));
+
+        // We need to explicitly check if rhs is nan, since we must return rhs in that case
+        ne_path->IfThenElse(&lt_path,
+                            &gt_path,
+        ne_path->           Or(
+        ne_path->              NotEqualTo(rhs, rhs),
+        ne_path->              LessThan(lhs, rhs)));
+        lt_path->StoreOver(result, rhs);
+        gt_path->StoreOver(result, lhs);
+
+        return result;
+      });
+      break;
+
     case Opcode::F64Abs:
-      EmitUnaryOp<double>(b, pc, [&](OMR::JitBuilder::IlValue* value) {
-        auto* return_value = b->Copy(value);
-
-        OMR::JitBuilder::IlBuilder* zero_path = nullptr;
-        OMR::JitBuilder::IlBuilder* nonzero_path = nullptr;
-        OMR::JitBuilder::IlBuilder* neg_path = nullptr;
-
-        // We have to check explicitly for 0.0, since abs(-0.0) is 0.0.
-        b->IfThenElse(&zero_path, &nonzero_path, b->EqualTo(value, b->ConstDouble(0)));
-        zero_path->StoreOver(return_value, zero_path->ConstDouble(0));
-
-        nonzero_path->IfThen(&neg_path, nonzero_path->LessThan(value, nonzero_path->ConstDouble(0)));
-        neg_path->StoreOver(return_value, neg_path->Mul(value, neg_path->ConstDouble(-1)));
-
-        return return_value;
+      EmitUnaryOp<double>(b, pc, &stack, [&](TR::IlValue* value) {
+        return b->ConvertBitsTo(Double,
+        b->                     And(
+        b->                         ConvertBitsTo(Int64, value),
+        b->                         ConstInt64(0x7fffffffffffffffL)));
       });
       break;
 
     case Opcode::F64Neg:
-      EmitUnaryOp<double>(b, pc, [&](OMR::JitBuilder::IlValue* value) {
+      EmitUnaryOp<double>(b, pc, &stack, [&](TR::IlValue* value) {
         return b->Mul(value, b->ConstDouble(-1));
       });
       break;
 
     case Opcode::F64Sqrt:
-      EmitUnaryOp<double>(b, pc, [&](OMR::JitBuilder::IlValue* value) {
+      EmitUnaryOp<double>(b, pc, &stack, [&](TR::IlValue* value) {
         return b->Call("f64_sqrt", 1, value);
       });
       break;
 
     case Opcode::F64Add:
-      EmitBinaryOp<double>(b, pc, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
+      EmitBinaryOp<double>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->Add(lhs, rhs);
       });
       break;
 
     case Opcode::F64Sub:
-      EmitBinaryOp<double>(b, pc, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
+      EmitBinaryOp<double>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->Sub(lhs, rhs);
       });
       break;
 
     case Opcode::F64Mul:
-      EmitBinaryOp<double>(b, pc, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
+      EmitBinaryOp<double>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->Mul(lhs, rhs);
       });
       break;
 
     case Opcode::F64Div:
-      EmitBinaryOp<double>(b, pc, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
+      EmitBinaryOp<double>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->Div(lhs, rhs);
       });
       break;
 
     case Opcode::F64Copysign:
-      EmitBinaryOp<double>(b, pc, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
-        return b->Call("f64_copysign", 2, lhs, rhs);
+      EmitBinaryOp<double>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+        return b->ConvertBitsTo(Double,
+        b->                     Or(
+        b->                        And(
+        b->                            ConvertBitsTo(Int64, lhs),
+        b->                            ConstInt64(0x7fffffffffffffffL)),
+        b->                        And(
+        b->                            ConvertBitsTo(Int64, rhs),
+        b->                            ConstInt64(0x8000000000000000L))));
       });
       break;
 
     case Opcode::F64Eq:
-      EmitBinaryOp<double, int>(b, pc, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
+      EmitBinaryOp<double, int>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->EqualTo(lhs, rhs);
       });
       break;
 
     case Opcode::F64Ne:
-      EmitBinaryOp<double, int>(b, pc, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
+      EmitBinaryOp<double, int>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->NotEqualTo(lhs, rhs);
       });
       break;
 
     case Opcode::F64Lt:
-      EmitBinaryOp<double, int>(b, pc, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
+      EmitBinaryOp<double, int>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->LessThan(lhs, rhs);
       });
       break;
 
     case Opcode::F64Le:
-      EmitBinaryOp<double, int>(b, pc, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
+      EmitBinaryOp<double, int>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->LessOrEqualTo(lhs, rhs);
       });
       break;
 
     case Opcode::F64Gt:
-      EmitBinaryOp<double, int>(b, pc, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
+      EmitBinaryOp<double, int>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->GreaterThan(lhs, rhs);
       });
       break;
 
     case Opcode::F64Ge:
-      EmitBinaryOp<double, int>(b, pc, [&](OMR::JitBuilder::IlValue* lhs, OMR::JitBuilder::IlValue* rhs) {
+      EmitBinaryOp<double, int>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
         return b->GreaterOrEqualTo(lhs, rhs);
       });
       break;
 
+    case Opcode::F64Min:
+      EmitBinaryOp<double>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+        auto* result = b->ConstDouble(0.0f);
+
+        TR::IlBuilder* eq_path = nullptr;
+        TR::IlBuilder* ne_path = nullptr;
+        TR::IlBuilder* lt_path = nullptr;
+        TR::IlBuilder* gt_path = nullptr;
+
+        b->IfThenElse(&eq_path, &ne_path, b->EqualTo(lhs, rhs));
+
+        // Using bitwise OR here ensures that min(-0.0, 0.0) = -0.0
+        eq_path->StoreOver(result,
+        eq_path->          ConvertBitsTo(Double,
+        eq_path->                        Or(
+        eq_path->                           ConvertBitsTo(Int64, lhs),
+        eq_path->                           ConvertBitsTo(Int64, rhs))));
+
+        // We need to explicitly check if lhs is nan, since we must return lhs in that case
+        ne_path->IfThenElse(&lt_path,
+                            &gt_path,
+        ne_path->           Or(
+        ne_path->              NotEqualTo(lhs, lhs),
+        ne_path->              LessThan(lhs, rhs)));
+        lt_path->StoreOver(result, lhs);
+        gt_path->StoreOver(result, rhs);
+
+        return result;
+      });
+      break;
+
+    case Opcode::F64Max:
+      EmitBinaryOp<double>(b, pc, &stack, [&](TR::IlValue* lhs, TR::IlValue* rhs) {
+        auto* result = b->ConstDouble(0.0);
+
+        TR::IlBuilder* eq_path = nullptr;
+        TR::IlBuilder* ne_path = nullptr;
+        TR::IlBuilder* lt_path = nullptr;
+        TR::IlBuilder* gt_path = nullptr;
+
+        b->IfThenElse(&eq_path, &ne_path, b->EqualTo(lhs, rhs));
+
+        // Using bitwise AND here ensures that max(-0.0, 0.0) = 0.0
+        eq_path->StoreOver(result,
+        eq_path->          ConvertBitsTo(Double,
+        eq_path->                        And(
+        eq_path->                            ConvertBitsTo(Int64, lhs),
+        eq_path->                            ConvertBitsTo(Int64, rhs))));
+
+        // We need to explicitly check if rhs is nan, since we must return rhs in that case
+        ne_path->IfThenElse(&lt_path,
+                            &gt_path,
+        ne_path->           Or(
+        ne_path->              NotEqualTo(rhs, rhs),
+        ne_path->              LessThan(lhs, rhs)));
+        lt_path->StoreOver(result, rhs);
+        gt_path->StoreOver(result, lhs);
+
+        return result;
+      });
+      break;
+
     case Opcode::I32WrapI64: {
-      auto* value = Pop(b, "i64");
-      Push(b, "i32",
-      b->  ConvertTo(Int32, value),
-           pc);
+      stack.Push(b->ConvertTo(Int32, stack.Pop()));
       break;
     }
 
-    case Opcode::I64ExtendSI32: {
-      auto* value = Pop(b, "i32");
-      Push(b, "i64",
-      b->  ConvertTo(Int64, value),
-           pc);
+    case Opcode::I64ExtendI32S: {
+      stack.Push(b->ConvertTo(Int64, stack.Pop()));
       break;
     }
 
-    case Opcode::I64ExtendUI32: {
-      auto* value = Pop(b, "i32");
-      Push(b, "i64",
-      b->  UnsignedConvertTo(Int64, value),
-           pc);
+    case Opcode::I64ExtendI32U: {
+      stack.Push(b->UnsignedConvertTo(Int64, stack.Pop()));
       break;
     }
 
     case Opcode::F32DemoteF64: {
-      auto* value = Pop(b, "f64");
-      Push(b, "f32",
-      b->  ConvertTo(Float, value),
-           pc);
+      stack.Push(b->ConvertTo(Float, stack.Pop()));
       break;
     }
 
     case Opcode::F64PromoteF32: {
-      auto* value = Pop(b, "f32");
-      Push(b, "f64",
-      b->  ConvertTo(Double, value),
-           pc);
+      stack.Push(b->ConvertTo(Double, stack.Pop()));
       break;
     }
 
     case Opcode::I32Extend8S: {
-      auto* value = b->ConvertTo(Int32, b->ConvertTo(Int8, Pop(b, "i32")));
-      Push(b, "i32", value, pc);
+      stack.Push(b->ConvertTo(Int32, b->ConvertTo(Int8, stack.Pop())));
       break;
     }
 
     case Opcode::I32Extend16S: {
-      auto* value = b->ConvertTo(Int32, b->ConvertTo(Int16, Pop(b, "i32")));
-      Push(b, "i32", value, pc);
+      stack.Push(b->ConvertTo(Int32, b->ConvertTo(Int16, stack.Pop())));
       break;
     }
 
     case Opcode::I64Extend8S: {
-      auto* value = b->ConvertTo(Int32, b->ConvertTo(Int8, Pop(b, "i32")));
-      Push(b, "i32", value, pc);
+      stack.Push(b->ConvertTo(Int64, b->ConvertTo(Int8, stack.Pop())));
       break;
     }
 
     case Opcode::I64Extend16S: {
-      auto* value = b->ConvertTo(Int32, b->ConvertTo(Int16, Pop(b, "i32")));
-      Push(b, "i32", value, pc);
+      stack.Push(b->ConvertTo(Int64, b->ConvertTo(Int16, stack.Pop())));
       break;
     }
 
     case Opcode::I64Extend32S: {
-      auto* value = b->ConvertTo(Int64, b->ConvertTo(Int32, Pop(b, "i64")));
-      Push(b, "i64", value, pc);
+      stack.Push(b->ConvertTo(Int64, b->ConvertTo(Int32, stack.Pop())));
       break;
     }
 
-    case Opcode::F32ConvertSI32: {
-      auto* value = b->ConvertTo(Float, Pop(b, "i32"));
-      Push(b, "f32", value, pc);
+    case Opcode::F32ConvertI32S: {
+      stack.Push(b->ConvertTo(Float, stack.Pop()));
       break;
     }
 
-    case Opcode::F32ConvertUI32: {
-      auto* value = b->UnsignedConvertTo(Float, Pop(b, "i32"));
-      Push(b, "f32", value, pc);
+    case Opcode::F32ConvertI32U: {
+      stack.Push(b->UnsignedConvertTo(Float, stack.Pop()));
       break;
     }
 
-    case Opcode::F32ConvertSI64: {
-      auto* value = b->ConvertTo(Float, Pop(b, "i64"));
-      Push(b, "f32", value, pc);
+    case Opcode::F32ConvertI64S: {
+      stack.Push(b->ConvertTo(Float, stack.Pop()));
       break;
     }
 
-    case Opcode::F32ConvertUI64: {
-      auto* value = b->UnsignedConvertTo(Float, Pop(b, "i64"));
-      Push(b, "f32", value, pc);
+    case Opcode::F32ConvertI64U: {
+      stack.Push(b->UnsignedConvertTo(Float, stack.Pop()));
       break;
     }
 
-    case Opcode::F64ConvertSI32: {
-      auto* value = b->ConvertTo(Double, Pop(b, "i32"));
-      Push(b, "f64", value, pc);
+    case Opcode::F64ConvertI32S: {
+      stack.Push(b->ConvertTo(Double, stack.Pop()));
       break;
     }
 
-    case Opcode::F64ConvertUI32: {
-      auto* value = b->UnsignedConvertTo(Double, Pop(b, "i32"));
-      Push(b, "f64", value, pc);
+    case Opcode::F64ConvertI32U: {
+      stack.Push(b->UnsignedConvertTo(Double, stack.Pop()));
       break;
     }
 
-    case Opcode::F64ConvertSI64: {
-      auto* value = b->ConvertTo(Double, Pop(b, "i64"));
-      Push(b, "f64", value, pc);
+    case Opcode::F64ConvertI64S: {
+      stack.Push(b->ConvertTo(Double, stack.Pop()));
       break;
     }
 
-    case Opcode::F64ConvertUI64: {
-      auto* value = b->UnsignedConvertTo(Double, Pop(b, "i64"));
-      Push(b, "f64", value, pc);
+    case Opcode::F64ConvertI64U: {
+      stack.Push(b->UnsignedConvertTo(Double, stack.Pop()));
       break;
     }
 
     case Opcode::F32ReinterpretI32: {
-      auto* value = b->BitcastTo(Float, Pop(b, "i32"));
-      Push(b, "f32", value, pc);
+      stack.Push(b->ConvertBitsTo(Float, stack.Pop()));
       break;
     }
 
     case Opcode::I32ReinterpretF32: {
-      auto* value = b->BitcastTo(Int32, Pop(b, "f32"));
-      Push(b, "i32", value, pc);
+      stack.Push(b->ConvertBitsTo(Int32, stack.Pop()));
       break;
     }
 
     case Opcode::F64ReinterpretI64: {
-      auto* value = b->BitcastTo(Double, Pop(b, "i64"));
-      Push(b, "f64", value, pc);
+      stack.Push(b->ConvertBitsTo(Double, stack.Pop()));
       break;
     }
 
     case Opcode::I64ReinterpretF64: {
-      auto* value = b->BitcastTo(Int64, Pop(b, "f64"));
-      Push(b, "i64", value, pc);
+      stack.Push(b->ConvertBitsTo(Int64, stack.Pop()));
       break;
     }
 
-    case Opcode::I32TruncSF32:
-      EmitTruncation<int32_t, float>(b, pc);
+    case Opcode::I32TruncF32S:
+      EmitTruncation<int32_t, float>(b, pc, &stack);
       break;
 
-    case Opcode::I32TruncUF32:
-      EmitUnsignedTruncation<uint32_t, float>(b, pc);
+    case Opcode::I32TruncF32U:
+      EmitUnsignedTruncation<uint32_t, float>(b, pc, &stack);
       break;
 
-    case Opcode::I32TruncSF64:
-      EmitTruncation<int32_t, double>(b, pc);
+    case Opcode::I32TruncF64S:
+      EmitTruncation<int32_t, double>(b, pc, &stack);
       break;
 
-    case Opcode::I32TruncUF64:
-      EmitUnsignedTruncation<uint32_t, double>(b, pc);
+    case Opcode::I32TruncF64U:
+      EmitUnsignedTruncation<uint32_t, double>(b, pc, &stack);
       break;
 
-    case Opcode::I64TruncSF32:
-      EmitTruncation<int64_t, float>(b, pc);
-      break;
-
-//    UNSIGNED TYPE NOT HANDLED
-//    case Opcode::I64TruncUF32:
-//      EmitTruncation<uint64_t, float>(b, pc);
-//      break;
-
-    case Opcode::I64TruncSF64:
-      EmitTruncation<int64_t, double>(b, pc);
+    case Opcode::I64TruncF32S:
+      EmitTruncation<int64_t, float>(b, pc, &stack);
       break;
 
 //    UNSIGNED TYPE NOT HANDLED
-//    case Opcode::I64TruncUF64:
-//      EmitTruncation<uint64_t, double>(b, pc);
+//    case Opcode::I64TruncF32U:
+//      EmitTruncation<uint64_t, float>(b, pc, &stack);
 //      break;
 
-    case Opcode::InterpAlloca: {
-      auto pInt32 = typeDictionary()->PointerTo(Int32);
-      auto* stack_top_addr = b->ConstAddress(&thread_->value_stack_top_);
-      auto* stack_base_addr = b->ConstAddress(thread_->value_stack_.data());
-
-      auto* old_value_stack_top = b->LoadAt(pInt32, stack_top_addr);
-      auto* count = b->ConstInt32(ReadU32(&pc));
-      auto* stack_top =  b->Add(old_value_stack_top, count);
-      b->StoreAt(stack_top_addr, stack_top);
-
-      EmitTrapIf(b,
-      b->        UnsignedGreaterOrEqualTo(
-                     stack_top,
-      b->            Const(static_cast<int32_t>(thread_->value_stack_.size()))),
-      b->        Const(static_cast<Result_t>(interp::Result::TrapValueStackExhausted)),
-                 pc);
-
-      OMR::JitBuilder::IlBuilder* set_zero = nullptr;
-      b->ForLoopUp("i", &set_zero, old_value_stack_top, stack_top, b->Const(1));
-      set_zero->StoreIndirect("Value", "i64",
-      set_zero->              IndexAt(pValueType_, stack_base_addr,
-      set_zero->                      Load("i")),
-      set_zero->              ConstInt64(0));
-
+    case Opcode::I64TruncF64S:
+      EmitTruncation<int64_t, double>(b, pc, &stack);
       break;
-    }
+
+//    UNSIGNED TYPE NOT HANDLED
+//    case Opcode::I64TruncF64U:
+//      EmitTruncation<uint64_t, double>(b, pc, &stack);
+//      break;
+
+    case Opcode::I32TruncSatF32S:
+      EmitSaturatingTruncation<int32_t, float>(b, &stack);
+      break;
+
+    case Opcode::I32TruncSatF32U:
+      EmitUnsignedSaturatingTruncation<uint32_t, float>(b, &stack);
+      break;
+
+    case Opcode::I32TruncSatF64S:
+      EmitSaturatingTruncation<int32_t, double>(b, &stack);
+      break;
+
+
+    case Opcode::I32TruncSatF64U:
+      EmitUnsignedSaturatingTruncation<uint32_t, double>(b, &stack);
+      break;
+
+    case Opcode::I64TruncSatF32S:
+      EmitSaturatingTruncation<int64_t, float>(b, &stack);
+      break;
+
+//    UNSIGNED TYPE NOT HANDLED
+//    case Opcode::I64TruncSatF32U:
+//      EmitSaturatingTruncation<uint64_t, float>(b, &stack);
+//      break;
+
+    case Opcode::I64TruncSatF64S:
+      EmitSaturatingTruncation<int64_t, double>(b, &stack);
+      break;
+
+//    UNSIGNED TYPE NOT HANDLED
+//    case Opcode::I64TruncSatF64U:
+//      EmitSaturatingTruncation<uint64_t, double>(b, &stack);
+//      break;
 
     case Opcode::InterpBrUnless: {
-      auto target = &istream[ReadU32(&pc)];
-      auto condition = Pop(b, "i32");
-      auto it = std::find_if(workItems_.begin(), workItems_.end(), [&](const BytecodeWorkItem& b) {
-        return target == b.pc;
+      auto target = &istream[interp::ReadU32(&pc)];
+      auto condition = stack.Pop();
+      auto it = std::find_if(workItems_.cbegin(), workItems_.cend(), [&](const BytecodeWorkItem& b) {
+        return pc == b.pc;
       });
-      if (it != workItems_.end()) {
-        b->IfCmpEqualZero(&it->builder, condition);
+      if (it != workItems_.cend()) {
+        b->IfCmpEqualZero(it->builder, condition);
       } else {
         int32_t next_index = static_cast<int32_t>(workItems_.size());
         workItems_.emplace_back(OrphanBytecodeBuilder(next_index,
-                                                      const_cast<char*>(ReadOpcodeAt(target).GetName())),
+                                                      const_cast<char*>(interp::ReadOpcodeAt(pc).GetName())),
                                 target);
         b->IfCmpEqualZero(&workItems_[next_index].builder, condition);
       }
@@ -1727,13 +1877,13 @@ bool FunctionBuilder::Emit(OMR::JitBuilder::BytecodeBuilder* b,
     }
 
     case Opcode::Drop:
-      DropKeep(b, 1, 0);
+      stack.DropKeep(1, 0);
       break;
 
     case Opcode::InterpDropKeep: {
-      uint32_t drop_count = ReadU32(&pc);
-      uint8_t keep_count = *pc++;
-      DropKeep(b, drop_count, keep_count);
+      uint32_t drop_count = interp::ReadU32(&pc);
+      uint32_t keep_count = interp::ReadU32(&pc);
+      stack.DropKeep(drop_count, keep_count);
       break;
     }
 
@@ -1744,21 +1894,20 @@ bool FunctionBuilder::Emit(OMR::JitBuilder::BytecodeBuilder* b,
       return false;
   }
 
-  int32_t next_index = static_cast<int32_t>(workItems_.size());
-
-  workItems_.emplace_back(OrphanBytecodeBuilder(next_index,
-                                                const_cast<char*>(ReadOpcodeAt(pc).GetName())),
-                          pc);
-  b->AddFallThroughBuilder(workItems_[next_index].builder);
+  auto it = std::find_if(workItems_.cbegin(), workItems_.cend(), [&](const BytecodeWorkItem& b) {
+    return pc == b.pc;
+  });
+  if (it != workItems_.cend()) {
+    b->AddFallThroughBuilder(it->builder);
+  } else {
+    int32_t next_index = static_cast<int32_t>(workItems_.size());
+    workItems_.emplace_back(OrphanBytecodeBuilder(next_index,
+                                                  const_cast<char*>(interp::ReadOpcodeAt(pc).GetName())),
+                            pc);
+    b->AddFallThroughBuilder(workItems_[next_index].builder);
+  }
 
   return true;
-}
-
-bool FunctionThunkBuilder::buildIL() {
-  void *handle = dlopen("/hdd/wasmjit-omr/tempmod1.so",RTLD_LAZY);
-  const void *funct = dlsym(handle,fn_name.c_str());
-  Store("target",ConstAddress((void*)funct));
-  return ThunkBuilder::buildIL();
 }
 
 }

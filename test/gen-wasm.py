@@ -42,6 +42,7 @@ NAMED_VALUES = {
     'i64': 0x7e,  # -2
     'f32': 0x7d,  # -3
     'f64': 0x7c,  # -4
+    'v128': 0x7b,  # -5
     'anyfunc': 0x70,  # -0x10
     'function': 0x60,  # -0x20
     'void': 0x40,  # -0x40
@@ -61,6 +62,19 @@ NAMED_VALUES = {
     'ELEM': 9,
     'CODE': 10,
     'DATA': 11,
+    'DATACOUNT': 12,
+    'EVENT': 13,
+
+    # name subsection codes
+    'NAME_MODULE': 0,
+    'NAME_FUNCTION': 1,
+    'NAME_LOCALS': 2,
+
+    # linking subsection codes
+    'LINKING_SEGMENT_INFO': 5,
+    'LINKING_INIT_FUNCTIONS': 6,
+    'LINKING_COMDAT_INFO': 7,
+    'LINKING_SYMBOL_TABLE': 8,
 
     # external kinds
     'func_kind': 0,
@@ -80,6 +94,8 @@ NAMED_VALUES = {
     "return": 0x0f,
     "call": 0x10,
     "call_indirect": 0x11,
+    "return_call": 0x12,
+    "return_call_indirect": 0x13,
     "drop": 0x1a,
     "select": 0x1b,
     "get_local": 0x20,
@@ -110,8 +126,8 @@ NAMED_VALUES = {
     "i64.store8": 0x3c,
     "i64.store16": 0x3d,
     "i64.store32": 0x3e,
-    "current_memory": 0x3f,
-    "grow_memory": 0x40,
+    "memory.size": 0x3f,
+    "memory.grow": 0x40,
     "i32.const": 0x41,
     "i64.const": 0x42,
     "f32.const": 0x43,
@@ -494,8 +510,8 @@ def p_error(p):
   raise Error('%d: syntax error, %s' % (p.lineno, p))
 
 
-parser = yacc.yacc(tabmodule='gen_wasm', debugfile='gen_wasm_debug.txt',
-                   outputdir=OUT_DIR)
+parser = yacc.yacc(debug=False, tabmodule='gen_wasm',
+                   debugfile='gen_wasm_debug.txt', outputdir=OUT_DIR)
 
 ################################################################################
 

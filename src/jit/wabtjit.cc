@@ -14,15 +14,18 @@
  * limitations under the License.
  */
 
-#include "../cast.h"
-#include "../interp.h"
+//#include "../cast.h"
+//#include "../interp.h"
+#include <cstddef>
 #include "wabtjit.h"
 #include "type-dictionary.h"
 #include "function-builder.h"
 //#include "infra/Assert.hpp"
 #include <dlfcn.h>
 
-#include "JitBuilder.hpp"
+
+//#include "JitBuilder.hpp"
+//extern int32_t internal_compileMethodBuilder(TR::MethodBuilder * methodBuilder, void ** entryPoint);
 
 namespace wabt{
 namespace jit {

@@ -20,14 +20,13 @@
 #include <array>
 
 #include "src/circular-array.h"
+#include "src/error.h"
 #include "src/feature.h"
-#include "src/ir.h"
 #include "src/intrusive-list.h"
+#include "src/ir.h"
 #include "src/wast-lexer.h"
 
 namespace wabt {
-
-class ErrorHandler;
 
 struct WastParseOptions {
   WastParseOptions(const Features& features) : features(features) {}
@@ -40,7 +39,7 @@ typedef std::array<TokenType, 2> TokenTypePair;
 
 class WastParser {
  public:
-  WastParser(WastLexer*, ErrorHandler*, WastParseOptions*);
+  WastParser(WastLexer*, Errors*, WastParseOptions*);
 
   void WABT_PRINTF_FORMAT(3, 4) Error(Location, const char* format, ...);
   Result ParseModule(std::unique_ptr<Module>* out_module);
@@ -121,9 +120,11 @@ class WastParser {
   Result ParseTextList(std::vector<uint8_t>* out_data);
   bool ParseTextListOpt(std::vector<uint8_t>* out_data);
   Result ParseVarList(VarVector* out_var_list);
-  bool ParseVarListOpt(VarVector* out_var_list);
+  Result ParseElemExprVarList(ElemExprVector* out_list);
+  bool ParseElemExprVarListOpt(ElemExprVector* out_list);
   Result ParseValueType(Type* out_type);
   Result ParseValueTypeList(TypeVector* out_type_list);
+  Result ParseRefType(Type* out_type);
   Result ParseQuotedText(std::string* text);
   bool ParseOffsetOpt(uint32_t* offset);
   bool ParseAlignOpt(uint32_t* align);
@@ -134,7 +135,7 @@ class WastParser {
   Result ParseModuleField(Module*);
   Result ParseDataModuleField(Module*);
   Result ParseElemModuleField(Module*);
-  Result ParseExceptModuleField(Module*);
+  Result ParseEventModuleField(Module*);
   Result ParseExportModuleField(Module*);
   Result ParseFuncModuleField(Module*);
   Result ParseTypeModuleField(Module*);
@@ -149,7 +150,12 @@ class WastParser {
   Result ParseInlineImport(Import*);
   Result ParseTypeUseOpt(FuncDeclaration*);
   Result ParseFuncSignature(FuncSignature*, BindingHash* param_bindings);
-  Result ParseBoundValueTypeList(TokenType, TypeVector*, BindingHash*);
+  Result ParseUnboundFuncSignature(FuncSignature*);
+  Result ParseBoundValueTypeList(TokenType,
+                                 TypeVector*,
+                                 BindingHash*,
+                                 Index binding_index_offset = 0);
+  Result ParseUnboundValueTypeList(TokenType, TypeVector*);
   Result ParseResultList(TypeVector*);
   Result ParseInstrList(ExprList*);
   Result ParseTerminatingInstrList(ExprList*);
@@ -160,11 +166,10 @@ class WastParser {
   Result ParseBlockInstr(std::unique_ptr<Expr>*);
   Result ParseLabelOpt(std::string*);
   Result ParseEndLabelOpt(const std::string&);
+  Result ParseBlockDeclaration(BlockDeclaration*);
   Result ParseBlock(Block*);
   Result ParseExprList(ExprList*);
   Result ParseExpr(ExprList*);
-  Result ParseCatchInstrList(CatchVector* catches);
-  Result ParseCatchExprList(CatchVector* catches);
   Result ParseGlobalType(Global*);
 
   template <typename T>
@@ -198,12 +203,13 @@ class WastParser {
   template <typename T>
   Result ParseAssertScriptModuleCommand(TokenType, CommandPtr*);
 
+  Result ParseSimdV128Const(Const*, TokenType);
+
   void CheckImportOrdering(Module*);
 
   WastLexer* lexer_;
   Index last_module_index_ = kInvalidIndex;
-  ErrorHandler* error_handler_;
-  int errors_ = 0;
+  Errors* errors_;
   WastParseOptions* options_;
 
   CircularArray<Token, 2> tokens_;
@@ -211,12 +217,12 @@ class WastParser {
 
 Result ParseWatModule(WastLexer* lexer,
                       std::unique_ptr<Module>* out_module,
-                      ErrorHandler*,
+                      Errors*,
                       WastParseOptions* options = nullptr);
 
 Result ParseWastScript(WastLexer* lexer,
                        std::unique_ptr<Script>* out_script,
-                       ErrorHandler*,
+                       Errors*,
                        WastParseOptions* options = nullptr);
 
 }  // namespace wabt

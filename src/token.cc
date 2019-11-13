@@ -20,101 +20,13 @@ namespace wabt {
 
 const char* GetTokenTypeName(TokenType token_type) {
   static const char* s_names[] = {
-      // Bare.
-      "Invalid",
-      "anyfunc",
-      "assert_exhaustion",
-      "assert_invalid",
-      "assert_malformed",
-      "assert_return",
-      "assert_return_arithmetic_nan",
-      "assert_return_canonical_nan",
-      "assert_trap",
-      "assert_unlinkable",
-      "bin",
-      "data",
-      "elem",
-      "EOF",
-      "except",
-      "export",
-      "func",
-      "get",
-      "global",
-      "import",
-      "invoke",
-      "local",
-      "(",
-      "memory",
-      "module",
-      "mut",
-      "offset",
-      "param",
-      "quote",
-      "register",
-      "result",
-      ")",
-      "shared",
-      "start",
-      "table",
-      "then",
-      "type",
-
-      // Literal.
-      "FLOAT",
-      "NAT",
-      "INT",
-
-      // Opcode.
-      "ATOMIC_LOAD",
-      "ATOMIC_RMW",
-      "ATOMIC_RMW_CMPXCHG",
-      "ATOMIC_STORE",
-      "BINARY",
-      "block",
-      "br",
-      "br_if",
-      "br_table",
-      "call",
-      "call_indirect",
-      "catch",
-      "catch_all",
-      "COMPARE",
-      "CONST",
-      "CONVERT",
-      "current_memory",
-      "drop",
-      "else",
-      "end",
-      "get_global",
-      "get_local",
-      "grow_memory",
-      "if",
-      "LOAD",
-      "loop",
-      "nop",
-      "rethrow",
-      "return",
-      "select",
-      "set_global",
-      "set_local",
-      "STORE",
-      "tee_local",
-      "throw",
-      "try",
-      "UNARY",
-      "unreachable",
-      "WAIT",
-      "WAKE",
-
-      // String.
-      "align=",
-      "offset=",
-      "Reserved",
-      "TEXT",
-      "VAR",
-
-      // Type.
-      "VALUETYPE",
+#define WABT_TOKEN(name, string) string,
+#define WABT_TOKEN_FIRST(name, string)
+#define WABT_TOKEN_LAST(name, string)
+#include "token.def"
+#undef WABT_TOKEN
+#undef WABT_TOKEN_FIRST
+#undef WABT_TOKEN_LAST
   };
 
   static_assert(
@@ -122,8 +34,9 @@ const char* GetTokenTypeName(TokenType token_type) {
       "Expected TokenType names list length to match number of TokenTypes.");
 
   int x = static_cast<int>(token_type);
-  if (x < WABT_ENUM_COUNT(TokenType))
+  if (x < WABT_ENUM_COUNT(TokenType)) {
     return s_names[x];
+  }
 
   return "Invalid";
 }
@@ -139,7 +52,7 @@ Token::Token(Location loc, TokenType token_type, Type type)
   Construct(type_, type);
 }
 
-Token::Token(Location loc, TokenType token_type, const std::string& text)
+Token::Token(Location loc, TokenType token_type, string_view text)
     : loc(loc), token_type_(token_type) {
   assert(HasText());
   Construct(text_, text);
@@ -157,78 +70,15 @@ Token::Token(Location loc, TokenType token_type, const Literal& literal)
   Construct(literal_, literal);
 }
 
-Token::Token(const Token& other) : Token() {
-  *this = other;
-}
-
-Token::Token(Token&& other) : Token() {
-  *this = std::move(other);
-}
-
-Token& Token::operator=(const Token& other) {
-  Destroy();
-  loc = other.loc;
-  token_type_ = other.token_type_;
-
-  if (HasLiteral()) {
-    Construct(literal_, other.literal_);
-  } else if (HasOpcode()) {
-    Construct(opcode_, other.opcode_);
-  } else if (HasText()) {
-    Construct(text_, other.text_);
-  } else if (HasType()) {
-    Construct(type_, other.type_);
-  }
-
-  return *this;
-}
-
-Token& Token::operator=(Token&& other) {
-  Destroy();
-  loc = other.loc;
-  token_type_ = other.token_type_;
-
-  if (HasLiteral()) {
-    Construct(literal_, std::move(other.literal_));
-  } else if (HasOpcode()) {
-    Construct(opcode_, std::move(other.opcode_));
-  } else if (HasText()) {
-    Construct(text_, std::move(other.text_));
-  } else if (HasType()) {
-    Construct(type_, std::move(other.type_));
-  }
-
-  other.token_type_ = TokenType::Invalid;
-
-  return *this;
-}
-
-Token::~Token() {
-  Destroy();
-}
-
-void Token::Destroy() {
-  if (HasLiteral()) {
-    Destruct(literal_);
-  } else if (HasOpcode()) {
-    Destruct(opcode_);
-  } else if (HasText()) {
-    Destruct(text_);
-  } else if (HasType()) {
-    Destruct(type_);
-  }
-  token_type_ = TokenType::Invalid;
-}
-
 std::string Token::to_string() const {
   if (IsTokenTypeBare(token_type_)) {
     return GetTokenTypeName(token_type_);
   } else if (HasLiteral()) {
-    return literal_.text;
+    return literal_.text.to_string();
   } else if (HasOpcode()) {
     return opcode_.GetName();
   } else if (HasText()) {
-    return text_;
+    return text_.to_string();
   } else {
     assert(HasType());
     return GetTypeName(type_);

@@ -42,7 +42,8 @@
 #define WABT_USE(x) static_cast<void>(x)
 
 #define WABT_PAGE_SIZE 0x10000 /* 64k */
-#define WABT_MAX_PAGES 0x10000 /* # of pages that fit in 32-bit address space */
+#define WABT_MAX_PAGES 0x10000 /* # of pages that fit in 32-bit address space \
+                                */
 #define WABT_BYTES_TO_PAGES(x) ((x) >> 16)
 #define WABT_ALIGN_UP_TO_PAGE(x) \
   (((x) + WABT_PAGE_SIZE - 1) & ~(WABT_PAGE_SIZE - 1))
@@ -50,6 +51,10 @@
 #define PRIstringview "%.*s"
 #define WABT_PRINTF_STRING_VIEW_ARG(x) \
   static_cast<int>((x).length()), (x).data()
+
+#define PRItypecode "%s%#x"
+#define WABT_PRINTF_TYPE_CODE(x) \
+  (static_cast<int32_t>(x) < 0 ? "-" : ""), std::abs(static_cast<int32_t>(x))
 
 #define WABT_DEFAULT_SNPRINTF_ALLOCA_BUFSIZE 128
 #define WABT_SNPRINTF_ALLOCA(buffer, len, format)                          \
@@ -76,6 +81,10 @@
 
 #if WITH_EXCEPTIONS
 #define WABT_TRY try {
+#define WABT_CATCH_BAD_ALLOC \
+  }                          \
+  catch (std::bad_alloc&) {  \
+  }
 #define WABT_CATCH_BAD_ALLOC_AND_EXIT           \
   }                                             \
   catch (std::bad_alloc&) {                     \
@@ -83,12 +92,17 @@
   }
 #else
 #define WABT_TRY
+#define WABT_CATCH_BAD_ALLOC
 #define WABT_CATCH_BAD_ALLOC_AND_EXIT
 #endif
 
 #define PRIindex "u"
 #define PRIaddress "u"
 #define PRIoffset PRIzx
+
+struct v128 {
+  uint32_t v[4];
+};
 
 namespace wabt {
 
@@ -101,14 +115,14 @@ static const Index kInvalidIndex = ~0;
 static const Offset kInvalidOffset = ~0;
 
 template <typename Dst, typename Src>
-Dst Bitcast(Src value) {
+Dst Bitcast(Src&& value) {
   static_assert(sizeof(Src) == sizeof(Dst), "Bitcast sizes must match.");
   Dst result;
   memcpy(&result, &value, sizeof(result));
   return result;
 }
 
-template<typename T>
+template <typename T>
 void ZeroMemory(T& v) {
   WABT_STATIC_ASSERT(std::is_pod<T>::value);
   memset(&v, 0, sizeof(v));
@@ -124,15 +138,6 @@ void Construct(T& placement, Args&&... args) {
 template <typename T>
 void Destruct(T& placement) {
   placement.~T();
-}
-
-// Calls data() on vector, string, etc. but will return nullptr if the
-// container is empty.
-// TODO(binji): this should probably be removed when there is a more direct way
-// to represent a memory slice (e.g. something similar to GSL's span)
-template <typename T>
-typename T::value_type* DataOrNull(T& container) {
-  return container.empty() ? nullptr : container.data();
 }
 
 inline std::string WABT_PRINTF_FORMAT(1, 2)
@@ -170,14 +175,14 @@ struct Location {
   };
 
   Location() : line(0), first_column(0), last_column(0) {}
-  Location(const char* filename, int line, int first_column, int last_column)
+  Location(string_view filename, int line, int first_column, int last_column)
       : filename(filename),
         line(line),
         first_column(first_column),
         last_column(last_column) {}
   explicit Location(size_t offset) : offset(offset) {}
 
-  const char* filename = nullptr;
+  string_view filename;
   union {
     // For text files.
     struct {
@@ -192,32 +197,40 @@ struct Location {
   };
 };
 
-/* matches binary format, do not change */
-enum class Type {
-  I32 = -0x01,
-  I64 = -0x02,
-  F32 = -0x03,
-  F64 = -0x04,
-  Anyfunc = -0x10,
-  Func = -0x20,
-  Void = -0x40,
-  ___ = Void, /* convenient for the opcode table in opcode.h */
-  Any = 0,    /* Not actually specified, but useful for type-checking */
+// Matches binary format, do not change.
+enum class Type : int32_t {
+  I32 = -0x01,        // 0x7f
+  I64 = -0x02,        // 0x7e
+  F32 = -0x03,        // 0x7d
+  F64 = -0x04,        // 0x7c
+  V128 = -0x05,       // 0x7b
+  Funcref = -0x10,    // 0x70
+  Anyref = -0x11,     // 0x6f
+  ExceptRef = -0x18,  // 0x68
+  Func = -0x20,       // 0x60
+  Void = -0x40,       // 0x40
+  ___ = Void,         // Convenient for the opcode table in opcode.h
+  Any = 0,            // Not actually specified, but useful for type-checking
 };
 typedef std::vector<Type> TypeVector;
 
 enum class RelocType {
-  FuncIndexLEB = 0,       // e.g. Immediate of call instruction
-  TableIndexSLEB = 1,     // e.g. Loading address of function
-  TableIndexI32 = 2,      // e.g. Function address in DATA
-  MemoryAddressLEB = 3,   // e.g. Memory address in load/store offset immediate
-  MemoryAddressSLEB = 4,  // e.g. Memory address in i32.const
-  MemoryAddressI32 = 5,   // e.g. Memory address in DATA
-  TypeIndexLEB = 6,       // e.g. Immediate type in call_indirect
-  GlobalIndexLEB = 7,     // e.g. Immediate of get_global inst
+  FuncIndexLEB = 0,          // e.g. Immediate of call instruction
+  TableIndexSLEB = 1,        // e.g. Loading address of function
+  TableIndexI32 = 2,         // e.g. Function address in DATA
+  MemoryAddressLEB = 3,      // e.g. Memory address in load/store offset immediate
+  MemoryAddressSLEB = 4,     // e.g. Memory address in i32.const
+  MemoryAddressI32 = 5,      // e.g. Memory address in DATA
+  TypeIndexLEB = 6,          // e.g. Immediate type in call_indirect
+  GlobalIndexLEB = 7,        // e.g. Immediate of get_global inst
+  FunctionOffsetI32 = 8,     // e.g. Code offset in DWARF metadata
+  SectionOffsetI32 = 9,      // e.g. Section offset in DWARF metadata
+  EventIndexLEB = 10,        // Used in throw instructions
+  MemoryAddressRelSLEB = 11, // In PIC code, data address relative to __memory_base
+  TableIndexRelSLEB = 12,    // In PIC code, table index relative to __table_base
 
   First = FuncIndexLEB,
-  Last = GlobalIndexLEB,
+  Last = TableIndexRelSLEB,
 };
 static const int kRelocTypeCount = WABT_ENUM_COUNT(RelocType);
 
@@ -231,10 +244,33 @@ struct Reloc {
 };
 
 enum class LinkingEntryType {
-  StackPointer = 1,
-  SymbolInfo = 2,
-  DataSize = 3,
-  DataAlignment = 4,
+  SegmentInfo = 5,
+  InitFunctions = 6,
+  ComdatInfo = 7,
+  SymbolTable = 8,
+};
+
+enum class SymbolType {
+  Function = 0,
+  Data = 1,
+  Global = 2,
+  Section = 3,
+  Event = 4,
+};
+
+enum class ComdatType {
+  Data = 0x0,
+  Function = 0x1,
+};
+
+#define WABT_SYMBOL_FLAG_UNDEFINED 0x10
+#define WABT_SYMBOL_MASK_VISIBILITY 0x4
+#define WABT_SYMBOL_MASK_BINDING 0x3
+#define WASM_SYMBOL_EXPLICIT_NAME 0x40
+
+enum class SymbolVisibility {
+  Default = 0,
+  Hidden = 4,
 };
 
 enum class SymbolBinding {
@@ -249,29 +285,30 @@ enum class ExternalKind {
   Table = 1,
   Memory = 2,
   Global = 3,
-  Except = 4,
+  Event = 4,
 
   First = Func,
-  Last = Except,
+  Last = Event,
 };
 static const int kExternalKindCount = WABT_ENUM_COUNT(ExternalKind);
 
 struct Limits {
+  Limits() = default;
+  explicit Limits(uint64_t initial) : initial(initial) {}
+  Limits(uint64_t initial, uint64_t max)
+      : initial(initial), max(max), has_max(true) {}
+  Limits(uint64_t initial, uint64_t max, bool is_shared)
+      : initial(initial), max(max), has_max(true), is_shared(is_shared) {}
+
   uint64_t initial = 0;
   uint64_t max = 0;
   bool has_max = false;
   bool is_shared = false;
 };
-enum class LimitsShareable { Allowed, NotAllowed };
 
 enum { WABT_USE_NATURAL_ALIGNMENT = 0xFFFFFFFF };
 
-enum class NameSectionSubsection {
-  Function = 1,
-  Local = 2,
-};
-
-Result ReadFile(const char* filename, std::vector<uint8_t>* out_data);
+Result ReadFile(string_view filename, std::vector<uint8_t>* out_data);
 
 void InitStdio();
 
@@ -280,8 +317,9 @@ void InitStdio();
 extern const char* g_kind_name[];
 
 static WABT_INLINE const char* GetKindName(ExternalKind kind) {
-  assert(static_cast<int>(kind) < kExternalKindCount);
-  return g_kind_name[static_cast<size_t>(kind)];
+  return static_cast<int>(kind) < kExternalKindCount
+    ? g_kind_name[static_cast<size_t>(kind)]
+    : "<error_kind>";
 }
 
 /* reloc */
@@ -289,8 +327,28 @@ static WABT_INLINE const char* GetKindName(ExternalKind kind) {
 extern const char* g_reloc_type_name[];
 
 static WABT_INLINE const char* GetRelocTypeName(RelocType reloc) {
-  assert(static_cast<int>(reloc) < kRelocTypeCount);
-  return g_reloc_type_name[static_cast<size_t>(reloc)];
+  return static_cast<int>(reloc) < kRelocTypeCount
+    ? g_reloc_type_name[static_cast<size_t>(reloc)]
+    : "<error_reloc_type>";
+}
+
+/* symbol */
+
+static WABT_INLINE const char* GetSymbolTypeName(SymbolType type) {
+  switch (type) {
+    case SymbolType::Function:
+      return "func";
+    case SymbolType::Global:
+      return "global";
+    case SymbolType::Data:
+      return "data";
+    case SymbolType::Section:
+      return "section";
+    case SymbolType::Event:
+      return "event";
+    default:
+      return "<error_symbol_type>";
+  }
 }
 
 /* type */
@@ -305,16 +363,50 @@ static WABT_INLINE const char* GetTypeName(Type type) {
       return "f32";
     case Type::F64:
       return "f64";
-    case Type::Anyfunc:
-      return "anyfunc";
+    case Type::V128:
+      return "v128";
+    case Type::Funcref:
+      return "funcref";
     case Type::Func:
       return "func";
+    case Type::ExceptRef:
+      return "except_ref";
     case Type::Void:
       return "void";
     case Type::Any:
       return "any";
+    case Type::Anyref:
+      return "anyref";
+    default:
+      return "<type_index>";
   }
-  WABT_UNREACHABLE;
+}
+
+static WABT_INLINE bool IsTypeIndex(Type type) {
+  return static_cast<int32_t>(type) >= 0;
+}
+
+static WABT_INLINE Index GetTypeIndex(Type type) {
+  assert(IsTypeIndex(type));
+  return static_cast<Index>(type);
+}
+
+static WABT_INLINE TypeVector GetInlineTypeVector(Type type) {
+  assert(!IsTypeIndex(type));
+  switch (type) {
+    case Type::Void:
+      return TypeVector();
+
+    case Type::I32:
+    case Type::I64:
+    case Type::F32:
+    case Type::F64:
+    case Type::V128:
+      return TypeVector(&type, &type + 1);
+
+    default:
+      WABT_UNREACHABLE;
+  }
 }
 
 template <typename T>
@@ -336,4 +428,4 @@ inline void ConvertBackslashToSlash(std::string* s) {
 
 }  // namespace wabt
 
-#endif // WABT_COMMON_H_
+#endif  // WABT_COMMON_H_

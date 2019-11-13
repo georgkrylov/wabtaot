@@ -18,103 +18,99 @@
 #define FUNCTIONBUILDER_HPP
 
 #include "type-dictionary.h"
+#include "stack.h"
+#include "ilgen/BytecodeBuilder.hpp"
+#include "ilgen/MethodBuilder.hpp"
+#include "ilgen/VirtualMachineState.hpp"
 
-#include "src/interp.h"
+#include "src/interp/interp.h"
 
 #include <type_traits>
-#include <string>
 
 namespace wabt {
 namespace jit {
 
-class FunctionBuilder : public OMR::JitBuilder::MethodBuilder {
+// Workaround for broken JitBuilder callbacks. See vms_hack.cc for more details.
+void initializeVmsHack(TR::VirtualMachineState* vms);
+
+class WabtState : public TR::VirtualMachineState {
+public:
+  VirtualStack stack;
+
+  WabtState() { initializeVmsHack(this); }
+
+  VirtualMachineState* MakeCopy() override {
+    return new WabtState(*this);
+  }
+
+  void MergeInto(TR::VirtualMachineState* other, TR::IlBuilder* b) override {
+    this->stack.MergeInto(&dynamic_cast<WabtState&>(*other).stack, b);
+  }
+};
+
+class FunctionBuilder : public TR::MethodBuilder {
  public:
   FunctionBuilder(interp::Thread* thread, interp::DefinedFunc* fn, TypeDictionary* types);
   bool buildIL() override;
 
-  /**
-   * @brief Generate push to the interpreter stack
-   * @param b is the builder object used to generate the code
-   * @param type is the name of the field in the Value union corresponding to the type of the value being pushed
-   * @param value is the IlValue representing the value being pushed
-   */
-  void Push(OMR::JitBuilder::IlBuilder* b, const char* type, OMR::JitBuilder::IlValue* value, const uint8_t* pc);
-
-  /**
-   * @brief Generate pop from the interpreter stack
-   * @param b is the builder object used to generate the code
-   * @param type is the name of the field in the Value union corresponding to the type of the value being popped
-   * @return an IlValue representing the popped value
-   */
-  OMR::JitBuilder::IlValue* Pop(OMR::JitBuilder::IlBuilder* b, const char* type);
-
-  /**
-   * @brief Drop a number of values from the interpreter stack, optionally keeping the top value of the stack
-   * @param b is the builder object used to generate the code
-   * @param drop_count is the number of values to drop from the stack
-   * @param keep_count is 1 to keep the top value intact and 0 otherwise
-   */
-  void DropKeep(OMR::JitBuilder::IlBuilder* b, uint32_t drop_count, uint8_t keep_count);
-
-  /**
-   * @brief Generate load of pointer to a vlue on the interpreter stack by an index
-   * @param b is the builder object used to generate the code
-   * @param depth is the index from the top of the stack
-   * @return and IlValue representing a pointer to the value on the stack
-   *
-   * JitBuilder does not currently represent unions as value types. This a problem
-   * for this function because it cannot simply return an IlValue representing
-   * the union. As workaround, it will generate a load of the *base address* of
-   * the union, instead of loading the union directly. This behaviour differs
-   * from `Thread::Pick()` and users must take this into account.
-   */
-  OMR::JitBuilder::IlValue* Pick(OMR::JitBuilder::IlBuilder* b, Index depth);
-
  private:
   struct BytecodeWorkItem {
-    OMR::JitBuilder::BytecodeBuilder* builder;
+    TR::BytecodeBuilder* builder;
     const uint8_t* pc;
 
-    BytecodeWorkItem(OMR::JitBuilder::BytecodeBuilder* builder, const uint8_t* pc)
+    BytecodeWorkItem(TR::BytecodeBuilder* builder, const uint8_t* pc)
       : builder(builder), pc(pc) {}
   };
 
+  void SetUpLocals(TR::IlBuilder* b, const uint8_t** pc, VirtualStack* stack);
+  void TearDownLocals(TR::IlBuilder* b);
+  uint32_t GetLocalOffset(VirtualStack* stack, Type* type, uint32_t depth);
+
+  void MoveToPhysStack(TR::IlBuilder* b, const uint8_t* pc, VirtualStack* stack, uint32_t depth);
+  void MoveFromPhysStack(TR::IlBuilder* b, VirtualStack* stack, const std::vector<Type>& types);
+  TR::IlValue* PickPhys(TR::IlBuilder* b, uint32_t depth);
+
   template <typename T>
   const char* TypeFieldName() const;
-
   const char* TypeFieldName(Type t) const;
+  const char* TypeFieldName(TR::DataType dt) const;
 
-  OMR::JitBuilder::IlValue* Const(OMR::JitBuilder::IlBuilder* b, const interp::TypedValue* v) const;
-
-  template <typename T, typename TResult = T, typename TOpHandler>
-  void EmitBinaryOp(OMR::JitBuilder::IlBuilder* b, const uint8_t* pc, TOpHandler h);
+  TR::IlValue* Const(TR::IlBuilder* b, const interp::TypedValue* v) const;
 
   template <typename T, typename TResult = T, typename TOpHandler>
-  void EmitUnaryOp(OMR::JitBuilder::IlBuilder* b, const uint8_t* pc, TOpHandler h);
+  void EmitBinaryOp(TR::IlBuilder* b, const uint8_t* pc, VirtualStack* stack, TOpHandler h);
+
+  template <typename T, typename TResult = T, typename TOpHandler>
+  void EmitUnaryOp(TR::IlBuilder* b, const uint8_t* pc, VirtualStack* stack, TOpHandler h);
 
   template <typename T>
-  void EmitIntDivide(OMR::JitBuilder::IlBuilder* b, const uint8_t* pc);
+  void EmitIntDivide(TR::IlBuilder* b, const uint8_t* pc, VirtualStack* stack);
 
   template <typename T>
-  void EmitIntRemainder(OMR::JitBuilder::IlBuilder* b, const uint8_t* pc);
+  void EmitIntRemainder(TR::IlBuilder* b, const uint8_t* pc, VirtualStack* stack);
 
   template <typename T>
-  OMR::JitBuilder::IlValue* EmitMemoryPreAccess(OMR::JitBuilder::IlBuilder* b, const uint8_t** pc);
+  TR::IlValue* EmitMemoryPreAccess(TR::IlBuilder* b, const uint8_t** pc, VirtualStack* stack);
 
-  void EmitTrap(OMR::JitBuilder::IlBuilder* b, OMR::JitBuilder::IlValue* result, const uint8_t* pc);
-  void EmitCheckTrap(OMR::JitBuilder::IlBuilder* b, OMR::JitBuilder::IlValue* result, const uint8_t* pc);
-  void EmitTrapIf(OMR::JitBuilder::IlBuilder* b, OMR::JitBuilder::IlValue* condition, OMR::JitBuilder::IlValue* result, const uint8_t* pc);
+  void EmitTrap(TR::IlBuilder* b, TR::IlValue* result, const uint8_t* pc);
+  void EmitCheckTrap(TR::IlBuilder* b, TR::IlValue* result, const uint8_t* pc);
+  void EmitTrapIf(TR::IlBuilder* b, TR::IlValue* condition, TR::IlValue* result, const uint8_t* pc);
 
   template <typename F>
-  OMR::JitBuilder::IlValue* EmitIsNan(OMR::JitBuilder::IlBuilder* b, OMR::JitBuilder::IlValue* value);
+  TR::IlValue* EmitIsNan(TR::IlBuilder* b, TR::IlValue* value);
 
   template <typename ToType, typename FromType>
-  void EmitTruncation(OMR::JitBuilder::IlBuilder* b, const uint8_t* pc);
+  void EmitTruncation(TR::IlBuilder* b, const uint8_t* pc, VirtualStack* stack);
   template <typename ToType, typename FromType>
-  void EmitUnsignedTruncation(OMR::JitBuilder::IlBuilder* b, const uint8_t* pc);
+  void EmitUnsignedTruncation(TR::IlBuilder* b, const uint8_t* pc, VirtualStack* stack);
+
+  template <typename ToType, typename FromType>
+  void EmitSaturatingTruncation(TR::IlBuilder* b, VirtualStack* stack);
+  template <typename ToType, typename FromType>
+  void EmitUnsignedSaturatingTruncation(TR::IlBuilder* b, VirtualStack* stack);
 
   template <typename>
-  OMR::JitBuilder::IlValue* CalculateShiftAmount(OMR::JitBuilder::IlBuilder* b, OMR::JitBuilder::IlValue* amount);
+  TR::IlValue* CalculateShiftAmount(TR::IlBuilder* b, TR::IlValue* amount);
 
   using Result_t = std::underlying_type<wabt::interp::Result>::type;
 
@@ -131,21 +127,12 @@ class FunctionBuilder : public OMR::JitBuilder::MethodBuilder {
   interp::Thread* thread_;
   interp::DefinedFunc* fn_;
 
-  OMR::JitBuilder::IlType* const valueType_;
-  OMR::JitBuilder::IlType* const pValueType_;
+  TR::IlType* const valueType_;
+  TR::IlType* const pValueType_;
 
-  bool Emit(OMR::JitBuilder::BytecodeBuilder* b, const uint8_t* istream, const uint8_t* pc);
+  bool Emit(TR::BytecodeBuilder* b, const uint8_t* istream, const uint8_t* pc, VirtualStack& stack);
 };
 
-class FunctionThunkBuilder : public OMR::JitBuilder::ThunkBuilder {
-  public:
-  FunctionThunkBuilder(OMR::JitBuilder::TypeDictionary *types, const char *name, 
-			  OMR::JitBuilder::IlType *returnType,uint32_t numCalleeParams, 
-		       OMR::JitBuilder::IlType **calleeParamTypes) : OMR::JitBuilder::ThunkBuilder(types, name, returnType, numCalleeParams, calleeParamTypes), fn_name(name)
-            { }
-  virtual bool buildIL();
-  std::string fn_name;
-};
 }
 }
 
