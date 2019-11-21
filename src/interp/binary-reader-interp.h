@@ -35,7 +35,7 @@ Result ReadBinaryInterp(interp::Environment* env,
                         const void* data,
                         size_t size,
                         const ReadBinaryOptions* options,
-                        ErrorHandler*,
+                        Errors*,
                         interp::DefinedModule* module);
 
 }  // namespace wabt

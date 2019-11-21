@@ -17,7 +17,7 @@
 #include "type-dictionary.h"
 #include "src/interp/interp.h"
 
-wabt::jit::TypeDictionary::TypeDictionary() : OMR::JitBuilder::TypeDictionary() {
+wabt::jit::TypeDictionary::TypeDictionary() : TR::TypeDictionary() {
     using namespace wabt::interp;
 
 
@@ -37,7 +37,7 @@ wabt::jit::TypeDictionary::TypeDictionary() : OMR::JitBuilder::TypeDictionary() 
     UnionField("Value", "__size_pad", LookupStruct("ValueSizePad"));
     CloseUnion("Value");
 }
-
+/*
 wabt::jit::AOTTypeDictionary::AOTTypeDictionary() : OMR::JitBuilder::TypeDictionary() {
     using namespace wabt::interp;
     /*stackElement = DefineUnion("Value");
@@ -45,7 +45,7 @@ wabt::jit::AOTTypeDictionary::AOTTypeDictionary() : OMR::JitBuilder::TypeDiction
     UnionField("Value", "i64", toIlType<decltype(Value::i64)>());
     UnionField("Value", "f32", toIlType<float>());
     UnionField("Value", "f64", toIlType<double>());
-    CloseUnion("Value");*/
+    CloseUnion("Value");*//*
     stackElement = toIlType<decltype(Value::i64)>();
     stackElementPtr = PointerTo(stackElement);
   stackTop = PointerTo(stackElementPtr);
@@ -57,3 +57,4 @@ wabt::jit::AOTTypeDictionary::AOTTypeDictionary() : OMR::JitBuilder::TypeDiction
   CloseStruct(name);
   threadPtr = PointerTo(thread);
 }
+*/

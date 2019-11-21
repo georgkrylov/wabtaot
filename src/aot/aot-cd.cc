@@ -1,11 +1,11 @@
 #include "../common.h" // for ReadFile, DataOrNull.
 
-#include "../binary-reader-interp.h"
+#include "../interp/binary-reader-interp.h"
 #include "../binary-reader.h"
 #include "../cast.h"
-#include "../error-handler.h"
+#include "../error-formatter.h"
 #include "../feature.h"
-#include "../interp.h"
+#include "../interp/interp.h"
 #include "../literal.h"
 #include "../option-parser.h"
 #include "../resolve-names.h"
@@ -30,7 +30,7 @@
 
 using namespace wabt;
 using namespace wabt::interp;
-
+/*
 class WasmInterpHostImportDelegate : public HostImportDelegate {
  public:
   wabt::Result ImportFunc(interp::FuncImport* import,
@@ -88,25 +88,97 @@ class WasmInterpHostImportDelegate : public HostImportDelegate {
     WABT_SNPRINTF_ALLOCA(buffer, length, format);
     callback(buffer);
   }
-};
+};*/
+
+extern int32_t internal_compileMethodBuilder(TR::MethodBuilder * methodBuilder, void ** entryPoint);
+
+static std::unique_ptr<FileStream> s_stdout_stream;
+static std::unique_ptr<FileStream> s_log_stream;
+
+static interp::Result PrintCallback(const HostFunc* func,
+                                    const interp::FuncSignature* sig,
+                                    const TypedValues& args,
+                                    TypedValues& results) {
+  printf("called host ");
+  WriteCall(s_stdout_stream.get(), func->module_name, func->field_name, args,
+            results, interp::Result::Ok);
+  return interp::Result::Ok;
+}
 
 // from wasm-interp.cc in wasmjit-omr/src/tools.
 static wabt::Result ReadModule(const char* module_filename,
                                Environment* env,
-                               ErrorHandler* error_handler,
+                               Errors* errors,
                                DefinedModule* out_module)
 {
   wabt::Result result;
   std::vector<uint8_t> file_data;
 
   HostModule* host_module = env->AppendHostModule("host");
-  host_module->import_delegate.reset(new WasmInterpHostImportDelegate());
+  host_module->on_unknown_func_export =
+      [](Environment* env, HostModule* host_module, string_view name,
+         Index sig_index) -> Index {
+
+    if (name != "") {
+      std::pair<HostFunc*, Index> pair =
+        host_module->AppendFuncExport(name, sig_index, PrintCallback);
+      return pair.second;
+    }
+
+    return kInvalidIndex;
+    
+  };
 
   HostModule *wasi = env->AppendHostModule("wasi_unstable");
-  wasi->import_delegate.reset(new WasmInterpHostImportDelegate());
+  wasi->on_unknown_func_export =
+      [](Environment* env, HostModule* host_module, string_view name,
+         Index sig_index) -> Index {
+
+    if (name != "") {
+      std::pair<HostFunc*, Index> pair =
+        host_module->AppendFuncExport(name, sig_index, PrintCallback);
+      return pair.second;
+    }
+
+    return kInvalidIndex;
+    
+   };
 
   HostModule *envi = env->AppendHostModule("env");
-  envi->import_delegate.reset(new WasmInterpHostImportDelegate());
+  envi->on_unknown_func_export =
+      [](Environment* env, HostModule* host_module, string_view name,
+         Index sig_index) -> Index {
+
+    if (name != "") {
+      std::pair<HostFunc*, Index> pair =
+        host_module->AppendFuncExport(name, sig_index, PrintCallback);
+      return pair.second;
+    }
+
+    return kInvalidIndex;
+    
+  };
+
+  envi->on_unknown_export =
+      [](Environment* env, HostModule* module, string_view name, ExternalKind kind)
+         -> Index {
+    if (name != "") {
+      
+      switch(kind) {
+          case ExternalKind::Memory: {
+              auto pair = module->AppendMemoryExport(name, Limits(256, 256));
+              return pair.second;
+          }
+          case ExternalKind::Table: {
+              auto pair = module->AppendTableExport(name, Type::Funcref, Limits(6));
+              return pair.second;
+          }
+      }
+    }
+
+    return kInvalidIndex;
+    
+  };
 
   // *out_module = nullptr;
 
@@ -114,18 +186,20 @@ static wabt::Result ReadModule(const char* module_filename,
   if (Succeeded(result)) {
     const bool kReadDebugNames = true;
     const bool kStopOnFirstError = true;
+    const bool kFailOnCustomSectionError = true;
 
-    Features features;
-    FileStream* log_stream = nullptr;
-
-    ReadBinaryOptions options(features, log_stream, kReadDebugNames, kStopOnFirstError);
-    result = ReadBinaryInterp(env, DataOrNull(file_data), file_data.size(),
-                              &options, error_handler, out_module);
-    // if((*out_module)->name=="") {
-    //   (*out_module)->name = std::string(module_filename);
-    // }
+    Features s_features;
+    ReadBinaryOptions options(s_features, s_log_stream.get(), kReadDebugNames,
+                              kStopOnFirstError, kFailOnCustomSectionError);
+    result = ReadBinaryInterp(env, file_data.data(), file_data.size(),
+                              &options, errors, out_module);
+/*
+    if (Succeeded(result)) {
+      if (s_verbose) {
+        env->DisassembleModule(s_stdout_stream.get(), out_module);
+      }
+    }*/
   }
-
   return result;
 }
 
@@ -142,10 +216,11 @@ wabt::Result compileAOT(interp::Environment& env, DefinedModule* module)
   for(Index i = 0; i < func_count; ++i) {
     if(!env.GetFunc(i)->is_compiled) {
       auto* fn = cast<wabt::interp::DefinedFunc>(env.GetFunc(i));
-      std::unique_ptr<AOTTypeDictionary> types(new AOTTypeDictionary());
+      std::unique_ptr<AOTTypeDictionary> types(new (PERSISTENT_NEW) AOTTypeDictionary());
+      //static AOTTypeDictionary types;
       std::string name = "f" + std::to_string(i) +"m"+module->name.substr(0,3);
       
-      AOTFunctionBuilder* builder = new AOTFunctionBuilder(&thread, fn,
+      AOTFunctionBuilder* builder = new (PERSISTENT_NEW) AOTFunctionBuilder(&thread, fn,
 							   std::move(name),
 							   types.get(),
 							   env, aotManager);
@@ -185,7 +260,7 @@ wabt::Result compileAOT(interp::Environment& env, DefinedModule* module)
       void* function = nullptr;
       function = getCodeEntry(const_cast<char*>(fn->dbg_name_.c_str()));
       if(!function) {
-        compileMethodBuilder(&builder, &function);
+        internal_compileMethodBuilder(&builder, &function);
         storeCodeEntry((char *)fn->dbg_name_.c_str(),function);
 	      function = getCodeEntry(const_cast<char*>(fn->dbg_name_.c_str()));
       }
@@ -310,7 +385,8 @@ int main(int argc, char** argv) {
     return -1;
   }
   Environment env;
-
+  s_stdout_stream = FileStream::CreateStdout();
+  s_log_stream = FileStream::CreateStdout();
   for(uint32_t i = 1;i<argc;i++) {
     registerModules(argv[i],&env);
   }
@@ -327,9 +403,10 @@ int main(int argc, char** argv) {
     // }
 
     DefinedModule* module = nullptr; //new DefinedModule();
-    ErrorHandlerFile error_handler(Location::Type::Binary);
+    //ErrorHandlerFile error_handler(Location::Type::Binary);
+    Errors errors;
     module = dynamic_cast<DefinedModule*>(env.GetModule(i-1));
-    wabt::Result result = ReadModule(src_filename, &env, &error_handler, module);
+    wabt::Result result = ReadModule(src_filename, &env, &errors, module);
 
     if(Succeeded(result)) {
       compileAOT(env, module);

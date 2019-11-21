@@ -1,6 +1,6 @@
 #include <cstdio>
 
-#include "src/interp.h"
+#include "src/interp/interp.h"
 #include "trap-with.h"
 
 extern "C" void trapWith(int32_t r) {

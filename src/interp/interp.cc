@@ -244,6 +244,20 @@ Export* Module::GetExport(string_view name) {
   return &exports[field_index];
 }
 
+Export* HostModule::GetExport(string_view name, ExternalKind kind) {
+  int field_index = export_bindings.FindIndex(name);
+  if (field_index < 0) {
+    Index index = OnUnknownExport(name, kind);
+    if (index != kInvalidIndex) {
+      Export* export_ = &exports[index];
+      //assert(export_->name.compare(name) == 0);
+      return export_;
+    }
+    return nullptr;
+  }
+  return &exports[field_index];
+}
+
 Index Module::AppendExport(ExternalKind kind,
                            Index item_index,
                            string_view name) {
@@ -266,6 +280,13 @@ HostModule::HostModule(Environment* env, string_view name)
 Index HostModule::OnUnknownFuncExport(string_view name, Index sig_index) {
   if (on_unknown_func_export) {
     return on_unknown_func_export(env_, this, name, sig_index);
+  }
+  return kInvalidIndex;
+}
+
+Index HostModule::OnUnknownExport(string_view name, ExternalKind kind) {
+  if (on_unknown_export) {
+    return on_unknown_export(env_, this, name, kind);
   }
   return kInvalidIndex;
 }
@@ -1689,14 +1710,14 @@ bool Environment::TryJit(Thread* t, IstreamOffset offset, Environment::JITedFunc
       meta->num_calls++;
 
       if (meta->num_calls >= jit_threshold) {
-	if(enable_load_from_dlib) {
+	/*if(enable_load_from_dlib) {
 	//if(0){
 	  meta->jit_fn = jit::loadCompiled(t,meta->wasm_fn,*this);
 	  meta->tried_jit = true;
-	}else{
+	}else{*/
 	  meta->jit_fn = jit::compile(t, meta->wasm_fn);
 	  meta->tried_jit = true;
-	}
+	//}
       } else {
         *fn = nullptr;
         return false;
@@ -1724,7 +1745,7 @@ bool Environment::TryJit(Thread* t, IstreamOffset offset, Environment::JITedFunc
       meta->num_calls++;
 
       if (meta->num_calls >= jit_threshold) {
-	if(enable_load_thunk){
+/*	if(enable_load_thunk){
 	  df = dynamic_cast<DefinedFunc*>(meta->wasm_fn);
 	  meta->jit_fn = jit::loadThunk(t,meta->wasm_fn,*this);
 	  //meta->tried_jit = true;
@@ -1732,10 +1753,10 @@ bool Environment::TryJit(Thread* t, IstreamOffset offset, Environment::JITedFunc
 	//if(0){
 	  meta->jit_fn = jit::loadCompiled(t,meta->wasm_fn,*this);
 	  meta->tried_jit = true;
-	}else{
+	}else{*/
 	  meta->jit_fn = jit::compile(t, meta->wasm_fn);
 	  meta->tried_jit = true;
-	}
+	//}
      
     } else {
         *fn = nullptr;
@@ -3061,7 +3082,7 @@ Result Thread::Run(int num_instructions) {
             SimdExtractLane<int32_t, v128, int32_t>(lane_val, lane_idx)));
         break;
       }
-
+/*
 Result Thread::CallThunk(Environment::JITedFunction jit_fn,Func *df) {
   void *handle = dlopen(env_->infile,RTLD_LAZY);
   if(!handle)
@@ -3089,7 +3110,7 @@ Result Thread::CallThunk(Environment::JITedFunction jit_fn,Func *df) {
 	for(int k=0;k<env_->memories_[j].data.size();k++){
 	  memcpy(&mems[j][k],&env_->memories_[j].data[k],sizeof(long));
 	}
-	}*/
+	}*//*
       mems = new char*[env_->GetMemoryCount()];
       for(int j=0;j<env_->memories_.size();j++){
 	mems[j] = env_->memories_[j].data.data();
@@ -3149,23 +3170,13 @@ Result Thread::CallThunk(Environment::JITedFunction jit_fn,Func *df) {
 	  memcpy(&env_->memories_[j].data[k],&mems[j][k],sizeof(long));
 	}
       }
-      }*/
+      }*//*
     delete [] mems;
     delete [] globs;
     delete [] params;
     return Result::Ok;
-}
+}*/
 
-void Environment::Disassemble(Stream* stream,
-                              IstreamOffset from,
-                              IstreamOffset to) {
-  /* TODO(binji): mark function entries */
-  /* TODO(binji): track value stack size */
-  if (from >= istream_->data.size())
-    return;
-  to = std::min<IstreamOffset>(to, istream_->data.size());
-  const uint8_t* istream = istream_->data.data();
-  const uint8_t* pc = &istream[from];
 
       case Opcode::I64X2ExtractLane: {
         v128 lane_val = static_cast<v128>(Pop<v128>());

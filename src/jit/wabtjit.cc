@@ -25,7 +25,7 @@
 
 
 //#include "JitBuilder.hpp"
-//extern int32_t internal_compileMethodBuilder(TR::MethodBuilder * methodBuilder, void ** entryPoint);
+extern int32_t internal_compileMethodBuilder(TR::MethodBuilder * methodBuilder, void ** entryPoint);
 
 namespace wabt{
 namespace jit {
@@ -35,7 +35,7 @@ JITedFunction compile(interp::Thread* thread, interp::Func* fn) {
   FunctionBuilder builder(thread, dynamic_cast<interp::DefinedFunc*>(fn), &types);
   void* function = nullptr;
   
-  if (compileMethodBuilder(&builder, &function) == 0) {
+  if (internal_compileMethodBuilder(&builder, &function) == 0) {
     return reinterpret_cast<JITedFunction>(function);
   } else {
     return nullptr;
@@ -69,7 +69,7 @@ JITedFunction loadCompiled(interp::Thread* thread, interp::Func* fn,
   void *funct = dlsym(handle,fn->dbg_name_.c_str());
   return reinterpret_cast<JITedFunction>(funct);
 }
-
+/*
 JITedFunction loadThunk(interp::Thread* thread, interp::Func* fn,
 			interp::Environment& env) {
   AOTTypeDictionary types;
@@ -150,6 +150,6 @@ OMR::JitBuilder::IlType* TypeFieldType(const char* t) {
   //TR_ASSERT_FATAL(false, "Invalid primitive type");
   return nullptr;
 }
-
+*/
 }
 }

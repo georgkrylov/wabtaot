@@ -1,0 +1,11 @@
+(module
+	(func $sub2 (param i64) (param i64) (result i64)
+	 get_local 0
+	 get_local 1
+	 i64.sub)
+	
+	(func (export "aaaa") (result i64)
+	 i64.const 6
+	 i64.const 4
+	 call $sub2)
+)

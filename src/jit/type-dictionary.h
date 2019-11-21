@@ -16,12 +16,12 @@
 
 #ifndef TYPEDICTIONARY_HPP
 #define TYPEDICTIONARY_HPP
-#include <stddef.h>
-#include "JitBuilder.hpp"
+
+#include "ilgen/TypeDictionary.hpp"
 
 namespace wabt {
 namespace jit {
-
+/*
 class TypeDictionary : public OMR::JitBuilder::TypeDictionary {
  public:
   TypeDictionary();
@@ -50,6 +50,11 @@ class AOTTypeDictionary : public OMR::JitBuilder::TypeDictionary {
   OMR::JitBuilder::IlType *thread;
   OMR::JitBuilder::IlType *threadPtr;
   OMR::JitBuilder::IlType *stackTop;
+};*/
+
+class TypeDictionary : public TR::TypeDictionary {
+ public:
+  TypeDictionary();
 };
 
 template <typename T>

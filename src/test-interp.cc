@@ -53,8 +53,8 @@ class HostTrapTest : public ::testing::Test {
     Errors errors;
     interp::DefinedModule* module = nullptr;
     ReadBinaryOptions options;
-    Result result = ReadBinaryInterp(&env_, data.data(), data.size(), options,
-                                     &errors, &module);
+    Result result = ReadBinaryInterp(&env_, data.data(), data.size(), &options,
+                                     &errors, module);
     EXPECT_EQ(Result::Ok, result);
 
     if (result == Result::Ok) {
@@ -128,8 +128,8 @@ class HostMemoryTest : public ::testing::Test {
   Result LoadModule(const std::vector<uint8_t>& data) {
     Errors errors;
     ReadBinaryOptions options;
-    return ReadBinaryInterp(&env_, data.data(), data.size(), options, &errors,
-                            &module_);
+    return ReadBinaryInterp(&env_, data.data(), data.size(), &options, &errors,
+                            module_);
   }
 
   std::string string_data;

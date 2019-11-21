@@ -387,10 +387,9 @@ struct HostFunc : Func {
         module_name(module_name.to_string()),
         field_name(field_name.to_string()),
       // {
-      //      is_compiled = true;
   //  }
       
-        callback(callback) {}
+        callback(callback) { is_compiled = true; }
 
   static bool classof(const Func* func) { return func->is_host; }
 
@@ -460,6 +459,8 @@ struct HostModule : Module {
   static bool classof(const Module* module) { return module->is_host; }
 
   Index OnUnknownFuncExport(string_view name, Index sig_index) override;
+  Export* GetExport(string_view, ExternalKind);
+  Index OnUnknownExport(string_view, ExternalKind);
 
   std::pair<HostFunc*, Index> AppendFuncExport(string_view name,
                                                const FuncSignature&,
@@ -494,6 +495,9 @@ struct HostModule : Module {
   std::function<
       Index(Environment*, HostModule*, string_view name, Index sig_index)>
       on_unknown_func_export;
+  std::function<
+      Index(Environment*, HostModule*, string_view name, ExternalKind)>
+      on_unknown_export;
 
  private:
   Environment* env_;

@@ -319,6 +319,10 @@ class BinaryReaderInterp : public BinaryReaderNop {
   wabt::Result GetModuleExport(Module* module,
                                string_view field_name,
                                Export** out_export);
+  wabt::Result GetModuleExport(Module* module,
+                               string_view field_name,
+                               ExternalKind kind,
+                               Export** out_export);
 
   Features features_;
   Errors* errors_ = nullptr;
@@ -746,6 +750,25 @@ wabt::Result BinaryReaderInterp::GetModuleExport(Module* module,
   return wabt::Result::Ok;
 }
 
+wabt::Result BinaryReaderInterp::GetModuleExport(Module* module,
+                                                 string_view field_name,
+                                                 ExternalKind kind,
+                                                 Export** out_export) {
+  Export* export_;
+  if(module->is_host)
+    export_ = static_cast<HostModule*>(module)->GetExport(field_name, kind);
+  else
+    export_ = module->GetExport(field_name);
+  if (!export_) {
+    PrintError("unknown module field \"" PRIstringview "\"",
+               WABT_PRINTF_STRING_VIEW_ARG(field_name));
+    return wabt::Result::Error;
+  }
+
+  *out_export = export_;
+  return wabt::Result::Ok;
+}
+
 wabt::Result BinaryReaderInterp::OnImportFunc(Index import_index,
                                               string_view module_name,
                                               string_view field_name,
@@ -758,15 +781,15 @@ wabt::Result BinaryReaderInterp::OnImportFunc(Index import_index,
   Module* import_module;
   CHECK_RESULT(FindRegisteredModule(import->module_name, &import_module));
 
-  Index func_env_index;
+  Index func_env_index;/*
   if (auto* host_import_module = dyn_cast<HostModule>(import_module)) {
     HostFunc* func = new HostFunc(import->module_name, import->field_name,
-                                  import->sig_index);
+                                  import->sig_index,{});
     env_->EmplaceBackFunc(func);
 
     FuncSignature* sig = env_->GetFuncSignature(func->sig_index);
-    CHECK_RESULT(host_import_module->import_delegate->ImportFunc(
-        import, func, sig, MakePrintErrorCallback()));
+//    CHECK_RESULT(host_import_module->import_delegate->ImportFunc(
+//        import, func, sig, MakePrintErrorCallback()));
     assert(func->callback);
 
     func_env_index = env_->GetFuncCount() - 1;
@@ -775,7 +798,7 @@ wabt::Result BinaryReaderInterp::OnImportFunc(Index import_index,
     func->offset = func_index;
     env_->AddJitMetadata(func);
     func->dbg_name_.assign(field_name.to_string());
-  } else {
+  } else {*/
   Export* export_ =
       import_module->GetFuncExport(env_, field_name, import->sig_index);
   if (!export_) {
@@ -793,8 +816,12 @@ wabt::Result BinaryReaderInterp::OnImportFunc(Index import_index,
     PrintError("import signature mismatch");
     return wabt::Result::Error;
   }
-
-  func_index_mapping_.push_back(export_->index);
+  func->offset = func_index;
+  func->dbg_name_.assign(field_name.to_string());
+  env_->AddJitMetadata(func);
+  func_env_index = export_->index;
+  //}
+  func_index_mapping_.push_back(func_env_index);
   num_func_imports_++;
   return wabt::Result::Ok;
 }
@@ -817,7 +844,11 @@ wabt::Result BinaryReaderInterp::OnImportTable(Index import_index,
   CHECK_RESULT(FindRegisteredModule(import->module_name, &import_module));
 
   Export* export_;
-  CHECK_RESULT(GetModuleExport(import_module, import->field_name, &export_));
+  if(import_module->is_host) {
+      CHECK_RESULT(GetModuleExport(import_module, import->field_name, import->kind, &export_));
+  } else {
+      CHECK_RESULT(GetModuleExport(import_module, import->field_name, &export_));
+  }
   CHECK_RESULT(CheckImportKind(import, export_->kind));
 
   Table* table = env_->GetTable(export_->index);
@@ -845,7 +876,11 @@ wabt::Result BinaryReaderInterp::OnImportMemory(Index import_index,
   CHECK_RESULT(FindRegisteredModule(import->module_name, &import_module));
 
   Export* export_;
-  CHECK_RESULT(GetModuleExport(import_module, import->field_name, &export_));
+  if(import_module->is_host) {
+      CHECK_RESULT(GetModuleExport(import_module, import->field_name, import->kind, &export_));
+  } else {
+      CHECK_RESULT(GetModuleExport(import_module, import->field_name, &export_));
+  }
   CHECK_RESULT(CheckImportKind(import, export_->kind));
 
   Memory* memory = env_->GetMemory(export_->index);
@@ -1917,7 +1952,7 @@ wabt::Result ReadBinaryInterp(Environment* env,
                               const void* data,
                               size_t size,
                               const ReadBinaryOptions* options,
-                              ErrorHandler* error_handler,
+                              Errors* errors,
                               DefinedModule* module) {
   // Need to mark before taking ownership of env->istream.
   Environment::MarkPoint mark = env->Mark();
@@ -1928,10 +1963,10 @@ wabt::Result ReadBinaryInterp(Environment* env,
 
 
   BinaryReaderInterp reader(env, module, std::move(istream), errors,
-                            options.features);
+                            options->features);
   //env->EmplaceBackModule(module);
 
-  wabt::Result result = ReadBinary(data, size, &reader, options);
+  wabt::Result result = ReadBinary(data, size, &reader, *options);
   env->SetIstream(reader.ReleaseOutputBuffer());
   if (Succeeded(result)) {
     module->istream_start = istream_offset;

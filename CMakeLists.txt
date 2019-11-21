@@ -36,7 +36,7 @@ list(APPEND CMAKE_MODULE_PATH
 set(OMR_CORE_GLUE_TARGET ON CACHE BOOL "")
 set(OMR_RAS_GLUE_TARGET ON CACHE BOOL "")
 set(OMR_DDR OFF CACHE BOOL "Enable DDR")
-set(OMR_EXAMPLE OFF CACHE BOOL "")
+set(OMR_EXAMPLE ON CACHE BOOL "")
 set(OMR_COMPILER  ON CACHE BOOL "")
 set(OMR_JITBUILDER ON CACHE BOOL "")
 set(OMR_COMPILER ON CACHE BOOL "")
@@ -295,7 +295,7 @@ add_subdirectory(src/jit)
 add_subdirectory(src/aot)
 # add_subdirectory(src/mix-aot)
 
-target_link_libraries(libwabt PUBLIC wabtjit)
+#target_link_libraries(libwabt PUBLIC wabtjit)
 
 target_link_libraries(wabt PUBLIC wabtjit)
 
