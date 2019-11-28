@@ -82,6 +82,12 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFu
 		 1,
 		 Int32);
 
+  DefineFunction("CallIndirectHelper", __FILE__, "0",
+		 reinterpret_cast<void*>(CallIndirectHelper),
+		 Int64,
+		 3,
+		 Int64, Int64, Int64);
+
   returnType_ = functionReturnType(fn_);
 
   auto memories_size = env_.GetMemoryCount();
@@ -128,6 +134,10 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFu
     mem_names_.push_back(mem_name);
     DefineGlobal(mem_names_.back().data(),types_->PointerTo(Int8),reinterpret_cast<void*>(env_.mems+arg-1));
     //it must be a pointer to the value, as in globals
+  }
+
+  if(env_.GetTableCount()) {
+    DefineGlobal("Params",types_->PointerTo(Int64),reinterpret_cast<void*>(env_.indirectCallParams));
   }
 
   DefineReturnType(returnType_);
@@ -190,6 +200,61 @@ void AOTFunctionBuilder::defineImportFunction(const std::string& name, FunctionI
 		 result_type,
 		 import.param_types_.size(),
 		 static_cast<TR::IlType**>(import.param_types_.data()));
+}
+
+uint64_t AOTFunctionBuilder::CallIndirectHelper(Index table_index, Index sig_index, Index entry_index) {
+  using namespace wabt::interp;
+  
+  Environment *env = ::getEnvironment();
+
+//  Index table_index = reinterpret_cast<Index>(params[0]);
+  Table* table = &env->tables_[table_index];
+//  Index sig_index = reinterpret_cast<Index>(params[1]);
+//  Index entry_index = reinterpret_cast<Index>(params[2]);
+  TRAP_IF(entry_index >= table->func_indexes.size(), UndefinedTableIndex);
+  Index func_index = table->func_indexes[entry_index];
+  TRAP_IF(func_index == kInvalidIndex, UninitializedTableElement);
+  Func* func = env->funcs_[func_index].get();
+  TRAP_UNLESS(env->FuncSignaturesAreEqual(func->sig_index, sig_index),
+              IndirectCallSignatureMismatch);
+//  assert(env->GetFuncSignature(sig_index)->param_types.size() == count-3);
+//  count-=3;
+  auto count = env->GetFuncSignature(sig_index)->param_types.size();  
+
+  if (func->is_host) {
+    //auto result = static_cast<Result_t>(th->CallHost(cast<HostFunc>(func)));
+    //if (result != static_cast<Result_t>(interp::Result::Ok))
+      //return result;
+  } else {
+    uint64_t (*fn)();
+    ::getCompiledFunction(func->dbg_name_.c_str(),reinterpret_cast<void(**)()>(&fn));
+    switch(count) {
+      case 0:
+        return fn();
+      case 1: {
+        auto param1 = env->indirectCallParams[0]; //might be problems with order of variables
+        auto funct = reinterpret_cast<uint64_t(*)(uint64_t)>(fn);
+        return funct(param1);
+      }
+      case 2: {
+        auto param1 = env->indirectCallParams[0]; //might be problems with order of variables
+        auto param2 = env->indirectCallParams[1];
+        auto funct = reinterpret_cast<uint64_t(*)(uint64_t,uint64_t)>(fn);
+        return funct(param2,param1);
+      }
+      case 3: {
+        auto param1 = env->indirectCallParams[0]; //might be problems with order of variables
+        auto param2 = env->indirectCallParams[0];
+        auto param3 = env->indirectCallParams[0];
+        auto funct = reinterpret_cast<uint64_t(*)(uint64_t,uint64_t,uint64_t)>(fn);
+        return funct(param3,param2,param1);
+      }
+      default:
+          throw std::runtime_error("Too many arguments!");
+    }
+    return fn();
+  }
+  return static_cast<Result_t>(interp::Result::Ok);
 }
 
 
@@ -615,6 +680,18 @@ void AOTFunctionBuilder::pushReturnValue(Func* builder, TR::IlBuilder* b,
   }
 }
 
+void AOTFunctionBuilder::pushReturnValue(Index sig_index, TR::IlBuilder* b,
+					 TR::IlValue* returnValue)
+{
+  const auto& result_types = env_.GetFuncSignature(sig_index)->result_types;
+
+  if(result_types.empty())
+    return;
+  else {
+    Push(b, TypeFieldName(result_types.front()), returnValue);
+  }
+}
+
 /*
 template <typename ToType, typename FromType>
 void FunctionBuilder::EmitSaturatingTruncation(TR::IlBuilder* b, VirtualStack* stack) {
@@ -709,12 +786,16 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
 
   switch (opcode) {
     case Opcode::Select: {
-      TR::IlBuilder* true_path = nullptr;
-      TR::IlBuilder* false_path = nullptr;
+      auto* sel = Pop(b, "i64");
+      auto* false_value = Pop(b, "i64");
+      auto* true_value = Pop(b, "i64");
 
-      b->IfThenElse(&true_path, &false_path, Pop(b, "i32"));
-      DropKeep(true_path, 1, 0);
-      DropKeep(false_path, 1, 1);
+      TR::IlBuilder* true_path = nullptr;
+
+      b->IfThen(&true_path, sel);
+      true_path->StoreOver(false_value, true_value);
+
+      Push(b,"i64",false_value);
       break;
     }
 
@@ -858,8 +939,9 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
       auto offset = ReadU32(&pc);
       auto meta_it = env_.jit_meta_.find(offset);
 
-      if(meta_it != env_.jit_meta_.end()) {
+    if(meta_it != env_.jit_meta_.end()) {
 	auto* fn = meta_it->second.wasm_fn;
+    //auto *fn = env_.GetFunc(offset);
 	auto& builder = aotManager_.getFB(fn->offset);
 
 	//std::vector<TR::IlValue*> args;
@@ -876,7 +958,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
  	auto* value = b->Call(fn->dbg_name_.c_str(), size, args);
 	pushReturnValue(fn, b, value);
 	delete args;
-	//aotManager_.addCallToRegistry(fn_name_,builder.fn_name_);
+//	aotManager_.addCallToRegistry(fn_name_,builder.fn_name_);
       } else {
 	throw std::runtime_error("Call: function not found!");
       }
@@ -885,22 +967,33 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
     }
 
   case Opcode::CallIndirect: {
-    throw std::runtime_error("indirect calls not supported");
-    /*
-      auto th_addr = b->ConstAddress(thread_);
-      auto table_index = b->ConstInt32(ReadU32(&pc));
-      auto sig_index = b->ConstInt32(ReadU32(&pc));
-      auto entry_index = Pop(b, "i32");
-      auto current_pc = b->Const(pc);
+    
+//    auto th_addr = b->ConstAddress(thread_);
+    auto table_index = b->ConstInt64(ReadU32(&pc));
+    auto sig = ReadU32(&pc);
+    auto sig_index = b->ConstInt64(sig);
+    auto entry_index = Pop(b, "i64");
+//    auto current_pc = b->Const(pc);
+      
+    int size = env_.GetFuncSignature(sig)->param_types.size();
+	TR::IlValue **args = new TR::IlValue*[3]();
+    
+    int i = 0;
+    
+    auto *array = b->Load("Params");
+    for(auto t = env_.GetFuncSignature(sig)->param_types.begin();
+	    t!=env_.GetFuncSignature(sig)->param_types.end(); t++) {
+	  auto location = b->IndexAt(types_->PointerTo(Int64), array, b->ConstInt64(i++));
+      b->StoreAt(location, Pop(b, TypeFieldName(*t)));
+	}
+    args[2] = entry_index;
+    args[1] = sig_index;
+    args[0] = table_index;
 
-      // TODO: again, more of the same.
-      b->Store("result",
-      b->      Call("CallIndirectHelper", 5, th_addr, table_index, sig_index, entry_index, current_pc));
-
-      // Don't pass the pc since a trap in a called function should not update the thread's pc
-      EmitCheckTrap(b, b->Load("result"));
-      */
-      break;
+    auto *value = b->Call("CallIndirectHelper", 3, args);
+    pushReturnValue(sig, b, value);
+      
+    break;
     }
 
     // case Opcode::InterpCallHost: {

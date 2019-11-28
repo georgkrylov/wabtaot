@@ -149,6 +149,7 @@ Environment::~Environment() {
   jit_env_.offsets = offsets;
   if(enable_load_from_dlib)
     delete elfLoader;
+  delete [] indirectCallParams;
 }
 
 int Environment::JitMeta::numOfFunction = 0;

@@ -602,7 +602,12 @@ wabt::Result BinaryReaderInterp::EmitFuncOffset(DefinedFunc* func,
     Index defined_index = TranslateModuleFuncIndexToDefined(func_index);
     CHECK_RESULT(AppendFixup(&func_fixups_, defined_index));
   }
-  CHECK_RESULT(EmitI32(func->offset));
+
+  if(!func->is_host && func->offset == 0)
+    CHECK_RESULT(EmitI32(func->offset + num_func_imports_));
+  else
+    CHECK_RESULT(EmitI32(func->offset));
+
   return wabt::Result::Ok;
 }
 
@@ -1254,11 +1259,19 @@ wabt::Result BinaryReaderInterp::BeginFunctionBody(Index index, Offset size) {
   FuncSignature* sig = env_->GetFuncSignature(func->sig_index);
 
   func->offset = GetIstreamOffset();
+  bool offset_zero = false;
+  // needed to differentiate first function and first import
+  if (func->offset == 0) {
+      func->offset += num_func_imports_;
+      offset_zero = true;
+  }
   func->local_decl_count = 0;
   func->local_count = 0;
 
   /* wasmjit-omr: emit JIT metadata now that func->offset is known */
   env_->AddJitMetadata(func);
+  if (offset_zero)
+      func->offset = 0;
 
   current_func_ = func;
   depth_fixups_.clear();
@@ -1972,9 +1985,9 @@ wabt::Result ReadBinaryInterp(Environment* env,
     module->istream_start = istream_offset;
     module->istream_end = env->istream().size();
     //*out_module = module;
-/*
+
     result = reader.InitializeSegments();
-    if (Succeeded(result)) {
+/*    if (Succeeded(result)) {
       *out_module = module;
     } else {
       // We failed to initialize data and element segments, but we can't reset

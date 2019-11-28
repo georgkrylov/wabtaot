@@ -664,6 +664,8 @@ class Environment {
   void DisassembleModule(Stream* stream, Module*);
   void LoadDLib(char *filename);
   void FillMemories();
+  void FillTables();
+  uint64_t *indirectCallParams = new uint64_t[8];
 
  private:
   friend class Thread;
@@ -707,6 +709,7 @@ class Environment {
   std::unordered_map<IstreamOffset, JitMeta> jit_meta_;
   ELFLoader *elfLoader = nullptr;
   char **mems = nullptr;
+  Func **tabs = nullptr;
 };
 
 

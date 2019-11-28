@@ -28,6 +28,10 @@
 #include <vector>
 #include <type_traits>
 
+
+extern void getCompiledFunction(const char *,void (**)());
+extern wabt::interp::Environment *getEnvironment();
+
 namespace wabt {
 namespace aot {
 
@@ -45,6 +49,7 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
 
   TR::IlValue* popReturnValue(TR::IlBuilder*);
   void pushReturnValue(interp::Func*, TR::IlBuilder*, TR::IlValue*);
+  void pushReturnValue(Index, TR::IlBuilder*, TR::IlValue*);
   void pushParams();
   
   virtual ~AOTFunctionBuilder() {}
@@ -90,6 +95,7 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
   
   void defineFunction(const std::string&, interp::DefinedFunc*);
   void defineImportFunction(const std::string& name, FunctionImport &import);
+
   interp::DefinedFunc* getFn() {
     return fn_;
   }
@@ -97,6 +103,8 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
   const std::string& getName() const {
     return fn_name_;
   }
+
+  static uint64_t CallIndirectHelper(Index table_index, Index sig_index, Index entry_index);
 
  private:
   struct BytecodeWorkItem {
@@ -157,10 +165,10 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
 
   using Result_t = std::underlying_type<wabt::interp::Result>::type;
 
-  //  static Result_t CallHelper(wabt::interp::Thread* th, wabt::interp::IstreamOffset offset);
+//  static Result_t CallHelper(wabt::interp::Thread* th, wabt::interp::IstreamOffset offset, uint8_t* current_pc);
 
-  //  static Result_t CallIndirectHelper(wabt::interp::Thread* th, Index table_index, Index sig_index, Index entry_index);
-  //, uint8_t* current_pc);
+  
+
 
   //static Result_t CallHostHelper(wabt::interp::Thread* th, Index func_index);
 

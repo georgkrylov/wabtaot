@@ -90,6 +90,8 @@ class WasmInterpHostImportDelegate : public HostImportDelegate {
   }
 };*/
 
+static Environment *envPointer;
+
 extern int32_t internal_compileMethodBuilder(TR::MethodBuilder * methodBuilder, void ** entryPoint);
 
 static std::unique_ptr<FileStream> s_stdout_stream;
@@ -203,6 +205,16 @@ static wabt::Result ReadModule(const char* module_filename,
   return result;
 }
 
+void getCompiledFunction(const char *name, void (**fn)())
+{
+  *fn = reinterpret_cast<void(*)()>(getCodeEntry(const_cast<char*>(name)));
+}
+
+wabt::interp::Environment *getEnvironment()
+{
+  return envPointer;
+}
+
 wabt::Result compileAOT(interp::Environment& env, DefinedModule* module)
 {
   using namespace wabt::aot;
@@ -284,6 +296,7 @@ void relocateAOT(interp::Environment& env,DefinedModule *module)
   setCodeEntry("copysign",reinterpret_cast<void*>(cpsign));
   setCodeEntry("sqrtf",reinterpret_cast<void*>(sqrtf));
   setCodeEntry("copysignf",reinterpret_cast<void*>(copysignf));
+  setCodeEntry("CallIndi",reinterpret_cast<void*>(wabt::aot::AOTFunctionBuilder::CallIndirectHelper));
   // for(Index i = 0; i < func_count; ++i) {
   //   if(env.GetFunc(i)->is_host) {
   //     setCodeEntry()
@@ -325,6 +338,7 @@ void relocateAOT(interp::Environment& env,DefinedModule *module)
     //global_names.emplace_back(global_name);
     setCodeEntry(const_cast<char*>(memory_name),reinterpret_cast<void*>(env.GetMems()+i));
   }
+  setCodeEntry(const_cast<char*>("Params"), reinterpret_cast<void*>(&env.indirectCallParams));
   // uint16_t compiled_function_index = 0;
   for(Index i = 0; i < module->compiled_functions.size(); ++i) {
     // if(!env.GetFunc(i)->is_host) {
@@ -390,7 +404,7 @@ int main(int argc, char** argv) {
   for(uint32_t i = 1;i<argc;i++) {
     registerModules(argv[i],&env);
   }
-  
+  envPointer = &env;
   for(uint32_t i = 1;i<argc;i++) {
     // const char* ffi = strrchr(argv[i],'/');
     // printf("%s\n",ffi);
