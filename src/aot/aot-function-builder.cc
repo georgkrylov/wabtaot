@@ -82,7 +82,7 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFu
 		 1,
 		 Int32);
 
-  DefineFunction("CallIndirectHelper", __FILE__, "0",
+  DefineFunction("CallIndi", __FILE__, "0",
 		 reinterpret_cast<void*>(CallIndirectHelper),
 		 Int64,
 		 3,
@@ -990,7 +990,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
     args[1] = sig_index;
     args[0] = table_index;
 
-    auto *value = b->Call("CallIndirectHelper", 3, args);
+    auto *value = b->Call("CallIndi", 3, args);
     pushReturnValue(sig, b, value);
       
     break;
@@ -1013,139 +1013,25 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
     //   break;
     // }
 
-    case Opcode::I32Load8S: {
-      throw std::runtime_error("linear memory access not supported");
-      // TODO: again, more of the same.
-      /*
-      auto* addr = EmitMemoryPreAccess<int8_t>(b, &pc);
-      Push(b,
-           "i32",
-      b->  ConvertTo(Int32,
-      b->            LoadAt(typeDictionary()->PointerTo(Int8), addr)));
-           //pc);
-	   */
-      break;
-    }
+    case Opcode::I32Load8S: 
 
-    case Opcode::I32Load8U: {
-      throw std::runtime_error("linear memory access not supported");
-      // TODO: again, more of the same.
-      /*
-      auto* addr = EmitMemoryPreAccess<int8_t>(b, &pc);
-      Push(b,
-           "i32",
-      b->  UnsignedConvertTo(Int32,
-      b->                    LoadAt(typeDictionary()->PointerTo(Int8), addr)));
-      */
-      break;
-    }
+    case Opcode::I32Load8U:
 
-    case Opcode::I32Load16S: {
-      throw std::runtime_error("linear memory access not supported");
-      // TODO: again, more of the same.
-      /*
-      auto* addr = EmitMemoryPreAccess<int16_t>(b, &pc);
-      Push(b,
-           "i32",
-      b->  ConvertTo(Int32,
-      b->            LoadAt(typeDictionary()->PointerTo(Int16), addr)));
-           //pc);
-	   */
-      break;
-    }
+    case Opcode::I32Load16S: 
 
-    case Opcode::I32Load16U: {
-      throw std::runtime_error("linear memory access not supported");
-      // TODO: again, more of the same.
-      /*
-      auto* addr = EmitMemoryPreAccess<int16_t>(b, &pc);
-      Push(b,
-           "i32",
-      b->  UnsignedConvertTo(Int32,
-      b->                    LoadAt(typeDictionary()->PointerTo(Int16), addr)));
-      // pc);
-      */
-      break;
-    }
+    case Opcode::I32Load16U: 
 
-    case Opcode::I64Load8S: {
-      throw std::runtime_error("linear memory access not supported");
-      // TODO: again, more of the same.
-      /*
-      auto* addr = EmitMemoryPreAccess<int8_t>(b, &pc);
-      Push(b,
-           "i64",
-      b->  ConvertTo(Int64,
-      b->            LoadAt(typeDictionary()->PointerTo(Int8), addr)));
-	   //           pc);
-	   */
-      break;
-    }
+    case Opcode::I64Load8S: 
 
-    case Opcode::I64Load8U: {
-      throw std::runtime_error("linear memory access not supported");
-      // TODO: again, more of the same.
-      /*
-      auto* addr = EmitMemoryPreAccess<int8_t>(b, &pc);
-      Push(b,
-           "i64",
-      b->  UnsignedConvertTo(Int64,
-      b->                    LoadAt(typeDictionary()->PointerTo(Int8), addr)));
-	   //      pc);
-	   */
-      break;
-    }
+    case Opcode::I64Load8U: 
 
-    case Opcode::I64Load16S: {
-      throw std::runtime_error("linear memory access not supported");
-      // TODO: again, more of the same.
-      /*
-      auto* addr = EmitMemoryPreAccess<int16_t>(b, &pc);
-      Push(b,
-           "i64",
-      b->  ConvertTo(Int64,
-      b->            LoadAt(typeDictionary()->PointerTo(Int16), addr)));
-      */
-      break;
-    }
+    case Opcode::I64Load16S: 
 
-    case Opcode::I64Load16U: {
-      throw std::runtime_error("linear memory access not supported");
-      // TODO: again, more of the same.
-      /*
-      auto* addr = EmitMemoryPreAccess<int16_t>(b, &pc);
-      Push(b,
-           "i64",
-      b->  UnsignedConvertTo(Int64,
-      b->                    LoadAt(typeDictionary()->PointerTo(Int16), addr)));
-      */
-      break;
-    }
+    case Opcode::I64Load16U: 
 
-    case Opcode::I64Load32S: {
-      throw std::runtime_error("linear memory access not supported");
-      /*
-      auto* addr = EmitMemoryPreAccess<int32_t>(b, &pc);
-      Push(b,
-           "i64",
-      b->  ConvertTo(Int64,
-      b->            LoadAt(typeDictionary()->PointerTo(Int32), addr)));
-      */
-      break;
-    }
+    case Opcode::I64Load32S: 
 
-    case Opcode::I64Load32U: {
-      throw std::runtime_error("linear memory access not supported");
-      /*
-      auto* addr = EmitMemoryPreAccess<int32_t>(b, &pc);
-      Push(b,
-           "i64",
-      b->  UnsignedConvertTo(Int64,
-      b->                    LoadAt(typeDictionary()->PointerTo(Int32), addr)));
-	   //     pc);
-      */
-      break;
-    }
+    case Opcode::I64Load32U: 
 
     case Opcode::I32Load:
     case Opcode::I64Load:
@@ -1164,50 +1050,15 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
       break;
     }
 
-    case Opcode::I32Store8: {
-      throw std::runtime_error("linear memory access not supported");
-      /*
-      auto value = b->ConvertTo(Int8, Pop(b, "i32"));
-      b->StoreAt(EmitMemoryPreAccess<int8_t>(b, &pc), value);
-      */
-      break;
-    }
+    case Opcode::I32Store8: 
 
-    case Opcode::I32Store16: {
-      throw std::runtime_error("linear memory access not supported");
-      /*
-      auto value = b->ConvertTo(Int16, Pop(b, "i32"));
-      b->StoreAt(EmitMemoryPreAccess<int16_t>(b, &pc), value);
-      */
-      break;
-    }
+    case Opcode::I32Store16: 
 
-    case Opcode::I64Store8: {
-      throw std::runtime_error("linear memory access not supported");
-      /*
-      auto value = b->ConvertTo(Int8, Pop(b, "i64"));
-      b->StoreAt(EmitMemoryPreAccess<int8_t>(b, &pc), value);
-      */
-      break;
-    }
+    case Opcode::I64Store8: 
 
-    case Opcode::I64Store16: {
-      throw std::runtime_error("linear memory access not supported");
-      /*
-      auto value = b->ConvertTo(Int16, Pop(b, "i64"));
-      b->StoreAt(EmitMemoryPreAccess<int16_t>(b, &pc), value);
-      */
-      break;
-    }
+    case Opcode::I64Store16: 
 
-    case Opcode::I64Store32: {
-      throw std::runtime_error("linear memory access not supported");
-      /*
-      auto value = b->ConvertTo(Int32, Pop(b, "i64"));
-      b->StoreAt(EmitMemoryPreAccess<int32_t>(b, &pc), value);
-      */
-      break;
-    }
+    case Opcode::I64Store32: 
 
     case Opcode::I32Store:
     case Opcode::I64Store:

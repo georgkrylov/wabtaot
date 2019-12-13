@@ -297,6 +297,14 @@ void relocateAOT(interp::Environment& env,DefinedModule *module)
   setCodeEntry("sqrtf",reinterpret_cast<void*>(sqrtf));
   setCodeEntry("copysignf",reinterpret_cast<void*>(copysignf));
   setCodeEntry("CallIndi",reinterpret_cast<void*>(wabt::aot::AOTFunctionBuilder::CallIndirectHelper));
+  setCodeEntry("fd_write",reinterpret_cast<void*>(printf));
+  setCodeEntry("__lock",reinterpret_cast<void*>(1));
+  setCodeEntry("__unlock",reinterpret_cast<void*>(1));
+  setCodeEntry("emscripten_memcpy_big",reinterpret_cast<void*>(1));
+  setCodeEntry("emscripten_resize_heap",reinterpret_cast<void*>(1));
+  setCodeEntry("setTempRet0",reinterpret_cast<void*>(1));
+  setCodeEntry("memory",reinterpret_cast<void*>(1));
+  setCodeEntry("table",reinterpret_cast<void*>(1));
   // for(Index i = 0; i < func_count; ++i) {
   //   if(env.GetFunc(i)->is_host) {
   //     setCodeEntry()
@@ -305,7 +313,7 @@ void relocateAOT(interp::Environment& env,DefinedModule *module)
   //setCodeEntry(const_cast<char*>(env.GetFunc(0)->dbg_name_.data()),reinterpret_cast<void*>(print));
   //setCodeEntry(const_cast<char*>(env.GetFunc(1)->dbg_name_.data()),reinterpret_cast<void*>(print1));
   //setCodeEntry("print1",reinterpret_cast<void*>(print1));
-  for(int i=0;i<env.GetFuncCount();i++){
+  /*for(int i=0;i<env.GetFuncCount();i++){
     interp::Func *func = env.GetFunc(i);
     if(func->is_host){
       void *handle = dlopen("libc.so.6",RTLD_LAZY);
@@ -320,7 +328,7 @@ void relocateAOT(interp::Environment& env,DefinedModule *module)
       }
       setCodeEntry(const_cast<char*>(func->dbg_name_.data()),cfunc);
     }
-  }
+    }*/
   Value *globals = new Value[env.GetGlobalCount()]();
   std::vector<std::string> global_names;
   for(int i=0;i<env.GetGlobalCount();i++) {
