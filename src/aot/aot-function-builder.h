@@ -110,9 +110,12 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
   struct BytecodeWorkItem {
     TR::BytecodeBuilder* builder;
     const uint8_t* pc;
+    TR::VirtualMachineOperandStack* stack_;
+    uint32_t stackCount_;
 
-    BytecodeWorkItem(TR::BytecodeBuilder* builder, const uint8_t* pc)
-    : builder(builder), pc(pc)
+    BytecodeWorkItem(TR::BytecodeBuilder* builder, const uint8_t* pc, 
+		     TR::VirtualMachineOperandStack* stack,  uint32_t stackCount)
+    : builder(builder), pc(pc), stack_(stack), stackCount_(stackCount)
     {}
   };
 

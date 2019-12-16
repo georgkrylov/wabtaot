@@ -139,6 +139,7 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFu
   if(env_.GetTableCount()) {
     DefineGlobal("Params",types_->PointerTo(Int64),reinterpret_cast<void*>(env_.indirectCallParams));
   }
+  DefineLocal("SelectionVar",Int64);
 
   DefineReturnType(returnType_);
 
@@ -271,7 +272,7 @@ bool AOTFunctionBuilder::buildIL() {
 
   workItems_.emplace_back(OrphanBytecodeBuilder(0,
 						const_cast<char*>(interp::ReadOpcodeAt(&istream[fn_->offset]).GetName())),
-                          &istream[fn_->offset]);
+                          &istream[fn_->offset],stack_,stackCount_);
   AppendBuilder(workItems_[0].builder);
 
   int32_t next_index;
@@ -279,6 +280,8 @@ bool AOTFunctionBuilder::buildIL() {
   for(;;) {
     if ((next_index = GetNextBytecodeFromWorklist()) != -1) {
       auto& work_item = workItems_[next_index];
+      stack_ = work_item.stack_;
+      stackCount_ = work_item.stackCount_;
 
       if (!Emit(work_item.builder, istream, work_item.pc))
 	return false;
@@ -290,11 +293,11 @@ bool AOTFunctionBuilder::buildIL() {
 
       workItems_.emplace_back(OrphanBytecodeBuilder(next_index,
 						    const_cast<char*>(interp::ReadOpcodeAt(prev_state.pc).GetName())),
-			      prev_state.pc);
+			      prev_state.pc,prev_state.stack, prev_state.stack_count);
 
       prev_state.b->AddFallThroughBuilder(workItems_[next_index].builder);
-      stack_ = prev_state.stack;
-      stackCount_ = prev_state.stack_count;
+      //stack_ = prev_state.stack;
+      //stackCount_ = prev_state.stack_count;
     } else {
       break;
     }
@@ -811,10 +814,46 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
         int32_t next_index = static_cast<int32_t>(workItems_.size());
         workItems_.emplace_back(OrphanBytecodeBuilder(next_index,
                                                       const_cast<char*>(ReadOpcodeAt(target).GetName())),
-                                target);
+                                target,stack_,stackCount_);
         b->AddFallThroughBuilder(workItems_[next_index].builder);
       }
       return true;
+    }
+
+    case Opcode::BrTable: {
+        Index num_targets = ReadU32(&pc);
+        IstreamOffset table_offset = ReadU32(&pc);
+        b->Store("SelectionVar",Pop(b,"i64"));
+	JBCase **cases = new JBCase*[num_targets];
+	for(uint32_t i=0;i<num_targets;i++) {
+	  const uint8_t* entry = istream + table_offset + (i*WABT_TABLE_ENTRY_SIZE);
+          IstreamOffset new_pc;
+          uint32_t drop_count;
+          uint32_t keep_count;
+          ReadTableEntryAt(entry, &new_pc, &drop_count, &keep_count);
+	  int32_t next_index = static_cast<int32_t>(workItems_.size());
+          workItems_.emplace_back(OrphanBytecodeBuilder(next_index,
+                                                      const_cast<char*>(ReadOpcodeAt(reinterpret_cast<uint8_t*>(&new_pc)).GetName())),
+                                  (const uint8_t*)(&new_pc),new TR::VirtualMachineOperandStack(stack_),stackCount_);
+	  auto nextBuilder = static_cast<TR::IlBuilder*>(workItems_[workItems_.size()-1].builder);
+	  cases[i] = b->MakeCase(i,&nextBuilder,0);
+	  //auto nextBuilder1 = workItems_[workItems_.size()-1].builder;
+	  b->AddSuccessorBuilder(&workItems_[workItems_.size()-1].builder);
+	}
+	const uint8_t* entry = istream + table_offset + (num_targets*WABT_TABLE_ENTRY_SIZE);
+          IstreamOffset new_pc;
+          uint32_t drop_count;
+          uint32_t keep_count;
+          ReadTableEntryAt(entry, &new_pc, &drop_count, &keep_count);
+	  int32_t next_index = static_cast<int32_t>(workItems_.size());
+	  
+          workItems_.emplace_back(OrphanBytecodeBuilder(next_index,
+                                                      const_cast<char*>(ReadOpcodeAt(reinterpret_cast<uint8_t*>(&new_pc)).GetName())),
+                                  (const uint8_t*)(&new_pc),new TR::VirtualMachineOperandStack(stack_),stackCount_);
+	  auto nextBuilder = static_cast<TR::IlBuilder*>(workItems_[workItems_.size()-1].builder);
+	  b->TableSwitch("SelectionVar",&nextBuilder,false,num_targets,cases);
+	  delete cases;
+	  return true;
     }
 
     // case Opcode::BrIf: This opcode is never generated as it's always
@@ -1782,7 +1821,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
         int32_t next_index = static_cast<int32_t>(workItems_.size());
         workItems_.emplace_back(OrphanBytecodeBuilder(next_index,
                                                       const_cast<char*>(ReadOpcodeAt(target).GetName())),
-                                target);
+                                target,stack_,stackCount_);
         b->IfCmpEqualZero(&workItems_[next_index].builder, condition);
       }
 
@@ -1815,7 +1854,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
 
   workItems_.emplace_back(OrphanBytecodeBuilder(next_index,
 						const_cast<char*>(ReadOpcodeAt(pc).GetName())),
-                          pc);
+                          pc, stack_, stackCount_);
   b->AddFallThroughBuilder(workItems_[next_index].builder);
 
   return true;
