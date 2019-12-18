@@ -139,7 +139,7 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFu
   if(env_.GetTableCount()) {
     DefineGlobal("Params",types_->PointerTo(Int64),reinterpret_cast<void*>(env_.indirectCallParams));
   }
-  DefineLocal("SelectionVar",Int64);
+  DefineLocal("SelectionVar",Int32);
 
   DefineReturnType(returnType_);
 
@@ -823,18 +823,19 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
     case Opcode::BrTable: {
         Index num_targets = ReadU32(&pc);
         IstreamOffset table_offset = ReadU32(&pc);
-        b->Store("SelectionVar",Pop(b,"i64"));
+        b->Store("SelectionVar",Pop(b,"i32"));
 	JBCase **cases = new JBCase*[num_targets];
 	for(uint32_t i=0;i<num_targets;i++) {
 	  const uint8_t* entry = istream + table_offset + (i*WABT_TABLE_ENTRY_SIZE);
           IstreamOffset new_pc;
           uint32_t drop_count;
           uint32_t keep_count;
+
           ReadTableEntryAt(entry, &new_pc, &drop_count, &keep_count);
 	  int32_t next_index = static_cast<int32_t>(workItems_.size());
           workItems_.emplace_back(OrphanBytecodeBuilder(next_index,
                                                       const_cast<char*>(ReadOpcodeAt(reinterpret_cast<uint8_t*>(&new_pc)).GetName())),
-                                  (const uint8_t*)(&new_pc),new TR::VirtualMachineOperandStack(stack_),stackCount_);
+                                  &istream[new_pc],new TR::VirtualMachineOperandStack(stack_),stackCount_);
 	  auto nextBuilder = static_cast<TR::IlBuilder*>(workItems_[workItems_.size()-1].builder);
 	  cases[i] = b->MakeCase(i,&nextBuilder,0);
 	  //auto nextBuilder1 = workItems_[workItems_.size()-1].builder;
@@ -849,8 +850,9 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
 	  
           workItems_.emplace_back(OrphanBytecodeBuilder(next_index,
                                                       const_cast<char*>(ReadOpcodeAt(reinterpret_cast<uint8_t*>(&new_pc)).GetName())),
-                                  (const uint8_t*)(&new_pc),new TR::VirtualMachineOperandStack(stack_),stackCount_);
+                                  &istream[new_pc],new TR::VirtualMachineOperandStack(stack_),stackCount_);
 	  auto nextBuilder = static_cast<TR::IlBuilder*>(workItems_[workItems_.size()-1].builder);
+	   b->AddSuccessorBuilder(&workItems_[workItems_.size()-1].builder);
 	  b->TableSwitch("SelectionVar",&nextBuilder,false,num_targets,cases);
 	  delete cases;
 	  return true;
