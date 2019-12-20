@@ -283,7 +283,7 @@ wabt::Result compileAOT(interp::Environment& env, DefinedModule* module)
   return wabt::Result::Ok;
 }
 
-void print(int32_t a) { std::cout<<a<<"\n";}
+int32_t print(int32_t a,int32_t b,int32_t c,int32_t d) { std::cout<<a<<"\n"; return 0;}
 void print1(int32_t a,int32_t b){std::cout<<a+b<<"\n";}
 
 void relocateAOT(interp::Environment& env,DefinedModule *module)
@@ -297,7 +297,7 @@ void relocateAOT(interp::Environment& env,DefinedModule *module)
   setCodeEntry("sqrtf",reinterpret_cast<void*>(sqrtf));
   setCodeEntry("copysignf",reinterpret_cast<void*>(copysignf));
   setCodeEntry("CallIndi",reinterpret_cast<void*>(wabt::aot::AOTFunctionBuilder::CallIndirectHelper));
-  setCodeEntry("fd_write",reinterpret_cast<void*>(printf));
+  setCodeEntry("fd_write",reinterpret_cast<void*>(print));
   setCodeEntry("__lock",reinterpret_cast<void*>(1));
   setCodeEntry("__unlock",reinterpret_cast<void*>(1));
   setCodeEntry("emscripten_memcpy_big",reinterpret_cast<void*>(1));
@@ -305,6 +305,8 @@ void relocateAOT(interp::Environment& env,DefinedModule *module)
   setCodeEntry("setTempRet0",reinterpret_cast<void*>(1));
   setCodeEntry("memory",reinterpret_cast<void*>(1));
   setCodeEntry("table",reinterpret_cast<void*>(1));
+  setCodeEntry("emscript",reinterpret_cast<void*>(1));
+  setCodeEntry("setTempR",reinterpret_cast<void*>(1));
   // for(Index i = 0; i < func_count; ++i) {
   //   if(env.GetFunc(i)->is_host) {
   //     setCodeEntry()

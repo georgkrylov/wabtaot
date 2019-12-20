@@ -141,6 +141,9 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
   void EmitIntDivide(TR::IlBuilder* b);
 
   template <typename T>
+  void EmitUnsignedIntDivide(TR::IlBuilder* b);
+
+  template <typename T>
   void EmitIntRemainder(TR::IlBuilder* b);
 
   template <typename T>

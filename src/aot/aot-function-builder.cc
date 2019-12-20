@@ -492,6 +492,26 @@ void AOTFunctionBuilder::EmitIntDivide(TR::IlBuilder* b) {
 }
 
 template <typename T>
+void AOTFunctionBuilder::EmitUnsignedIntDivide(TR::IlBuilder* b) {
+  static_assert(std::is_integral<T>::value,
+                "EmitIntDivide only works on integral types");
+
+  EmitBinaryOp<T>(b, [&](TR::IlValue* dividend, TR::IlValue* divisor) {
+    EmitTrapIf(b,
+    b->        EqualTo(divisor, b->Const(static_cast<T>(0))),
+	       interp::Result::TrapIntegerDivideByZero);
+
+    EmitTrapIf(b,
+    b->        And(
+    b->            EqualTo(dividend, b->Const(std::numeric_limits<T>::min())),
+    b->            EqualTo(divisor, b->Const(static_cast<T>(-1)))),
+	       interp::Result::TrapIntegerOverflow);
+
+    return b->UnsignedDiv(dividend, divisor);
+  });
+}
+
+template <typename T>
 void AOTFunctionBuilder::EmitIntRemainder(TR::IlBuilder* b) {//, const uint8_t* pc) {
   static_assert(std::is_integral<T>::value,
                 "EmitIntRemainder only works on integral types");
@@ -1138,10 +1158,15 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
       });
       break;
 
+    case Opcode::I32DivU:
+      EmitUnsignedIntDivide<int32_t>(b);
+      break;
+
     case Opcode::I32DivS:
       EmitIntDivide<int32_t>(b);
       break;
 
+    case Opcode::I32RemU:
     case Opcode::I32RemS:
       EmitIntRemainder<int32_t>(b);
       break;
@@ -1285,11 +1310,17 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
         return b->Mul(lhs, rhs);
       });
       break;
+     
+    case Opcode::I64DivU:
+      EmitUnsignedIntDivide<int64_t>(b);
+      break;
 
+      
     case Opcode::I64DivS: // RETURN
       EmitIntDivide<int64_t>(b); //, pc);
       break;
 
+    case Opcode::I64RemU:
     case Opcode::I64RemS:
       EmitIntRemainder<int64_t>(b);//, pc);
       break;
@@ -1695,7 +1726,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
     }
 
     case Opcode::F32ConvertI32U: {
-      auto* value = b->UnsignedConvertTo(Float, Pop(b, "i32"));
+      auto* value = b->ConvertTo(Float,b->UnsignedConvertTo(Int32, Pop(b, "i32")));
       Push(b, "f32", value);//, pc);
       break;
     }
@@ -1707,7 +1738,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
     }
 
     case Opcode::F32ConvertI64U: {
-      auto* value = b->UnsignedConvertTo(Float, Pop(b, "i64"));
+      auto* value = b->ConvertTo(Float,b->UnsignedConvertTo(Int64, Pop(b, "i64")));
       Push(b, "f32", value);//, pc);
       break;
     }
@@ -1719,7 +1750,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
     }
 
     case Opcode::F64ConvertI32U: {
-      auto* value = b->UnsignedConvertTo(Double, Pop(b, "i32"));
+      auto* value = b->ConvertTo(Double,b->UnsignedConvertTo(Int32, Pop(b, "i32")));
       Push(b, "f64", value);//, pc);
       break;
     }
@@ -1731,7 +1762,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
     }
 
     case Opcode::F64ConvertI64U: {
-      auto* value = b->UnsignedConvertTo(Double, Pop(b, "i64"));
+      auto* value = b->ConvertTo(Double,b->UnsignedConvertTo(Int64, Pop(b, "i64")));
       Push(b, "f64", value);//, pc);
       break;
     }
@@ -1798,6 +1829,10 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
 //      EmitTruncation<uint64_t, double>(b, pc);
 //      break;
 
+    case Opcode::MemorySize:
+        Push(b, "i64", b->ConstInt64(64*1024));
+        break;
+
     case Opcode::InterpAlloca: {
       auto count = ReadU32(&pc);
 
@@ -1808,6 +1843,14 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
 
       break;
     }
+
+   // case Opcode::I64Popcnt:
+     // Push(b,"i64",(Popcount(Pop(b,"i64")));
+     // break;
+    
+//    case Opcode::I32Popcnt:
+  //    Push(b,"i32",(Popcount(Pop(b,"i32")));
+    //  break;
 
     case Opcode::InterpBrUnless: {
       auto target = &istream[ReadU32(&pc)];
