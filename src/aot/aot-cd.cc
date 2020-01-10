@@ -307,6 +307,13 @@ void relocateAOT(interp::Environment& env,DefinedModule *module)
   setCodeEntry("table",reinterpret_cast<void*>(1));
   setCodeEntry("emscript",reinterpret_cast<void*>(1));
   setCodeEntry("setTempR",reinterpret_cast<void*>(1));
+  setCodeEntry("Popcount",reinterpret_cast<void*>(static_cast<int(*)(unsigned)>(wabt::Popcount)));
+  setCodeEntry("Popcountll",reinterpret_cast<void*>(static_cast<int(*)(unsigned long long)>(wabt::Popcount)));
+  setCodeEntry("args_siz",reinterpret_cast<void*>(1));
+  setCodeEntry("args_get",reinterpret_cast<void*>(1));
+  setCodeEntry("proc_exi",reinterpret_cast<void*>(1));
+  setCodeEntry("fd_seek",reinterpret_cast<void*>(1));
+  setCodeEntry("fd_close",reinterpret_cast<void*>(1));
   // for(Index i = 0; i < func_count; ++i) {
   //   if(env.GetFunc(i)->is_host) {
   //     setCodeEntry()
@@ -365,6 +372,7 @@ void runExports(interp::Environment& env,DefinedModule *module)
 {
   
   for(auto exported:module->exports){
+    if(exported.kind != ExternalKind::Func) { continue;}
     std::string index = std::to_string(exported.index);
     void *fn = nullptr;
     for(uint32_t i = 0;i<module->funcs.size();i++){

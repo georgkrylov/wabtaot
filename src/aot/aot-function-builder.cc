@@ -87,6 +87,16 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFu
 		 Int64,
 		 3,
 		 Int64, Int64, Int64);
+  DefineFunction("Popcount", __FILE__, "0",
+		 reinterpret_cast<void*>(static_cast<int(*)(unsigned)>(wabt::Popcount)),
+		 Int32,
+		 1,
+		 Int32);
+  DefineFunction("Popcountll", __FILE__, "0",
+		 reinterpret_cast<void*>(static_cast<int(*)(unsigned long long)>(wabt::Popcount)),
+		 Int64,
+		 1,
+		 Int32);
 
   returnType_ = functionReturnType(fn_);
 
@@ -1833,6 +1843,13 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
         Push(b, "i64", b->ConstInt64(64*1024));
         break;
 
+    case Opcode::MemoryGrow: {
+      ReadU32(&pc);
+      auto growPages = Pop(b,"i32");
+      Push(b,"i64",b->ConstInt64(64*1024));
+      break;
+    }
+
     case Opcode::InterpAlloca: {
       auto count = ReadU32(&pc);
 
@@ -1844,13 +1861,23 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
       break;
     }
 
-   // case Opcode::I64Popcnt:
-     // Push(b,"i64",(Popcount(Pop(b,"i64")));
-     // break;
+   case Opcode::I64Popcnt:{
+     
+      TR::IlValue **args = new TR::IlValue*[1]{Pop(b,"i64")};
+      auto* value = b->Call("Popcountll", 1, args);
+      Push(b,"i64",value);
+      delete args;
+      break;
+   }
     
-//    case Opcode::I32Popcnt:
-  //    Push(b,"i32",(Popcount(Pop(b,"i32")));
-    //  break;
+    case Opcode::I32Popcnt: {
+
+      TR::IlValue **args = new TR::IlValue*[1]{Pop(b,"i32")};
+      auto* value = b->Call("Popcount", 1, args);
+      Push(b,"i32",value);
+      delete args;
+      break;
+    }
 
     case Opcode::InterpBrUnless: {
       auto target = &istream[ReadU32(&pc)];
