@@ -105,6 +105,7 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
   }
 
   static uint64_t CallIndirectHelper(Index table_index, Index sig_index, Index entry_index);
+  static uint32_t GrowMemory(uint32_t,uint32_t);
 
  private:
   struct BytecodeWorkItem {

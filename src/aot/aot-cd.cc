@@ -283,8 +283,14 @@ wabt::Result compileAOT(interp::Environment& env, DefinedModule* module)
   return wabt::Result::Ok;
 }
 
-int32_t print(int32_t a,int32_t b,int32_t c,int32_t d) { std::cout<<a<<"\n"; return 0;}
-void print1(int32_t a,int32_t b){std::cout<<a+b<<"\n";}
+int32_t printaa(int32_t a,int32_t b,int32_t c,int32_t d) { 
+  std::cout<<a<<"\n"; 
+  return 0;}
+int32_t print1(int32_t a,int32_t b){std::cout<<a<<","<<b<<"\n"; return 0;}
+void print2(int32_t a,int32_t b){std::cout<<a+b<<"\n";}
+int32_t seek(int32_t a,int64_t b,int32_t c,int32_t d) { std::cout<<a<<b<<c<<d<<"\n"; return 0;}
+int32_t clos(int32_t a){ std::cout<<a; return 0; };
+void clus(int32_t a){ std::cout<<a;};
 
 void relocateAOT(interp::Environment& env,DefinedModule *module)
 {
@@ -297,7 +303,8 @@ void relocateAOT(interp::Environment& env,DefinedModule *module)
   setCodeEntry("sqrtf",reinterpret_cast<void*>(sqrtf));
   setCodeEntry("copysignf",reinterpret_cast<void*>(copysignf));
   setCodeEntry("CallIndi",reinterpret_cast<void*>(wabt::aot::AOTFunctionBuilder::CallIndirectHelper));
-  setCodeEntry("fd_write",reinterpret_cast<void*>(print));
+  setCodeEntry("GrowMem",reinterpret_cast<void*>(wabt::aot::AOTFunctionBuilder::GrowMemory));
+  setCodeEntry("fd_write",reinterpret_cast<void*>(printaa));
   setCodeEntry("__lock",reinterpret_cast<void*>(1));
   setCodeEntry("__unlock",reinterpret_cast<void*>(1));
   setCodeEntry("emscripten_memcpy_big",reinterpret_cast<void*>(1));
@@ -309,11 +316,11 @@ void relocateAOT(interp::Environment& env,DefinedModule *module)
   setCodeEntry("setTempR",reinterpret_cast<void*>(1));
   setCodeEntry("Popcount",reinterpret_cast<void*>(static_cast<int(*)(unsigned)>(wabt::Popcount)));
   setCodeEntry("Popcountll",reinterpret_cast<void*>(static_cast<int(*)(unsigned long long)>(wabt::Popcount)));
-  setCodeEntry("args_siz",reinterpret_cast<void*>(1));
-  setCodeEntry("args_get",reinterpret_cast<void*>(1));
-  setCodeEntry("proc_exi",reinterpret_cast<void*>(1));
-  setCodeEntry("fd_seek",reinterpret_cast<void*>(1));
-  setCodeEntry("fd_close",reinterpret_cast<void*>(1));
+  setCodeEntry("args_siz",reinterpret_cast<void*>(print1));
+  setCodeEntry("args_get",reinterpret_cast<void*>(print1));
+  setCodeEntry("proc_exi",reinterpret_cast<void*>(clus));
+  setCodeEntry("fd_seek",reinterpret_cast<void*>(seek));
+  setCodeEntry("fd_close",reinterpret_cast<void*>(clos));
   // for(Index i = 0; i < func_count; ++i) {
   //   if(env.GetFunc(i)->is_host) {
   //     setCodeEntry()
@@ -375,6 +382,7 @@ void runExports(interp::Environment& env,DefinedModule *module)
     if(exported.kind != ExternalKind::Func) { continue;}
     std::string index = std::to_string(exported.index);
     void *fn = nullptr;
+    if(exported.name != "_start") continue;
     for(uint32_t i = 0;i<module->funcs.size();i++){
       if(!index.compare(module->funcs[i]->dbg_name_.substr(1,index.size()))){
         fn = module->compiled_functions[i];
