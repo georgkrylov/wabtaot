@@ -284,8 +284,11 @@ wabt::Result compileAOT(interp::Environment& env, DefinedModule* module)
 }
 
 int32_t printaa(int32_t a,int32_t b,int32_t c,int32_t d) { 
-  std::cout<<a<<"\n"; 
-  return 0;}
+  uint32_t bufferLoc = *(uint32_t*)(envPointer->GetMems()[0]+b);
+  char *buffer = envPointer->GetMems()[0]+bufferLoc;
+  std::cout<<buffer<<"\n"; 
+  return 0;
+}
 int32_t print1(int32_t a,int32_t b){std::cout<<a<<","<<b<<"\n"; return 0;}
 void print2(int32_t a,int32_t b){std::cout<<a+b<<"\n";}
 int32_t seek(int32_t a,int64_t b,int32_t c,int32_t d) { std::cout<<a<<b<<c<<d<<"\n"; return 0;}

@@ -261,8 +261,8 @@ uint64_t AOTFunctionBuilder::CallIndirectHelper(Index table_index, Index sig_ind
       }
       case 3: {
         auto param1 = env->indirectCallParams[0]; //might be problems with order of variables
-        auto param2 = env->indirectCallParams[0];
-        auto param3 = env->indirectCallParams[0];
+        auto param2 = env->indirectCallParams[1];
+        auto param3 = env->indirectCallParams[2];
         auto funct = reinterpret_cast<uint64_t(*)(uint64_t,uint64_t,uint64_t)>(fn);
         return funct(param3,param2,param1);
       }
@@ -849,7 +849,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
 			     [&](const BytecodeWorkItem& b) {
 			       return target == b.pc;
 			     });
-      if (it != workItems_.cend()) {
+      if (it != workItems_.cend() && *((uint32_t*)(it->pc))!=Opcode::LocalTee) {
         b->AddFallThroughBuilder(it->builder);
       } else {
         int32_t next_index = static_cast<int32_t>(workItems_.size());
