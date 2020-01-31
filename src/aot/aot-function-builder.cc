@@ -32,6 +32,7 @@ namespace aot {
       TRAP(type);            \
   } while (0)
 
+Environment* AOTFunctionBuilder::envPointer = 0;
 
 AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFunc* fn,
                                        std::string&& fn_name, AOTTypeDictionary* types,
@@ -103,7 +104,7 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFu
 		 1,
 		 Int32,
 		 Int32);
-
+  envPointer = &env_;
   returnType_ = functionReturnType(fn_);
 
   auto memories_size = env_.GetMemoryCount();
@@ -266,6 +267,17 @@ uint64_t AOTFunctionBuilder::CallIndirectHelper(Index table_index, Index sig_ind
         auto funct = reinterpret_cast<uint64_t(*)(uint64_t,uint64_t,uint64_t)>(fn);
         return funct(param3,param2,param1);
       }
+      case 6: {
+        auto param1 = env->indirectCallParams[0]; //might be problems with order of variables
+        auto param2 = env->indirectCallParams[1];
+        auto param3 = env->indirectCallParams[2];
+        auto param4 = env->indirectCallParams[3]; //might be problems with order of variables
+        auto param5 = env->indirectCallParams[4];
+        auto param6 = env->indirectCallParams[5];
+        auto funct = reinterpret_cast<uint64_t(*)(uint64_t,uint64_t,uint64_t,uint64_t,uint64_t,uint64_t)>(fn);
+        return funct(param6,param5,param4,param3,param2,param1);
+      }
+
       default:
           throw std::runtime_error("Too many arguments!");
     }
@@ -276,7 +288,12 @@ uint64_t AOTFunctionBuilder::CallIndirectHelper(Index table_index, Index sig_ind
 
 uint32_t AOTFunctionBuilder::GrowMemory(uint32_t mem, uint32_t grow_pages) {
   printf("Grow by: %ud",grow_pages);
-  return 1;
+  Memory *memory = envPointer->GetMemory(mem);
+  uint32_t old_page_size = memory->page_limits.initial;
+  uint32_t new_page_size = old_page_size + grow_pages;
+  //memory->data.resize(new_page_size * WABT_PAGE_SIZE);
+  memory->page_limits.initial = new_page_size;
+  return old_page_size;
 }
 
 
@@ -350,7 +367,7 @@ void AOTFunctionBuilder::DropKeep(TR::IlBuilder* b, uint32_t drop_count, uint8_t
 
   if(keep_count == 1) {
       auto* top = stack_->Pop(b);
-      stack_->Drop(b, drop_count);
+      stack_->Drop(b, drop_count-1);
       stack_->Push(b, top);
   } else {
     stack_->Drop(b, drop_count);
@@ -1997,8 +2014,8 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
       TR::IlValue **args = new TR::IlValue*[2]();
       args[0] = ConstInt32(ReadU32(&pc));
       args[1] = Pop(b,"i32");
-      b->Call("GrowMem",2,args);
-      Push(b,"i64",b->ConstInt64(64*1024));
+      auto* value = b->Call("GrowMem",2,args);
+      Push(b,"i64",value);
       break;
     }
 

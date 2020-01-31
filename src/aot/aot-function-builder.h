@@ -191,6 +191,7 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
   std::string fn_name_;
   
   Environment& env_;
+  static Environment* envPointer;
   AOTManager& aotManager_;
   
   TR::IlType* const valueType_;

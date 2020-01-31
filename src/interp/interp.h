@@ -200,7 +200,7 @@ struct Table {
 struct Memory {
   Memory() = default;
   explicit Memory(const Limits& limits)
-      : page_limits(limits), data(limits.initial * WABT_PAGE_SIZE) {}
+      : page_limits(limits), data(5368709120) {}
 
   Limits page_limits;
   std::vector<char> data;
@@ -665,7 +665,7 @@ class Environment {
   void LoadDLib(char *filename);
   void FillMemories();
   void FillTables();
-  uint64_t *indirectCallParams = new uint64_t[8];
+  uint64_t *indirectCallParams = new uint64_t[8]();
 
  private:
   friend class Thread;

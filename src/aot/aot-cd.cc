@@ -283,11 +283,12 @@ wabt::Result compileAOT(interp::Environment& env, DefinedModule* module)
   return wabt::Result::Ok;
 }
 
-int32_t printaa(int32_t a,int32_t b,int32_t c,int32_t d) { 
+uint32_t printaa(int32_t a,int32_t b,int32_t c,int32_t d) { 
   uint32_t bufferLoc = *(uint32_t*)(envPointer->GetMems()[0]+b);
   char *buffer = envPointer->GetMems()[0]+bufferLoc;
-  std::cout<<buffer<<"\n"; 
-  return 0;
+  uint32_t buffsize = *(uint32_t*)(envPointer->GetMems()[0]+b+4);
+  std::cout<<std::string(buffer,buffsize); 
+  return buffsize;
 }
 int32_t print1(int32_t a,int32_t b){std::cout<<a<<","<<b<<"\n"; return 0;}
 void print2(int32_t a,int32_t b){std::cout<<a+b<<"\n";}
@@ -315,7 +316,7 @@ void relocateAOT(interp::Environment& env,DefinedModule *module)
   setCodeEntry("setTempRet0",reinterpret_cast<void*>(1));
   setCodeEntry("memory",reinterpret_cast<void*>(1));
   setCodeEntry("table",reinterpret_cast<void*>(1));
-  setCodeEntry("emscript",reinterpret_cast<void*>(1));
+  setCodeEntry("emscript",reinterpret_cast<void*>(clus));
   setCodeEntry("setTempR",reinterpret_cast<void*>(1));
   setCodeEntry("Popcount",reinterpret_cast<void*>(static_cast<int(*)(unsigned)>(wabt::Popcount)));
   setCodeEntry("Popcountll",reinterpret_cast<void*>(static_cast<int(*)(unsigned long long)>(wabt::Popcount)));
