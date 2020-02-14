@@ -104,6 +104,12 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFu
 		 1,
 		 Int32,
 		 Int32);
+  DefineFunction("funpr", __FILE__, "0",
+		 reinterpret_cast<void*>(sqrt),
+		 NoType,
+		 1,
+		 Int64);
+  
   envPointer = &env_;
   returnType_ = functionReturnType(fn_);
 
@@ -272,10 +278,12 @@ uint64_t AOTFunctionBuilder::CallIndirectHelper(Index table_index, Index sig_ind
         auto param2 = env->indirectCallParams[1];
         auto param3 = env->indirectCallParams[2];
         auto param4 = env->indirectCallParams[3]; //might be problems with order of variables
-        auto param5 = env->indirectCallParams[4];
+        uint64_t param5 = env->indirectCallParams[4];
         auto param6 = env->indirectCallParams[5];
-        auto funct = reinterpret_cast<uint64_t(*)(uint64_t,uint64_t,uint64_t,uint64_t,uint64_t,uint64_t)>(fn);
-        return funct(param6,param5,param4,param3,param2,param1);
+	double dParam5 = 0.0;
+	memcpy(&dParam5,&param5,8);
+        auto funct = reinterpret_cast<uint64_t(*)(uint64_t,double,uint64_t,uint64_t,uint64_t,uint64_t)>(fn);
+        return funct(param6,dParam5,param4,param3,param2,param1);
       }
 
       default:
@@ -866,7 +874,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
 			     [&](const BytecodeWorkItem& b) {
 			       return target == b.pc;
 			     });
-      if (it != workItems_.cend() && *((uint32_t*)(it->pc))!=Opcode::LocalTee) {
+      if (it != workItems_.cend() && *((uint32_t*)(it->pc))!=Opcode::LocalTee && *((uint32_t*)(it->pc))!=Opcode::LocalSet) {
         b->AddFallThroughBuilder(it->builder);
       } else {
         int32_t next_index = static_cast<int32_t>(workItems_.size());
@@ -1046,6 +1054,14 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
 
 	//std::vector<TR::IlValue*> args;
 	int size = env_.GetFuncSignature(fn->sig_index)->param_types.size();
+	//TR::IlValue **args1 = new TR::IlValue*[size]();
+
+	//uint64_t namee = 0;
+	//memcpy(&namee, fn->dbg_name_.c_str(), 3);
+	//auto ilname = b->ConstInt64(namee);
+	//args1[0] = ilname;
+
+	//b->Call("funpr",1,args1);
 	TR::IlValue **args = new TR::IlValue*[size]();
 
 	//for(const auto& t: env_.GetFuncSignature(fn->sig_index)->param_types) {
@@ -1084,7 +1100,8 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
     for(auto t = env_.GetFuncSignature(sig)->param_types.begin();
 	    t!=env_.GetFuncSignature(sig)->param_types.end(); t++) {
 	  auto location = b->IndexAt(types_->PointerTo(Int64), array, b->ConstInt64(i++));
-      b->StoreAt(location, Pop(b, TypeFieldName(*t)));
+      //b->StoreAt(location, Pop(b, TypeFieldName(*t)));
+	  b->StoreAt(location, Pop(b, "i64"));
 	}
     args[2] = entry_index;
     args[1] = sig_index;
@@ -2056,7 +2073,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
 			       return target == b.pc;
 			     });
 
-      if (it != workItems_.end()) {
+      if (it != workItems_.end() && *((uint32_t*)(it->pc))!=Opcode::LocalTee && *((uint32_t*)(it->pc))!=Opcode::LocalSet) {
         b->IfCmpEqualZero(&it->builder, condition);
       } else {
         int32_t next_index = static_cast<int32_t>(workItems_.size());

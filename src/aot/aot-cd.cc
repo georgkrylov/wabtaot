@@ -296,6 +296,8 @@ int32_t seek(int32_t a,int64_t b,int32_t c,int32_t d) { std::cout<<a<<b<<c<<d<<"
 int32_t clos(int32_t a){ std::cout<<a; return 0; };
 void clus(int32_t a){ std::cout<<a;};
 
+void funpr(uint64_t a) { std::cout<<((char*)(&a)); }
+
 void relocateAOT(interp::Environment& env,DefinedModule *module)
 {
   auto func_count = env.GetFuncCount();
@@ -325,6 +327,7 @@ void relocateAOT(interp::Environment& env,DefinedModule *module)
   setCodeEntry("proc_exi",reinterpret_cast<void*>(clus));
   setCodeEntry("fd_seek",reinterpret_cast<void*>(seek));
   setCodeEntry("fd_close",reinterpret_cast<void*>(clos));
+  setCodeEntry("funpr",reinterpret_cast<void*>(funpr));
   // for(Index i = 0; i < func_count; ++i) {
   //   if(env.GetFunc(i)->is_host) {
   //     setCodeEntry()
