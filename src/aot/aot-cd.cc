@@ -273,8 +273,8 @@ wabt::Result compileAOT(interp::Environment& env, DefinedModule* module)
       function = getCodeEntry(const_cast<char*>(fn->dbg_name_.c_str()));
       if(!function) {
         internal_compileMethodBuilder(&builder, &function);
-        storeCodeEntry((char *)fn->dbg_name_.c_str(),function);
-	      function = getCodeEntry(const_cast<char*>(fn->dbg_name_.c_str()));
+        storeCodeEntry((char *)fn->dbg_name_.c_str());
+	function = getCodeEntry(const_cast<char*>(fn->dbg_name_.c_str()));
       }
       module->compiled_functions.push_back(function);
       env.GetFunc(i)->is_compiled = true;
@@ -375,7 +375,7 @@ void relocateAOT(interp::Environment& env,DefinedModule *module)
     // if(!env.GetFunc(i)->is_host) {
     if(module->compiled_functions[i]){
       auto* fn = static_cast<DefinedFunc*>(module->funcs[i]);
-      relocateCodeEntry(const_cast<char *>(fn->dbg_name_.c_str()), module->compiled_functions[i]);
+      relocateCodeEntry(const_cast<char *>(fn->dbg_name_.c_str()));
       // compiled_function_index++;
     }
     // }
@@ -389,7 +389,7 @@ void runExports(interp::Environment& env,DefinedModule *module)
     if(exported.kind != ExternalKind::Func) { continue;}
     std::string index = std::to_string(exported.index);
     void *fn = nullptr;
-    if(exported.name != "_start") continue;
+    //if(exported.name != "_start") continue;
     for(uint32_t i = 0;i<module->funcs.size();i++){
       if(!index.compare(module->funcs[i]->dbg_name_.substr(1,index.size()))){
         fn = module->compiled_functions[i];

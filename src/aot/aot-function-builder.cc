@@ -357,7 +357,7 @@ void AOTFunctionBuilder::Push(TR::IlBuilder* b, const char* type, TR::IlValue* v
   //TODO: should probably compare to valueType_ here, if that's
   //possible. I'm not sure if a simple pointer comparison will
   //work. IlTypes* for primitives might not be singleton values.
-  auto* value_wrapper = strcmp(type, "i64") ? b->BitcastTo(valueType_, value) : value;
+  auto* value_wrapper = strcmp(type, "i64") ? b->ConvertTo(valueType_, value) : value;
   stackCount_++;
   stack_->Push(b, value_wrapper);
 }
@@ -366,7 +366,7 @@ void AOTFunctionBuilder::Push(TR::IlBuilder* b, const char* type, TR::IlValue* v
 TR::IlValue* AOTFunctionBuilder::Pop(TR::IlBuilder* b, const char* type) {
   auto* value = stack_->Pop(b);
   stackCount_--;
-  return strcmp("i64", type) ? b->BitcastTo(TypeFieldType(type,b), value) : value;
+  return strcmp("i64", type) ? b->ConvertTo(TypeFieldType(type,b), value) : value;
 }
 
 void AOTFunctionBuilder::DropKeep(TR::IlBuilder* b, uint32_t drop_count, uint8_t keep_count) {
@@ -683,7 +683,7 @@ void AOTFunctionBuilder::EmitTruncation(TR::IlBuilder* b) {//, const uint8_t* pc
 
   // this could be optimized using templates or constant expressions,
   // but the compiler should be able to simplify this anyways
-  auto* new_value = std::is_unsigned<ToType>::value ? b->BitcastTo(target_type, value)
+  auto* new_value = std::is_unsigned<ToType>::value ? b->ConvertBitsTo(target_type, value)
     : b->ConvertTo(target_type, value);
   //auto new_value = b->BitcastTo(target_type,value);
 
@@ -1963,28 +1963,28 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
 
     case Opcode::F32ReinterpretI32: {
       //auto* value = b->ConvertTo(Float, Pop(b, "i32"));
-      auto* value = b->BitcastTo(Float, Pop(b, "i32"));
+      auto* value = b->ConvertBitsTo(Float, Pop(b, "i32"));
       Push(b, "f32", value);//, pc);
       break;
     }
 
     case Opcode::I32ReinterpretF32: {
       //auto* value = b->ConvertTo(Int32, Pop(b, "f32"));
-      auto* value = b->BitcastTo(Int32, Pop(b, "f32"));
+      auto* value = b->ConvertBitsTo(Int32, Pop(b, "f32"));
       Push(b, "i32", value);//, pc);
       break;
     }
 
     case Opcode::F64ReinterpretI64: {
       //auto* value = b->ConvertTo(Double, Pop(b, "i64"));
-      auto* value = b->BitcastTo(Double, Pop(b, "i64"));
+      auto* value = b->ConvertBitsTo(Double, Pop(b, "i64"));
       Push(b, "f64", value);//, pc);
       break;
     }
 
     case Opcode::I64ReinterpretF64: {
       //auto* value = b->ConvertTo(Int64, Pop(b, "f64"));
-      auto* value = b->BitcastTo(Int64, Pop(b, "f64"));
+      auto* value = b->ConvertBitsTo(Int64, Pop(b, "f64"));
       Push(b, "i64", value);//, pc);
       break;
     }

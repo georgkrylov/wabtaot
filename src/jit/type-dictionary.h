@@ -17,6 +17,7 @@
 #ifndef TYPEDICTIONARY_HPP
 #define TYPEDICTIONARY_HPP
 
+#include <time.h>
 #include "ilgen/TypeDictionary.hpp"
 
 namespace wabt {

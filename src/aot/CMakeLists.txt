@@ -5,6 +5,8 @@ add_executable(wabtaot
   aot-cd.cc
   aot-type-dictionary.cc
   aot-function-builder.cc
+  omr_relocation.cpp
+  relocation.cpp
   ../interp/binary-reader-interp.cc
 )
 
