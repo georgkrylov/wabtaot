@@ -61,17 +61,18 @@ class RelocationRecord:public WASM::WASMRelocationRecordConnector{
     public:
         RelocationRecord();
         RelocationRecord(TR::RelocationRuntime *reloRuntime, TR::RelocationRecordBinaryTemplate *record);
+        /*using WASM::WASMRelocationRecordConnector::create;
         static TR::RelocationRecord* create(TR::RelocationRecord *storage, TR::RelocationRuntime *reloRuntime, 
 					    TR::RelocationTarget *reloTarget, 
-					    TR::RelocationRecordBinaryTemplate *record);
+					    TR::RelocationRecordBinaryTemplate *record);*/
 };
 class RelocationRecordWithOffset:public WASM::WASMRelocationRecordConnector{
     public:
         RelocationRecordWithOffset();
         RelocationRecordWithOffset(TR::RelocationRuntime *reloRuntime, TR::RelocationRecordBinaryTemplate *record);
-        static TR::RelocationRecord* create(TR::RelocationRecord *storage, TR::RelocationRuntime *reloRuntime, 
+        /*static TR::RelocationRecord* create(TR::RelocationRecord *storage, TR::RelocationRuntime *reloRuntime, 
 					    TR::RelocationTarget *reloTarget, 
-					    TR::RelocationRecordBinaryTemplate *record);
+					    TR::RelocationRecordBinaryTemplate *record);*/
 	void setOffset(TR::RelocationTarget *reloTarget, UDATA offset); 
 };
 class RelocationRecordBinaryTemplate: public OMR::RelocationRecordBinaryTemplateConnector{
