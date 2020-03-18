@@ -45,3 +45,7 @@ WASM::RelocationRecordMethodCallAddress::RelocationRecordMethodCallAddress(TR::R
 }
 
 void TR::RelocationRecordWithOffset::setOffset(TR::RelocationTarget *reloTarget, UDATA offset) { reloTarget->storePointer(reinterpret_cast<uint8_t *>(offset), reinterpret_cast<uint8_t *>(&reinterpret_cast<WASM::RelocationRecordWithOffsetBinaryTemplate*>(_record)->_offset)); }
+
+TR::RelocationRecord* TR::RelocationRecord::create(TR::RelocationRecord *storage, TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, TR::RelocationRecordBinaryTemplate *record){
+  return WASM::RelocationRecord::create(storage,reloRuntime,reloTarget,record);
+}
