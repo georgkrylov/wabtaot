@@ -30,7 +30,7 @@ class RelocationRecordTwo : public WASM::RelocationRecord{
         RelocationRecordTwo(TR::RelocationRuntime *reloRuntime, TR::RelocationRecordBinaryTemplate *record);
         virtual void initialize(int dataOne,int dataTwo);
 };
-
+/*
 struct RelocationRecordWithOffsetPrivateData
    {
       uintptrj_t offset;
@@ -40,7 +40,7 @@ union RelocationRecordPrivateData
    {
      WASM::RelocationRecordWithOffsetPrivateData offset;
    };
-
+*/
 /*
 class RelocationRecordThree : public WASM::RelocationRecord{
     public:
@@ -63,27 +63,31 @@ class RelocationRecordWithOffset:public WASM::WASMRelocationRecordConnector{
 	void setOffset(TR::RelocationTarget *reloTarget, UDATA offset); 
 };
 
-class RelocationRecordMethodCallAddress : public WASM::RelocationRecord{
-    public:
-        RelocationRecordMethodCallAddress();
-        RelocationRecordMethodCallAddress(TR::RelocationRuntime *reloRuntime, TR::RelocationRecordBinaryTemplate *record);
-        int32_t applyRelocation(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, uint8_t *reloLocation);
-        int32_t applyRelocation(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, uint8_t *reloLocationHigh, uint8_t *reloLocationLow);
-        void preparePrivateData(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget);
-};
-
 class RelocationRecordWithOffsetBinaryTemplate : public OMR::RelocationRecordBinaryTemplateConnector{
      public:
          //void setOffset(TR::RelocationTarget*, UDATA offset);
 	 UDATA _offset;
 };
 
+class RelocationRecordMethodCallAddress : public WASM::RelocationRecord{
+    public:
+        RelocationRecordMethodCallAddress();
+        RelocationRecordMethodCallAddress(TR::RelocationRuntime *reloRuntime, TR::RelocationRecordBinaryTemplate *record);
+        virtual int32_t applyRelocation(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, uint8_t *reloLocation);
+        virtual int32_t applyRelocation(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, uint8_t *reloLocationHigh, uint8_t *reloLocationLow);
+        virtual void preparePrivateData(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget);
+        virtual int32_t bytesInHeader(TR::RelocationTarget* a) { return sizeof(RelocationRecordWithOffsetBinaryTemplate); }
+        uint8_t *computeTargetMethodAddress(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, uint8_t *baseLocation);
+        uint8_t* address(TR::RelocationTarget *reloTarget);
+        void setAddress(TR::RelocationTarget *reloTarget, uint8_t* callTargetAddress);
+};
+
 class RelocationRecordDataAddress : public WASM::RelocationRecordWithOffset{
      public:
         RelocationRecordDataAddress();
         RelocationRecordDataAddress(TR::RelocationRuntime *reloRuntime, TR::RelocationRecordBinaryTemplate *record);
-        int32_t applyRelocation(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, uint8_t *reloLocation);
-        int32_t applyRelocation(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, uint8_t *reloLocationHigh, uint8_t *reloLocationLow);
+        virtual int32_t applyRelocation(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, uint8_t *reloLocation);
+        virtual int32_t applyRelocation(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, uint8_t *reloLocationHigh, uint8_t *reloLocationLow);
 };
 
 }
@@ -99,19 +103,19 @@ class RelocationRecord:public WASM::WASMRelocationRecordConnector{
 					    TR::RelocationTarget *reloTarget, 
 					    TR::RelocationRecordBinaryTemplate *record);
 };
-class RelocationRecordWithOffset:public WASM::WASMRelocationRecordConnector{
+class RelocationRecordWithOffset:public WASM::RelocationRecordWithOffset{
     public:
         RelocationRecordWithOffset(){}
         RelocationRecordWithOffset(TR::RelocationRuntime *reloRuntime, TR::RelocationRecordBinaryTemplate *record){}
         /*static TR::RelocationRecord* create(TR::RelocationRecord *storage, TR::RelocationRuntime *reloRuntime, 
 					    TR::RelocationTarget *reloTarget, 
 					    TR::RelocationRecordBinaryTemplate *record);*/
-	void setOffset(TR::RelocationTarget *reloTarget, UDATA offset); 
+	void setOffset(TR::RelocationTarget *reloTarget, UDATA offset);
 };
 class RelocationRecordBinaryTemplate: public OMR::RelocationRecordBinaryTemplateConnector{
     public:
        RelocationRecordBinaryTemplate(){};
 };
-typedef WASM::RelocationRecordPrivateData RelocationRecordPrivateData;
+
 }
 #endif
