@@ -56,7 +56,7 @@ class RelocationRecordMethodCallAddressBinaryTemplate : public RelocationRecordB
 class RelocationRecordWithOffset:public WASM::WASMRelocationRecordConnector{
     public:
         RelocationRecordWithOffset(){}
-        RelocationRecordWithOffset(TR::RelocationRuntime *reloRuntime, TR::RelocationRecordBinaryTemplate *record){}
+        RelocationRecordWithOffset(TR::RelocationRuntime *reloRuntime, TR::RelocationRecordBinaryTemplate *record);
         /*static TR::RelocationRecord* create(TR::RelocationRecord *storage, TR::RelocationRuntime *reloRuntime, 
 					    TR::RelocationTarget *reloTarget, 
 					    TR::RelocationRecordBinaryTemplate *record);*/
@@ -86,6 +86,8 @@ class RelocationRecordDataAddress : public WASM::RelocationRecordWithOffset{
      public:
         RelocationRecordDataAddress();
         RelocationRecordDataAddress(TR::RelocationRuntime *reloRuntime, TR::RelocationRecordBinaryTemplate *record);
+        virtual int32_t bytesInHeader(TR::RelocationTarget* a) { return sizeof(RelocationRecordWithOffsetBinaryTemplate);}
+        //virtual void preparePrivateData(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget);
         virtual int32_t applyRelocation(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, uint8_t *reloLocation);
         virtual int32_t applyRelocation(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, uint8_t *reloLocationHigh, uint8_t *reloLocationLow);
 };

@@ -15,6 +15,10 @@ WASM::RelocationRecordTwo::RelocationRecordTwo():WASM::RelocationRecord(){
 WASM::RelocationRecordTwo::RelocationRecordTwo(TR::RelocationRuntime *reloRuntime, TR::RelocationRecordBinaryTemplate *record):WASM::RelocationRecord(reloRuntime, record){
     std::cout<<"Hello from WASMRelocationRecordTwo, with kind"<<std::endl;
 }
+
+WASM::RelocationRecordWithOffset::RelocationRecordWithOffset(TR::RelocationRuntime *reloRuntime, TR::RelocationRecordBinaryTemplate *record):WASM::RelocationRecord(reloRuntime, record){
+}
+
 /*
 WASM::RelocationRecordThree::RelocationRecordThree(int kind):WASM::RelocationRecord(kind){
     std::cout<<"Hello from WASMRelocationRecordThree, with kind"<<kind<<std::endl;
@@ -109,6 +113,15 @@ WASM::RelocationRecordDataAddress::RelocationRecordDataAddress():WASM::Relocatio
 WASM::RelocationRecordDataAddress::RelocationRecordDataAddress(TR::RelocationRuntime *reloRuntime, TR::RelocationRecordBinaryTemplate *record):WASM::RelocationRecordWithOffset(reloRuntime, record){
     std::cout<<"Hello from WASMRelocationRecordTwo, with kind"<<std::endl;
 }
+/*
+void 
+WASM::RelocationRecordDataAddress::preparePrivateData(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget){
+   TR::RelocationRecordMethodCallPrivateData *reloPrivateData = &(privateData()->methodCall)  ;
+   uint8_t *baseLocation = 0;
+   uint8_t *callTargetAddress = computeTargetMethodAddress(reloRuntime, reloTarget, baseLocation);
+   //reloPrivateData->callTargetOffset = (callTargetAddress - baseLocation);
+   reloPrivateData->callTargetOffset = callTargetAddress;
+}*/
 
 int32_t 
 WASM::RelocationRecordDataAddress::applyRelocation(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, uint8_t *reloLocation)
