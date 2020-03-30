@@ -60,6 +60,7 @@ class RelocationRecordWithOffset:public WASM::WASMRelocationRecordConnector{
         /*static TR::RelocationRecord* create(TR::RelocationRecord *storage, TR::RelocationRuntime *reloRuntime, 
 					    TR::RelocationTarget *reloTarget, 
 					    TR::RelocationRecordBinaryTemplate *record);*/
+        uintptrj_t offset(TR::RelocationTarget *reloTarget);
 	void setOffset(TR::RelocationTarget *reloTarget, UDATA offset); 
 };
 
@@ -91,6 +92,16 @@ class RelocationRecordDataAddress : public WASM::RelocationRecordWithOffset{
         virtual int32_t applyRelocation(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, uint8_t *reloLocation);
         virtual int32_t applyRelocation(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, uint8_t *reloLocationHigh, uint8_t *reloLocationLow);
 };
+
+class RelocationRecordBranchTable : public RelocationRecordWithOffset
+   {
+   public:
+     RelocationRecordBranchTable() {}
+     RelocationRecordBranchTable(TR::RelocationRuntime *reloRuntime, TR::RelocationRecordBinaryTemplate *record) : RelocationRecordWithOffset(reloRuntime, record) {}
+     virtual int32_t bytesInHeader() { return sizeof(RelocationRecordWithOffsetBinaryTemplate); }
+     virtual int32_t applyRelocation(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, uint8_t *reloLocation);
+     virtual int32_t applyRelocation(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, uint8_t *reloLocationHigh, uint8_t *reloLocationLow);
+    };
 
 }
 

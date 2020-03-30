@@ -35,6 +35,9 @@ TR::RelocationRecord* WASM::RelocationRecord::create(TR::RelocationRecord *stora
 	case TR_DataAddress : 
 	  reloRecord = reinterpret_cast<TR::RelocationRecord*>( new (storage) WASM::RelocationRecordDataAddress(reloRuntime,record)); 
 	  break;
+	case TR_BranchTable : 
+	  reloRecord = reinterpret_cast<TR::RelocationRecord*>( new (storage) WASM::RelocationRecordBranchTable(reloRuntime,record)); 
+	  break;
         break;
         default:
             std::cout<<"CANNOT CREATE WASM RELOCATION RECORD WITH KIND"<<std::endl;
@@ -100,6 +103,12 @@ WASM::RelocationRecordMethodCallAddress::setAddress(TR::RelocationTarget *reloTa
    reloTarget->storeAddress(callTargetAddress, reinterpret_cast<uint8_t *>(&reloData->_offset));
    }
 
+uintptrj_t
+WASM::RelocationRecordWithOffset::offset(TR::RelocationTarget *reloTarget)
+   {
+   return reloTarget->loadRelocationRecordValue((uintptrj_t *) &((RelocationRecordWithOffsetBinaryTemplate *)_record)->_offset);
+   }
+
 void WASM::RelocationRecordWithOffset::setOffset(TR::RelocationTarget *reloTarget, UDATA offset) { reloTarget->storePointer(reinterpret_cast<uint8_t *>(offset), reinterpret_cast<uint8_t *>(&reinterpret_cast<WASM::RelocationRecordWithOffsetBinaryTemplate*>(_record)->_offset)); }
 
 TR::RelocationRecord* TR::RelocationRecord::create(TR::RelocationRecord *storage, TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, TR::RelocationRecordBinaryTemplate *record){
@@ -133,6 +142,19 @@ WASM::RelocationRecordDataAddress::applyRelocation(TR::RelocationRuntime *reloRu
    }
 
 int32_t WASM::RelocationRecordDataAddress::applyRelocation(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, uint8_t *reloLocationLow, uint8_t *reloLocationHigh)
+   {      
+      return -1;
+   }
+
+int32_t
+WASM::RelocationRecordBranchTable::applyRelocation(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, uint8_t *reloLocation)
+   {
+   TR::SharedCacheRelocationRuntime *rr = reinterpret_cast<TR::SharedCacheRelocationRuntime*>(reloRuntime);
+   reloTarget->storeAddress(reloLocation+(UDATA)offset(reloTarget),reloLocation);
+   return 0;
+   }
+
+int32_t WASM::RelocationRecordBranchTable::applyRelocation(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, uint8_t *reloLocationLow, uint8_t *reloLocationHigh)
    {      
       return -1;
    }

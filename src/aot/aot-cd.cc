@@ -389,7 +389,7 @@ void runExports(interp::Environment& env,DefinedModule *module)
     if(exported.kind != ExternalKind::Func) { continue;}
     std::string index = std::to_string(exported.index);
     void *fn = nullptr;
-    //if(exported.name != "_start") continue;
+    if(exported.name != "_start") continue;
     for(uint32_t i = 0;i<module->funcs.size();i++){
       if(!index.compare(module->funcs[i]->dbg_name_.substr(1,index.size()))){
         fn = module->compiled_functions[i];
