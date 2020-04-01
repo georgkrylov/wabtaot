@@ -4,16 +4,16 @@
 #include "runtime/RelocationTarget.hpp"
 
 WASM::RelocationRecord::RelocationRecord():OMR::RelocationRecordConnector(){
-    std::cout<<"Hello from WASMRelocationRecord, with kind"<<std::endl;
+
 }
 WASM::RelocationRecord::RelocationRecord(TR::RelocationRuntime *reloRuntime, TR::RelocationRecordBinaryTemplate *record):OMR::RelocationRecordConnector(reloRuntime, record){
-    std::cout<<"Hello from WASMRelocationRecord, with kind"<<std::endl;
+
 }
 WASM::RelocationRecordTwo::RelocationRecordTwo():WASM::RelocationRecord(){
-    std::cout<<"Hello from WASMRelocationRecord, with kind"<<std::endl;
+
 }
 WASM::RelocationRecordTwo::RelocationRecordTwo(TR::RelocationRuntime *reloRuntime, TR::RelocationRecordBinaryTemplate *record):WASM::RelocationRecord(reloRuntime, record){
-    std::cout<<"Hello from WASMRelocationRecordTwo, with kind"<<std::endl;
+
 }
 
 WASM::RelocationRecordWithOffset::RelocationRecordWithOffset(TR::RelocationRuntime *reloRuntime, TR::RelocationRecordBinaryTemplate *record):WASM::RelocationRecord(reloRuntime, record){
@@ -46,15 +46,15 @@ TR::RelocationRecord* WASM::RelocationRecord::create(TR::RelocationRecord *stora
     return reloRecord;
 }
 void WASM::RelocationRecordTwo::initialize(int dataOne,int dataTwo){
-    std::cout<<"A wasm relocationRecordTwo was generated with dataOne="<<dataOne<<" and dataTwo="<<dataTwo<<std::endl;
+
 }
 
 WASM::RelocationRecordMethodCallAddress::RelocationRecordMethodCallAddress():WASM::RelocationRecord(){
-    std::cout<<"Hello from WASMRelocationRecordTwo, with kind"<<std::endl;
+
 }
 
 WASM::RelocationRecordMethodCallAddress::RelocationRecordMethodCallAddress(TR::RelocationRuntime *reloRuntime, TR::RelocationRecordBinaryTemplate *record):WASM::RelocationRecord(reloRuntime, record){
-    std::cout<<"Hello from WASMRelocationRecordTwo, with kind"<<std::endl;
+
 }
 
 void 
@@ -116,11 +116,11 @@ TR::RelocationRecord* TR::RelocationRecord::create(TR::RelocationRecord *storage
 }
 
 WASM::RelocationRecordDataAddress::RelocationRecordDataAddress():WASM::RelocationRecordWithOffset(){
-    std::cout<<"Hello from WASMRelocationRecordTwo, with kind"<<std::endl;
+
 }
 
 WASM::RelocationRecordDataAddress::RelocationRecordDataAddress(TR::RelocationRuntime *reloRuntime, TR::RelocationRecordBinaryTemplate *record):WASM::RelocationRecordWithOffset(reloRuntime, record){
-    std::cout<<"Hello from WASMRelocationRecordTwo, with kind"<<std::endl;
+
 }
 /*
 void 

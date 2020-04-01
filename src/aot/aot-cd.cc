@@ -290,6 +290,21 @@ uint32_t printaa(int32_t a,int32_t b,int32_t c,int32_t d) {
   std::cout<<std::string(buffer,buffsize); 
   return buffsize;
 }
+
+uint32_t gettimeod(int32_t a, int32_t b) {
+  static int i = 0;
+  uint32_t bufferLoc1 = *(uint32_t*)(envPointer->GetMems()[0]+a);
+  time_t *bufferLoc = (time_t*)(envPointer->GetMems()[0]+bufferLoc1);
+  suseconds_t *miliLoc = (suseconds_t*)(envPointer->GetMems()[0]+bufferLoc1+8);
+  struct timeval tv{};
+  gettimeofday(&tv,NULL);
+  //*bufferLoc = tv.tv_sec;
+  //*miliLoc = tv.tv_usec;
+  *bufferLoc = -1 - (++i);
+  *miliLoc = -1 - (++i);
+  return 0;
+}
+
 int32_t print1(int32_t a,int32_t b){std::cout<<a<<","<<b<<"\n"; return 0;}
 void print2(int32_t a,int32_t b){std::cout<<a+b<<"\n";}
 int32_t seek(int32_t a,int64_t b,int32_t c,int32_t d) { std::cout<<a<<b<<c<<d<<"\n"; return 0;}
@@ -328,6 +343,7 @@ void relocateAOT(interp::Environment& env,DefinedModule *module)
   setCodeEntry("fd_seek",reinterpret_cast<void*>(seek));
   setCodeEntry("fd_close",reinterpret_cast<void*>(clos));
   setCodeEntry("funpr",reinterpret_cast<void*>(funpr));
+  setCodeEntry("gettimeo",reinterpret_cast<void*>(gettimeod));
   // for(Index i = 0; i < func_count; ++i) {
   //   if(env.GetFunc(i)->is_host) {
   //     setCodeEntry()
