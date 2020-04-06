@@ -295,7 +295,7 @@ uint64_t AOTFunctionBuilder::CallIndirectHelper(Index table_index, Index sig_ind
 }
 
 uint32_t AOTFunctionBuilder::GrowMemory(uint32_t mem, uint32_t grow_pages) {
-  printf("Grow by: %ud",grow_pages);
+  //printf("Grow by: %ud",grow_pages);
   Memory *memory = envPointer->GetMemory(mem);
   uint32_t old_page_size = memory->page_limits.initial;
   uint32_t new_page_size = old_page_size + grow_pages;

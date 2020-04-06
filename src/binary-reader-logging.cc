@@ -24,12 +24,12 @@ namespace wabt {
 
 #define INDENT_SIZE 2
 
-#define LOGF_NOINDENT(...) stream_->Writef(__VA_ARGS__)
+#define LOGF_NOINDENT(...) //stream_->Writef(__VA_ARGS__)
 
 #define LOGF(...)               \
   do {                          \
-    WriteIndent();              \
-    LOGF_NOINDENT(__VA_ARGS__); \
+    /*WriteIndent();              \
+    LOGF_NOINDENT(__VA_ARGS__);*/ \
   } while (0)
 
 namespace {
