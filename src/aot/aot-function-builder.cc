@@ -357,7 +357,11 @@ void AOTFunctionBuilder::Push(TR::IlBuilder* b, const char* type, TR::IlValue* v
   //TODO: should probably compare to valueType_ here, if that's
   //possible. I'm not sure if a simple pointer comparison will
   //work. IlTypes* for primitives might not be singleton values.
-  auto* value_wrapper = strcmp(type, "i64") ? b->ConvertTo(valueType_, value) : value;
+  TR::IlValue* value_wrapper;
+  if(value->getDataType().isFloatingPoint() || value->getDataType().isDouble())
+    value_wrapper = b->ConvertBitsTo(valueType_, value);
+  else
+    value_wrapper = strcmp(type, "i64") ? b->ConvertTo(valueType_, value) : value;
   stackCount_++;
   stack_->Push(b, value_wrapper);
 }
@@ -366,7 +370,10 @@ void AOTFunctionBuilder::Push(TR::IlBuilder* b, const char* type, TR::IlValue* v
 TR::IlValue* AOTFunctionBuilder::Pop(TR::IlBuilder* b, const char* type) {
   auto* value = stack_->Pop(b);
   stackCount_--;
-  return strcmp("i64", type) ? b->ConvertTo(TypeFieldType(type,b), value) : value;
+  if(TypeFieldType(type,b) == Double || TypeFieldType(type,b) == Float)
+    return b->ConvertBitsTo(TypeFieldType(type,b), value);
+  else
+    return strcmp("i64", type) ? b->ConvertTo(TypeFieldType(type,b), value) : value;
 }
 
 void AOTFunctionBuilder::DropKeep(TR::IlBuilder* b, uint32_t drop_count, uint8_t keep_count) {
