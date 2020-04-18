@@ -273,6 +273,23 @@ uint64_t AOTFunctionBuilder::CallIndirectHelper(Index table_index, Index sig_ind
         auto funct = reinterpret_cast<uint64_t(*)(uint64_t,uint64_t,uint64_t)>(fn);
         return funct(param3,param2,param1);
       }
+      case 4: {
+        auto param1 = env->indirectCallParams[0]; //might be problems with order of variables
+        auto param2 = env->indirectCallParams[1];
+        auto param3 = env->indirectCallParams[2];
+	auto param4 = env->indirectCallParams[3];
+        auto funct = reinterpret_cast<uint64_t(*)(uint64_t,uint64_t,uint64_t,uint64_t)>(fn);
+        return funct(param4,param3,param2,param1);
+      }
+      case 5: {
+        auto param1 = env->indirectCallParams[0]; //might be problems with order of variables
+        auto param2 = env->indirectCallParams[1];
+        auto param3 = env->indirectCallParams[2];
+	auto param4 = env->indirectCallParams[3];
+	auto param5 = env->indirectCallParams[4];
+        auto funct = reinterpret_cast<uint64_t(*)(uint64_t,uint64_t,uint64_t,uint64_t,uint64_t)>(fn);
+        return funct(param5,param4,param3,param2,param1);
+      }
       case 6: {
         auto param1 = env->indirectCallParams[0]; //might be problems with order of variables
         auto param2 = env->indirectCallParams[1];
@@ -358,8 +375,15 @@ void AOTFunctionBuilder::Push(TR::IlBuilder* b, const char* type, TR::IlValue* v
   //possible. I'm not sure if a simple pointer comparison will
   //work. IlTypes* for primitives might not be singleton values.
   TR::IlValue* value_wrapper;
-  if(value->getDataType().isFloatingPoint() || value->getDataType().isDouble())
+  if(value->getDataType().isDouble())
     value_wrapper = b->ConvertBitsTo(valueType_, value);
+  else if( value->getDataType().isFloatingPoint()) {
+    auto convert1 = b->ConvertBitsTo(Int32, value);
+    value_wrapper = b->ConvertTo(Int64, convert1);
+    //auto convert1 = b->ConvertTo(Double, value);
+    //value_wrapper = b->ConvertBitsTo(Int64, convert1);
+    //value_wrapper = b->ConvertTo(valueType_, value);
+  }
   else
     value_wrapper = strcmp(type, "i64") ? b->ConvertTo(valueType_, value) : value;
   stackCount_++;
@@ -370,8 +394,15 @@ void AOTFunctionBuilder::Push(TR::IlBuilder* b, const char* type, TR::IlValue* v
 TR::IlValue* AOTFunctionBuilder::Pop(TR::IlBuilder* b, const char* type) {
   auto* value = stack_->Pop(b);
   stackCount_--;
-  if(TypeFieldType(type,b) == Double || TypeFieldType(type,b) == Float)
+  if(TypeFieldType(type,b) == Double)
     return b->ConvertBitsTo(TypeFieldType(type,b), value);
+  else if( TypeFieldType(type,b) == Float ){
+    auto convert1 = b->ConvertBitsTo(Double, value);
+    return b->ConvertTo(Float, convert1);
+    //auto convert1 = b->ConvertTo(Int32, value);
+    //return b->ConvertBitsTo(Float, convert1);
+    return b->ConvertTo(TypeFieldType(type,b), value);
+  }
   else
     return strcmp("i64", type) ? b->ConvertTo(TypeFieldType(type,b), value) : value;
 }
@@ -1921,13 +1952,13 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
     }
 
     case Opcode::F32ConvertI32S: {
-      auto* value = b->ConvertTo(Float, Pop(b, "i32"));
+      auto* value = b->ConvertBitsTo(Float, Pop(b, "i32"));
       Push(b, "f32", value);//, pc);
       break;
     }
 
     case Opcode::F32ConvertI32U: {
-      auto* value = b->ConvertTo(Float,b->UnsignedConvertTo(Int32, Pop(b, "i32")));
+      auto* value = b->ConvertBitsTo(Float,b->UnsignedConvertTo(Int32, Pop(b, "i32")));
       Push(b, "f32", value);//, pc);
       break;
     }
@@ -1957,13 +1988,13 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
     }
 
     case Opcode::F64ConvertI64S: {
-      auto* value = b->ConvertTo(Double, Pop(b, "i64"));
+      auto* value = b->ConvertBitsTo(Double, Pop(b, "i64"));
       Push(b, "f64", value);//, pc);
       break;
     }
 
     case Opcode::F64ConvertI64U: {
-      auto* value = b->ConvertTo(Double,b->UnsignedConvertTo(Int64, Pop(b, "i64")));
+      auto* value = b->ConvertBitsTo(Double,b->UnsignedConvertTo(Int64, Pop(b, "i64")));
       Push(b, "f64", value);//, pc);
       break;
     }

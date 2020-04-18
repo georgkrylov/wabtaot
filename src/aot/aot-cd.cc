@@ -94,6 +94,9 @@ static Environment *envPointer;
 
 extern int32_t internal_compileMethodBuilder(TR::MethodBuilder * methodBuilder, void ** entryPoint);
 
+int numOfArgs;
+int sizeOfArgs;
+
 static std::unique_ptr<FileStream> s_stdout_stream;
 static std::unique_ptr<FileStream> s_log_stream;
 
@@ -287,7 +290,9 @@ uint32_t printaa(int32_t a,int32_t b,int32_t c,int32_t d) {
   uint32_t bufferLoc = *(uint32_t*)(envPointer->GetMems()[0]+b);
   char *buffer = envPointer->GetMems()[0]+bufferLoc;
   uint32_t buffsize = *(uint32_t*)(envPointer->GetMems()[0]+b+4);
-  std::cout<<std::string(buffer,buffsize); 
+  if(buffsize){
+  std::cout<<std::string(buffer,buffsize)<<std::endl;
+  }
   return buffsize;
 }
 
@@ -310,6 +315,20 @@ void print2(int32_t a,int32_t b){std::cout<<a+b<<"\n";}
 int32_t seek(int32_t a,int64_t b,int32_t c,int32_t d) { std::cout<<a<<b<<c<<d<<"\n"; return 0;}
 int32_t clos(int32_t a){ std::cout<<a; return 0; };
 void clus(int32_t a){ std::cout<<a;};
+
+int32_t args_get(int32_t argv,int32_t argv_buf) {
+  uint32_t *bufferLoc = (uint32_t*)(envPointer->GetMems()[0]+argv);
+  uint32_t *bufferLocsize = (uint32_t*)(envPointer->GetMems()[0]+argv_buf);
+  return 0;
+}
+int32_t args_size_get(int32_t numOfArgs1, int32_t sizeOfArgs1){
+  uint32_t *bufferLoc = (uint32_t*)(envPointer->GetMems()[0]+numOfArgs1);
+  uint32_t *bufferLocsize = (uint32_t*)(envPointer->GetMems()[0]+sizeOfArgs1);
+  *bufferLoc = numOfArgs;
+  *bufferLocsize = sizeOfArgs;
+  return 0;
+}
+
 
 void funpr(uint64_t a) { std::cout<<((char*)(&a)); }
 
@@ -337,8 +356,8 @@ void relocateAOT(interp::Environment& env,DefinedModule *module)
   setCodeEntry("setTempR",reinterpret_cast<void*>(1));
   setCodeEntry("Popcount",reinterpret_cast<void*>(static_cast<int(*)(unsigned)>(wabt::Popcount)));
   setCodeEntry("Popcountll",reinterpret_cast<void*>(static_cast<int(*)(unsigned long long)>(wabt::Popcount)));
-  setCodeEntry("args_siz",reinterpret_cast<void*>(print1));
-  setCodeEntry("args_get",reinterpret_cast<void*>(print1));
+  setCodeEntry("args_siz",reinterpret_cast<void*>(args_size_get));
+  setCodeEntry("args_get",reinterpret_cast<void*>(args_get));
   setCodeEntry("proc_exi",reinterpret_cast<void*>(clus));
   setCodeEntry("fd_seek",reinterpret_cast<void*>(seek));
   setCodeEntry("fd_close",reinterpret_cast<void*>(clos));
@@ -405,7 +424,7 @@ void runExports(interp::Environment& env,DefinedModule *module)
     if(exported.kind != ExternalKind::Func) { continue;}
     std::string index = std::to_string(exported.index);
     void *fn = nullptr;
-    if(exported.name != "_start") continue;
+    //    if(exported.name != "_start") continue;
     for(uint32_t i = 0;i<module->funcs.size();i++){
       if(!index.compare(module->funcs[i]->dbg_name_.substr(1,index.size()))){
         fn = module->compiled_functions[i];
@@ -447,14 +466,18 @@ int main(int argc, char** argv) {
     std::cout << "usage: wabtaot <filename>\n";
     return -1;
   }
+
+  numOfArgs = argc-1;
+  sizeOfArgs = strlen(argv[2]);
+  
   Environment env;
   s_stdout_stream = FileStream::CreateStdout();
   s_log_stream = FileStream::CreateStdout();
-  for(uint32_t i = 1;i<argc;i++) {
-    registerModules(argv[i],&env);
-  }
+//  for(uint32_t i = 1;i<argc;i++) {
+    registerModules(argv[1],&env);
+//  }
   envPointer = &env;
-  for(uint32_t i = 1;i<argc;i++) {
+  for(uint32_t i = 1;i<2;i++) {
     // const char* ffi = strrchr(argv[i],'/');
     // printf("%s\n",ffi);
     // char* src_filename;
@@ -478,10 +501,10 @@ int main(int argc, char** argv) {
     }
   }
 
-  for(uint32_t i = 1;i<argc;i++) {
+  for(uint32_t i = 1;i<2;i++) {
     relocateAOT(env, dynamic_cast<DefinedModule*>(env.GetModule(i-1)));
   }
-  for(uint32_t i = 1;i<argc;i++) {
+  for(uint32_t i = 1;i<2;i++) {
     runExports(env,dynamic_cast<DefinedModule*>(env.GetModule(i-1)));
   }
   //runExports(env, module);
