@@ -244,6 +244,10 @@ uint64_t AOTFunctionBuilder::CallIndirectHelper(Index table_index, Index sig_ind
 //  assert(env->GetFuncSignature(sig_index)->param_types.size() == count-3);
 //  count-=3;
   auto count = env->GetFuncSignature(sig_index)->param_types.size();  
+//  printf("FI:%d\n",func_index);
+//  for (auto aa:env->GetFuncSignature(sig_index)->param_types) {
+//    printf("%d\n",aa);
+//}
 
   if (func->is_host) {
     //auto result = static_cast<Result_t>(th->CallHost(cast<HostFunc>(func)));
@@ -374,6 +378,7 @@ void AOTFunctionBuilder::Push(TR::IlBuilder* b, const char* type, TR::IlValue* v
   //TODO: should probably compare to valueType_ here, if that's
   //possible. I'm not sure if a simple pointer comparison will
   //work. IlTypes* for primitives might not be singleton values.
+/*
   TR::IlValue* value_wrapper;
   if(value->getDataType().isDouble())
     value_wrapper = b->ConvertBitsTo(valueType_, value);
@@ -386,6 +391,8 @@ void AOTFunctionBuilder::Push(TR::IlBuilder* b, const char* type, TR::IlValue* v
   }
   else
     value_wrapper = strcmp(type, "i64") ? b->ConvertTo(valueType_, value) : value;
+*/
+  TR::IlValue* value_wrapper = strcmp(type, "i64") ? b->BitcastTo(valueType_, value) : value;
   stackCount_++;
   stack_->Push(b, value_wrapper);
 }
@@ -394,6 +401,7 @@ void AOTFunctionBuilder::Push(TR::IlBuilder* b, const char* type, TR::IlValue* v
 TR::IlValue* AOTFunctionBuilder::Pop(TR::IlBuilder* b, const char* type) {
   auto* value = stack_->Pop(b);
   stackCount_--;
+/*
   if(TypeFieldType(type,b) == Double)
     return b->ConvertBitsTo(TypeFieldType(type,b), value);
   else if( TypeFieldType(type,b) == Float ){
@@ -405,6 +413,8 @@ TR::IlValue* AOTFunctionBuilder::Pop(TR::IlBuilder* b, const char* type) {
   }
   else
     return strcmp("i64", type) ? b->ConvertTo(TypeFieldType(type,b), value) : value;
+*/
+  return strcmp("i64", type) ? b->BitcastTo(TypeFieldType(type,b), value) : value;
 }
 
 void AOTFunctionBuilder::DropKeep(TR::IlBuilder* b, uint32_t drop_count, uint8_t keep_count) {
@@ -723,7 +733,7 @@ void AOTFunctionBuilder::EmitTruncation(TR::IlBuilder* b) {//, const uint8_t* pc
   // but the compiler should be able to simplify this anyways
   auto* new_value = std::is_unsigned<ToType>::value ? b->ConvertBitsTo(target_type, value)
     : b->ConvertTo(target_type, value);
-  //auto new_value = b->BitcastTo(target_type,value);
+//  auto new_value = b->BitcastTo(target_type,value);
 
   Push(b, TypeFieldName<ToType>(), new_value);
 }

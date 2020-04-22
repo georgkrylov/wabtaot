@@ -95,7 +95,7 @@ static Environment *envPointer;
 extern int32_t internal_compileMethodBuilder(TR::MethodBuilder * methodBuilder, void ** entryPoint);
 
 int numOfArgs;
-int sizeOfArgs;
+char **args_arr;
 
 static std::unique_ptr<FileStream> s_stdout_stream;
 static std::unique_ptr<FileStream> s_log_stream;
@@ -318,14 +318,23 @@ void clus(int32_t a){ std::cout<<a;};
 
 int32_t args_get(int32_t argv,int32_t argv_buf) {
   uint32_t *bufferLoc = (uint32_t*)(envPointer->GetMems()[0]+argv);
-  uint32_t *bufferLocsize = (uint32_t*)(envPointer->GetMems()[0]+argv_buf);
+  uint8_t *bufferLocsize = (uint8_t*)(envPointer->GetMems()[0]+argv_buf);
+  *bufferLoc = argv_buf;
+  if(numOfArgs>1)
+    *(bufferLoc+1) = argv_buf+strlen(args_arr[1]);
+  memcpy(bufferLocsize,args_arr[1],strlen(args_arr[1])+1);
+  if(numOfArgs>1)
+    memcpy(bufferLocsize+strlen(args_arr[1]),args_arr[2],strlen(args_arr[2])+1);
   return 0;
 }
 int32_t args_size_get(int32_t numOfArgs1, int32_t sizeOfArgs1){
   uint32_t *bufferLoc = (uint32_t*)(envPointer->GetMems()[0]+numOfArgs1);
   uint32_t *bufferLocsize = (uint32_t*)(envPointer->GetMems()[0]+sizeOfArgs1);
   *bufferLoc = numOfArgs;
-  *bufferLocsize = sizeOfArgs;
+  if(numOfArgs>1)
+    *bufferLocsize = strlen(args_arr[2])+strlen(args_arr[1])+2;
+  else
+    *bufferLocsize = 0;
   return 0;
 }
 
@@ -424,7 +433,7 @@ void runExports(interp::Environment& env,DefinedModule *module)
     if(exported.kind != ExternalKind::Func) { continue;}
     std::string index = std::to_string(exported.index);
     void *fn = nullptr;
-    //    if(exported.name != "_start") continue;
+        if(exported.name != "_start") continue;
     for(uint32_t i = 0;i<module->funcs.size();i++){
       if(!index.compare(module->funcs[i]->dbg_name_.substr(1,index.size()))){
         fn = module->compiled_functions[i];
@@ -468,7 +477,7 @@ int main(int argc, char** argv) {
   }
 
   numOfArgs = argc-1;
-  sizeOfArgs = strlen(argv[2]);
+  args_arr = argv;
   
   Environment env;
   s_stdout_stream = FileStream::CreateStdout();
