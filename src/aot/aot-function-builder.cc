@@ -244,10 +244,10 @@ uint64_t AOTFunctionBuilder::CallIndirectHelper(Index table_index, Index sig_ind
 //  assert(env->GetFuncSignature(sig_index)->param_types.size() == count-3);
 //  count-=3;
   auto count = env->GetFuncSignature(sig_index)->param_types.size();  
-//  printf("FI:%d\n",func_index);
-//  for (auto aa:env->GetFuncSignature(sig_index)->param_types) {
-//    printf("%d\n",aa);
-//}
+ // printf("FI:%d\n",func_index);
+ // for (auto aa:env->GetFuncSignature(sig_index)->param_types) {
+  //  printf("%d\n",aa);
+  //}
 
   if (func->is_host) {
     //auto result = static_cast<Result_t>(th->CallHost(cast<HostFunc>(func)));

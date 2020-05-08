@@ -291,7 +291,7 @@ uint32_t printaa(int32_t a,int32_t b,int32_t c,int32_t d) {
   char *buffer = envPointer->GetMems()[0]+bufferLoc;
   uint32_t buffsize = *(uint32_t*)(envPointer->GetMems()[0]+b+4);
   if(buffsize){
-  std::cout<<std::string(buffer,buffsize)<<std::endl;
+  std::cout<<std::string(buffer,buffsize);
   }
   return buffsize;
 }

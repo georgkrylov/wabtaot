@@ -200,7 +200,7 @@ struct Table {
 struct Memory {
   Memory() = default;
   explicit Memory(const Limits& limits)
-      : page_limits(limits), data(5368709120) {}
+      : page_limits(limits), data(2368709120) {}
 
   Limits page_limits;
   std::vector<char> data;
