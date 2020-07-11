@@ -27,6 +27,7 @@
 #include <utility>
 #include <vector>
 #include <unordered_map>
+#include <sys/mman.h>
 
 #include "src/jit/environment.h"
 #include "src/binding-hash.h"
@@ -200,10 +201,15 @@ struct Table {
 struct Memory {
   Memory() = default;
   explicit Memory(const Limits& limits)
-      : page_limits(limits), data(2368709120) {}
+    : page_limits(limits){
+	madvise(data.data(), 2368709120*sizeof(char), MADV_SEQUENTIAL);
+	madvise(data.data(), 2368709120*sizeof(char), MADV_HUGEPAGE);  
+	madvise(data.data(), 2368709120*sizeof(char), MADV_WILLNEED);
+	
+      }
 
   Limits page_limits;
-  std::vector<char> data;
+  alignas(4096) std::array<char,2368709120> data;
 };
 
 struct DataSegment {
