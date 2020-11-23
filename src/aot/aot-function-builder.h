@@ -224,7 +224,6 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
   std::vector<PreviousCompilerState> stackOfStacks_;
   
   bool Emit(TR::BytecodeBuilder* b, const uint8_t* istream, const uint8_t* pc);
-  int64_t regist_;
 };
 
 class FunctionImport {
