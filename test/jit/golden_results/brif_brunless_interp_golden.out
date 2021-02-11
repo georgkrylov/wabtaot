@@ -1,0 +1,10 @@
+test_brif_always_true() => i32:1
+test_brif_always_false() => i32:0
+test_brif_with_arg_0() => i32:0
+test_brif_with_arg_1() => i32:1
+test_if_always_true() => i32:1
+test_if_always_false() => i32:0
+test_if_with_arg_0() => i32:0
+test_if_with_arg_1() => i32:1
+test_if_with_result_0() => i32:0
+test_if_with_result_1() => i32:1

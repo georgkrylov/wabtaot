@@ -1,0 +1,104 @@
+test_i32_store8_0() => i32:3735936730
+test_i32_store8_1() => i32:3735936685
+test_i32_store8_2() => i32:3987594925
+test_i32_store8_3() => i32:3735936685
+test_i32_store8_4() => error: out of bounds memory access
+  at ??? + 0x1c
+[Interpreter to JIT transition]
+  at test_i32_store8_4 + 0x18
+test_i32_store8_5() => error: out of bounds memory access
+  at ??? + 0x1c
+[Interpreter to JIT transition]
+  at test_i32_store8_5 + 0x18
+test_i32_store8_6() => error: out of bounds memory access
+  at ??? + 0x1c
+[Interpreter to JIT transition]
+  at test_i32_store8_6 + 0x18
+test_i32_store16_0() => i32:3735928559
+test_i32_store16_1() => i32:3203391149
+test_i32_store16_2() => i32:3203391149
+test_i32_store16_3() => i32:3203391149
+test_i32_store16_4() => error: out of bounds memory access
+  at ??? + 0x1c
+[Interpreter to JIT transition]
+  at test_i32_store16_4 + 0x18
+test_i32_store16_5() => error: out of bounds memory access
+  at ??? + 0x1c
+[Interpreter to JIT transition]
+  at test_i32_store16_5 + 0x18
+test_i32_store16_6() => error: out of bounds memory access
+  at ??? + 0x1c
+[Interpreter to JIT transition]
+  at test_i32_store16_6 + 0x18
+test_i32_store16_7() => error: out of bounds memory access
+  at ??? + 0x1c
+[Interpreter to JIT transition]
+  at test_i32_store16_7 + 0x18
+test_i32_store16_8() => error: out of bounds memory access
+  at ??? + 0x1c
+[Interpreter to JIT transition]
+  at test_i32_store16_8 + 0x18
+test_i64_store8_0() => i64:16045725885737590490
+test_i64_store8_1() => i64:16045725885737590445
+test_i64_store8_2() => i64:17126589796306509485
+test_i64_store8_3() => i64:16045725885737590445
+test_i64_store8_4() => error: out of bounds memory access
+  at ??? + 0x1c
+[Interpreter to JIT transition]
+  at test_i64_store8_4 + 0x1c
+test_i64_store8_5() => error: out of bounds memory access
+  at ??? + 0x1c
+[Interpreter to JIT transition]
+  at test_i64_store8_5 + 0x1c
+test_i64_store8_6() => error: out of bounds memory access
+  at ??? + 0x1c
+[Interpreter to JIT transition]
+  at test_i64_store8_6 + 0x1c
+test_i64_store16_0() => i64:16045725885737582319
+test_i64_store16_1() => i64:16045725885205044909
+test_i64_store16_2() => i64:13758460224986799789
+test_i64_store16_3() => i64:13758460224986799789
+test_i64_store16_4() => error: out of bounds memory access
+  at ??? + 0x1c
+[Interpreter to JIT transition]
+  at test_i64_store16_4 + 0x1c
+test_i64_store16_5() => error: out of bounds memory access
+  at ??? + 0x1c
+[Interpreter to JIT transition]
+  at test_i64_store16_5 + 0x1c
+test_i64_store16_6() => error: out of bounds memory access
+  at ??? + 0x1c
+[Interpreter to JIT transition]
+  at test_i64_store16_6 + 0x1c
+test_i64_store16_7() => error: out of bounds memory access
+  at ??? + 0x1c
+[Interpreter to JIT transition]
+  at test_i64_store16_7 + 0x1c
+test_i64_store16_8() => error: out of bounds memory access
+  at ??? + 0x1c
+[Interpreter to JIT transition]
+  at test_i64_store16_8 + 0x1c
+test_i64_store32_0() => i64:16045725885204983535
+test_i64_store32_1() => i64:13758196625663975085
+test_i64_store32_2() => i64:13758196625663975085
+test_i64_store32_3() => i64:13758196625663975085
+test_i64_store32_4() => error: out of bounds memory access
+  at ??? + 0x1c
+[Interpreter to JIT transition]
+  at test_i64_store32_4 + 0x1c
+test_i64_store32_5() => error: out of bounds memory access
+  at ??? + 0x1c
+[Interpreter to JIT transition]
+  at test_i64_store32_5 + 0x1c
+test_i64_store32_6() => error: out of bounds memory access
+  at ??? + 0x1c
+[Interpreter to JIT transition]
+  at test_i64_store32_6 + 0x1c
+test_i64_store32_7() => error: out of bounds memory access
+  at ??? + 0x1c
+[Interpreter to JIT transition]
+  at test_i64_store32_7 + 0x1c
+test_i64_store32_8() => error: out of bounds memory access
+  at ??? + 0x1c
+[Interpreter to JIT transition]
+  at test_i64_store32_8 + 0x1c

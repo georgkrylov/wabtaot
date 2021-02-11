@@ -1,0 +1,2 @@
+./test/jit/f32_min_max.txt
+./test/jit/f64_min_max.txt
