@@ -1,0 +1,10 @@
+test_interp_direct_comp_fail() =>
+test_interp_indirect_comp_fail() =>
+test_jit_direct_comp_fail() => error: unreachable executed
+  at ??? + 0xc
+[Interpreter to JIT transition]
+  at test_jit_direct_comp_fail + 0x8
+test_jit_indirect_comp_fail() => error: unreachable executed
+  at ??? + 0x18
+[Interpreter to JIT transition]
+  at test_jit_indirect_comp_fail + 0x8

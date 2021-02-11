@@ -1,0 +1,12 @@
+test_zero() => i32:0
+test_one() => i32:1
+test_add() => i32:14
+test_sub() => i32:6
+trap_oob() => error: undefined table index
+  at ??? + 0x24
+[Interpreter to JIT transition]
+  at trap_oob + 0x20
+trap_sig_mismatch() => error: indirect call signature mismatch
+  at ??? + 0x24
+[Interpreter to JIT transition]
+  at trap_sig_mismatch + 0x20

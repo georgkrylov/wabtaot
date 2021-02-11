@@ -1,0 +1,54 @@
+i32_trunc_s_f32_test_0() => i32:4294967196
+i32_trunc_u_f32_test_0() => i32:3000000000
+i32_trunc_s_f64_test_0() => i32:4294967196
+i32_trunc_u_f64_test_0() => i32:3000000000
+i32_trunc_s_f32_test_1() => error: invalid conversion to integer
+  at ??? + 0xc
+[Interpreter to JIT transition]
+  at i32_trunc_s_f32_test_1 + 0x10
+i32_trunc_s_f64_test_1() => error: invalid conversion to integer
+  at ??? + 0xc
+[Interpreter to JIT transition]
+  at i32_trunc_s_f64_test_1 + 0x14
+i32_trunc_s_f32_test_2() => error: integer overflow
+  at ??? + 0xc
+[Interpreter to JIT transition]
+  at i32_trunc_s_f32_test_2 + 0x10
+i32_trunc_s_f32_test_3() => error: integer overflow
+  at ??? + 0xc
+[Interpreter to JIT transition]
+  at i32_trunc_s_f32_test_3 + 0x10
+i32_trunc_s_f64_test_2() => error: integer overflow
+  at ??? + 0xc
+[Interpreter to JIT transition]
+  at i32_trunc_s_f64_test_2 + 0x14
+i32_trunc_s_f64_test_3() => error: integer overflow
+  at ??? + 0xc
+[Interpreter to JIT transition]
+  at i32_trunc_s_f64_test_3 + 0x14
+i64_trunc_s_f32_test_0() => i32:1
+i64_trunc_s_f64_test_0() => i32:1
+i64_trunc_s_f32_test_1() => error: invalid conversion to integer
+  at ??? + 0xc
+[Interpreter to JIT transition]
+  at i64_trunc_s_f32_test_1 + 0x10
+i64_trunc_s_f64_test_1() => error: invalid conversion to integer
+  at ??? + 0xc
+[Interpreter to JIT transition]
+  at i64_trunc_s_f64_test_1 + 0x14
+i64_trunc_s_f32_test_2() => error: integer overflow
+  at ??? + 0xc
+[Interpreter to JIT transition]
+  at i64_trunc_s_f32_test_2 + 0x10
+i64_trunc_s_f32_test_3() => error: integer overflow
+  at ??? + 0xc
+[Interpreter to JIT transition]
+  at i64_trunc_s_f32_test_3 + 0x10
+i64_trunc_s_f64_test_2() => error: integer overflow
+  at ??? + 0xc
+[Interpreter to JIT transition]
+  at i64_trunc_s_f64_test_2 + 0x14
+i64_trunc_s_f64_test_3() => error: integer overflow
+  at ??? + 0xc
+[Interpreter to JIT transition]
+  at i64_trunc_s_f64_test_3 + 0x14
