@@ -30,6 +30,7 @@ set(TR_TARGET_BITS ${TR_HOST_BITS})
 
 add_wabtaot_subdirectory(codegen)
 add_wabtaot_subdirectory(runtime)
+add_wabtaot_subdirectory(env)
 add_wabtaot_subdirectory(${TR_TARGET_ARCH})
 
 set(WABTAOT_INCLUDES
