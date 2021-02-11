@@ -324,7 +324,6 @@ if (NOT EMSCRIPTEN)
       )
     endif ()
   endfunction()
-
   if (BUILD_TOOLS)
     # wat2wasm
     wabt_executable(

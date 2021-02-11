@@ -74,7 +74,7 @@ struct DataSegmentInfo {
 class BinaryReaderInterp : public BinaryReaderNop {
  public:
   BinaryReaderInterp(Environment* env,
-                     DefinedModule* module,
+                     DefinedModule** module,
                      std::unique_ptr<OutputBuffer> istream,
                      Errors* errors,
                      const Features& features);
@@ -365,14 +365,14 @@ class BinaryReaderInterp : public BinaryReaderNop {
 };
 
 BinaryReaderInterp::BinaryReaderInterp(Environment* env,
-                                       DefinedModule* module,
+                                       DefinedModule** module,
                                        std::unique_ptr<OutputBuffer> istream,
                                        Errors* errors,
                                        const Features& features)
     : features_(features),
       errors_(errors),
       env_(env),
-      module_(module),
+      module_(*module),
       istream_(std::move(istream)),
       istream_offset_(istream_.output_buffer().size()) {
   typechecker_.set_error_callback(
@@ -1964,9 +1964,9 @@ wabt::Result BinaryReaderInterp::OnFunctionName(Index index, string_view name) {
 wabt::Result ReadBinaryInterp(Environment* env,
                               const void* data,
                               size_t size,
-                              const ReadBinaryOptions* options,
+                              const ReadBinaryOptions& options,
                               Errors* errors,
-                              DefinedModule* module) {
+                              DefinedModule** module) {
   // Need to mark before taking ownership of env->istream.
   Environment::MarkPoint mark = env->Mark();
 
@@ -1976,14 +1976,14 @@ wabt::Result ReadBinaryInterp(Environment* env,
 
 
   BinaryReaderInterp reader(env, module, std::move(istream), errors,
-                            options->features);
+                            options.features);
   //env->EmplaceBackModule(module);
 
-  wabt::Result result = ReadBinary(data, size, &reader, *options);
+  wabt::Result result = ReadBinary(data, size, &reader, options);
   env->SetIstream(reader.ReleaseOutputBuffer());
   if (Succeeded(result)) {
-    module->istream_start = istream_offset;
-    module->istream_end = env->istream().size();
+    (*module)->istream_start = istream_offset;
+    (*module)->istream_end = env->istream().size();
     //*out_module = module;
 
     result = reader.InitializeSegments();
