@@ -27,7 +27,7 @@ add_library(wabtjit STATIC
 # suppresses any warnings they would otherwise generate.
 set(JITBUILDER_EXTRA_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/../../third_party/omr/compiler ${CMAKE_CURRENT_SOURCE_DIR}/../../third_party/omr)
 get_property(JITBUILDER_INCLUDE TARGET jitbuilder PROPERTY INTERFACE_INCLUDE_DIRECTORIES)
-
+add_dependencies(wabtjit jitbuilder)
 #target_include_directories(wabtjit SYSTEM PRIVATE "${JITBUILDER_INCLUDE}")
 #target_link_libraries(wabtjit jitbuilder omrvmstartup)
 
