@@ -1,0 +1,12 @@
+test_get_global_imm_1() => i32:10
+test_get_global_imm_2() => i64:10
+test_get_global_imm_3() => f32:10.000000
+test_get_global_imm_4() => f64:10.000000
+test_get_global_mut_1() => i32:10
+test_get_global_mut_2() => i64:10
+test_get_global_mut_3() => f32:10.000000
+test_get_global_mut_4() => f64:10.000000
+test_set_global_1() => i32:10
+test_set_global_2() => i64:10
+test_set_global_3() => f32:10.000000
+test_set_global_4() => f64:10.000000

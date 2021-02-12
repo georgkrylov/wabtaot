@@ -1,0 +1,17 @@
+./test/jit/wrap_store.txt
+./test/jit/ext_load.txt
+./test/jit/sign_ext.txt
+./test/jit/stack_trace.txt
+./test/jit/store.txt
+./test/jit/int_convert.txt
+./test/jit/stack_trace_comp_fail.txt
+./test/jit/truncation.txt
+./test/jit/truncation_saturating.txt
+./test/jit/get_set_tee_local.txt
+./test/jit/alloca_dropkeep.txt
+./test/jit/load.txt
+./test/jit/multi_value.txt
+./test/jit/callindirect.txt
+./test/jit/i64_arithmetic.txt
+./test/jit/f32_arithmetic.txt
+./test/jit/i32_arithmetic.txt

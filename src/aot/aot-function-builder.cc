@@ -7,7 +7,6 @@
 //#include "/home/petar/wasmjit-omr/third_party/omr/compiler/ilgen/VirtualMachineOperandStack.hpp"
 //#include "infra/Assert.hpp"
 #include "ilgen/VirtualMachineState.hpp"
-#include "ilgen/VirtualMachineRegister.hpp"
 
 #include <cmath>
 #include <limits>
@@ -337,9 +336,7 @@ bool AOTFunctionBuilder::buildIL() {
 
   // expects a non-NULL Compilation object to exist, so must be
   // constructed here, at compile time
-  auto regAddr = ConstAddress(&regist_);
-  TR::VirtualMachineRegister *xx = new TR::VirtualMachineRegister(this,"reg",ppValueType_,8,regAddr);
-  stack_ = new TR::VirtualMachineOperandStack(this, 64, valueType_, xx);
+  stack_ = new TR::VirtualMachineOperandStack(this, 64, valueType_, nullptr);
 
   pushParams();
 

@@ -1,0 +1,3 @@
+test_br_1_level() => i32:1
+test_br_2_level() => i32:1
+test_br_exit_loop() => i32:1

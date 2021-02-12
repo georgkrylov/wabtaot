@@ -1,0 +1,7 @@
+./test/jit/sign_ext.txt
+./test/jit/stack_trace.txt
+./test/jit/stack_trace_comp_fail.txt
+./test/jit/truncation_saturating.txt
+./test/jit/multi_value.txt
+./test/jit/call_complex.txt
+./test/jit/callindirect.txt

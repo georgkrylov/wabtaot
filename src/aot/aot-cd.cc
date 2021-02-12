@@ -27,6 +27,7 @@
 #include <string>
 #include <dlfcn.h>
 #include <time.h>
+#include <iomanip> // for the precision, for testing purposes
 
 using namespace wabt;
 using namespace wabt::interp;
@@ -114,7 +115,7 @@ static interp::Result PrintCallback(const HostFunc* func,
 static wabt::Result ReadModule(const char* module_filename,
                                Environment* env,
                                Errors* errors,
-                               DefinedModule* out_module)
+                               DefinedModule** out_module)
 {
   wabt::Result result;
   std::vector<uint8_t> file_data;
@@ -197,7 +198,7 @@ static wabt::Result ReadModule(const char* module_filename,
     ReadBinaryOptions options(s_features, s_log_stream.get(), kReadDebugNames,
                               kStopOnFirstError, kFailOnCustomSectionError);
     result = ReadBinaryInterp(env, file_data.data(), file_data.size(),
-                              &options, errors, out_module);
+                              options, errors, out_module);
 /*
     if (Succeeded(result)) {
       if (s_verbose) {
@@ -426,33 +427,42 @@ void relocateAOT(interp::Environment& env,DefinedModule *module)
   }
 }
 
-void runExports(interp::Environment& env,DefinedModule *module)
+void runExports(interp::Environment& env,DefinedModule *module, int run_all_exports)
 {
-  
+  if (run_all_exports == 1)
+      std::cout << std::setprecision(6) << std::fixed;
   for(auto exported:module->exports){
     if(exported.kind != ExternalKind::Func) { continue;}
     std::string index = std::to_string(exported.index);
     void *fn = nullptr;
-        if(exported.name != "_start") continue;
+    if (run_all_exports != 1)
+       if(exported.name != "_start") continue;
+
     for(uint32_t i = 0;i<module->funcs.size();i++){
       if(!index.compare(module->funcs[i]->dbg_name_.substr(1,index.size()))){
         fn = module->compiled_functions[i];
         break;
       }
     }
+
     // void *fun = module->compiled_functions[exported.index];
     if(env.GetFuncSignature(env.GetFunc(exported.index)->sig_index)->result_types.size()){
       if(env.GetFuncSignature(env.GetFunc(exported.index)->sig_index)->result_types.front() == Type::F32) {
         float a = reinterpret_cast<float(*)()>(fn)();
-        std::cout<<"Export "<<exported.name<<" : "<<a<<"\n";
+        std::cout<<exported.name<<"() => f32:"<<a<<"\n";
         }
       else if(env.GetFuncSignature(env.GetFunc(exported.index)->sig_index)->result_types.front() == Type::F64) {
+        std::cout << std::setprecision(6) << std::fixed;
         double a = reinterpret_cast<double(*)()>(fn)();
-        std::cout<<"Export "<<exported.name<<" : "<<a<<"\n";
+        std::cout<<exported.name<<"() => f64:"<<a<<"\n";
         }
-      else {	
+      else if(env.GetFuncSignature(env.GetFunc(exported.index)->sig_index)->result_types.front() == Type::I32)  {	
+      uint32_t a = reinterpret_cast<uint64_t(*)()>(fn)();
+      std::cout<<exported.name<<"() => i32:"<<a<<"\n";
+      }else
+      {
       uint64_t a = reinterpret_cast<uint64_t(*)()>(fn)();
-      std::cout<<"Export "<<exported.name<<" : "<<a<<"\n";
+      std::cout<<exported.name<<"() => i64:"<<a<<"\n";
       }
     }else{
       reinterpret_cast<void(*)()>(fn)();
@@ -475,7 +485,16 @@ int main(int argc, char** argv) {
     std::cout << "usage: wabtaot <filename>\n";
     return -1;
   }
+  //TODO rewrite using the infrastructure
+  int run_all_exports = 0;
 
+  if (argc == 3) {
+    for (int i = 0 ; i < argc; i++){
+      std::string third_argument(argv[i]);
+      if (third_argument.compare("--run-all-exports")==0)
+        run_all_exports = 1;
+    }
+  }
   numOfArgs = argc-1;
   args_arr = argv;
   
@@ -501,7 +520,7 @@ int main(int argc, char** argv) {
     //ErrorHandlerFile error_handler(Location::Type::Binary);
     Errors errors;
     module = dynamic_cast<DefinedModule*>(env.GetModule(i-1));
-    wabt::Result result = ReadModule(src_filename, &env, &errors, module);
+    wabt::Result result = ReadModule(src_filename, &env, &errors, &module);
 
     if(Succeeded(result)) {
       compileAOT(env, module);
@@ -514,7 +533,7 @@ int main(int argc, char** argv) {
     relocateAOT(env, dynamic_cast<DefinedModule*>(env.GetModule(i-1)));
   }
   for(uint32_t i = 1;i<2;i++) {
-    runExports(env,dynamic_cast<DefinedModule*>(env.GetModule(i-1)));
+    runExports(env,dynamic_cast<DefinedModule*>(env.GetModule(i-1)),run_all_exports);
   }
   //runExports(env, module);
 }

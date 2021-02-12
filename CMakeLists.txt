@@ -341,7 +341,6 @@ if (NOT EMSCRIPTEN)
       )
     endif ()
   endfunction()
-set(BUILD_TOOLS OFF)
 set(BUILD_TESTS OFF)
   if (BUILD_TOOLS)
     # wat2wasm
