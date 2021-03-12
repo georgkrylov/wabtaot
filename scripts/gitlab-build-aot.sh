@@ -1,6 +1,5 @@
 #!/bin/bash
 
-git submodule update --remote
 cd third_party/omr
 echo "OMR commit is:"
 git log -1 --oneline
