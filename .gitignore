@@ -9,4 +9,7 @@
 .vscode/
 /cmake-build-debug/
 /test_results
+tempmod.o
+/wabtaot-private-additions
+/polybench
 
