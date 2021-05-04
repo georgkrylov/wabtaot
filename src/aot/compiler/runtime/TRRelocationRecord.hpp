@@ -22,7 +22,7 @@ class RelocationRecordWithOffset:public WASM::RelocationRecordWithOffset{
 					    TR::RelocationRecordBinaryTemplate *record);*/
 	void setOffset(TR::RelocationTarget *reloTarget, UDATA offset);
 };
-class RelocationRecordBinaryTemplate: public OMR::RelocationRecordBinaryTemplateConnector{
+class RelocationRecordBinaryTemplate: public WASM::RelocationRecordWithOffsetBinaryTemplate{
     public:
        RelocationRecordBinaryTemplate(){};
 };

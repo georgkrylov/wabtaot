@@ -121,8 +121,11 @@ UDATA WASMCompositeCache::dataSectionFreeSpace() const
 //    } AOTMethodHeader;
 // find space for, and stores, a code entry. if it fails at any point,
 // simply return 0.
-bool WASMCompositeCache::storeEntry(const char* elementName, void* data, uint32_t allocSize)
+bool WASMCompositeCache::storeEntry(const char* elementName, TR::AOTMethodHeader* hdr)
 {
+  uint32_t allocSize = hdr->sizeOfSerializedVersion();
+  uint8_t* data = (uint8_t*)malloc (sizeof(char)*allocSize);
+  hdr->serialize(data);
   UDATA freeSpace = dataSectionFreeSpace();
 
   if(freeSpace < allocSize) {
@@ -151,7 +154,7 @@ bool WASMCompositeCache::storeEntry(const char* elementName, void* data, uint32_
   // memcpy(_codeUpdatePtr, _relocationData, relocationRecordSize);
   // _relocationData = nullptr;
   // _codeUpdatePtr+=relocationRecordSize;
-  
+  free(data);
   return true;
 }
 

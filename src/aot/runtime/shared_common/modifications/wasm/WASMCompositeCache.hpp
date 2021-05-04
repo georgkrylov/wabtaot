@@ -42,7 +42,7 @@ public:
   uint8_t* allocateMemoryInCache(uintptr_t size);
   bool startup(const char* cacheName, const char* ctrlDirName);
 
-  bool storeEntry(const char* elementName, void* data, uint32_t size);
+  bool storeEntry(const char* elementName, TR::AOTMethodHeader* header);
 
   UDATA baseSharedCacheAddress();
 

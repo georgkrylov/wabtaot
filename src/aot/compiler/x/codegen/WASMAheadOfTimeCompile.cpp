@@ -50,5 +50,5 @@ uint8_t* WASM::X86::AheadOfTimeCompile::initializeAOTRelocationHeader(TR::Iterat
 	 reinterpret_cast<TR::RelocationRecordWithOffset *>(reloRecord)->setOffset(reloTarget, 
 						      *reinterpret_cast<UDATA*>(relocation->getTargetAddress()));
       }
-      return relocation->getRelocationData()+ sizeof(TR::RelocationRecordBinaryTemplate)+sizeof(UDATA);
+      return relocation->getRelocationData()+ sizeof(TR::RelocationRecordBinaryTemplate);
    }
