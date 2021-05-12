@@ -11,5 +11,5 @@
 	url = https://github.com/dabeaz/ply
 [submodule "third_party/omr"]
 	path = third_party/omr
-	branch = "wasm-merging-dev"
+	branch = "AOTRelocationsWIP-wabt"
 	url = git@gitlab.casa.cs.unb.ca:gkrylov/omr.git
