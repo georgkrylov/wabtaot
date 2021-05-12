@@ -7,8 +7,8 @@ cd ../..
 
 mkdir build
 cd build
-cmake -DBUILD_TOOLS=ON .. 
-make -j6
+cmake -DBUILD_TOOLS=ON -DCMAKE_BUILD_TYPE=Debug .. 
+make -j8
 BUILD_RESULT=$?
 if test $BUILD_RESULT -eq 0
 then

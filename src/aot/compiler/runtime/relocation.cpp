@@ -27,8 +27,7 @@ TR::RelocationRecord* WASM::RelocationRecord::create(TR::RelocationRecord *stora
     TR::RelocationRecord* reloRecord;
     switch (record->type(reloTarget))
     {
-        case 2 : reloRecord =reinterpret_cast<TR::RelocationRecord*>(new (storage) WASM::RelocationRecordTwo());
-        break;
+
         case TR_MethodCallAddress : 
 	  reloRecord =reinterpret_cast<TR::RelocationRecord*>( new (storage) WASM::RelocationRecordMethodCallAddress(reloRuntime,record)); 
 	  break;
@@ -67,14 +66,70 @@ WASM::RelocationRecordMethodCallAddress::preparePrivateData(TR::RelocationRuntim
 }
 
 uint8_t *
+WASM::RelocationRecordDataAddress::computeTargetMethodAddress(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, uint8_t *baseLocation)
+   {
+   uint8_t *callTargetAddress = address(reloTarget);
+   char methodName[8]{};
+   memset(methodName,0,8*sizeof(char));
+   memcpy(methodName,&callTargetAddress,8);
+   callTargetAddress = reinterpret_cast<uint8_t*>(reinterpret_cast<TR::AOTRelocationRuntime *>(reloRuntime)->persistedItemAddress(methodName));
+   if (!callTargetAddress) throw std::runtime_error(std::string("symbol not defined: ")+std::string(reinterpret_cast<char*>(methodName)));
+   return callTargetAddress;
+   }
+uint8_t *
 WASM::RelocationRecordMethodCallAddress::computeTargetMethodAddress(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, uint8_t *baseLocation)
    {
    uint8_t *callTargetAddress = address(reloTarget);
    char methodName[8]{};
+   memset(methodName,0,8*sizeof(char));
    memcpy(methodName,&callTargetAddress,8);
    callTargetAddress = reinterpret_cast<uint8_t*>(reinterpret_cast<TR::AOTRelocationRuntime *>(reloRuntime)->persistedItemAddress(methodName));
-   if (!callTargetAddress) throw std::runtime_error(std::string("symbol not defined: ")+std::string(reinterpret_cast<const char*>(methodName)));
+   if (!callTargetAddress) throw std::runtime_error(std::string("symbol not defined: ")+std::string(reinterpret_cast<char*>(methodName)));
    return callTargetAddress;
+   }
+
+int32_t WASM::RelocationRecord::applyRelocation(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, uint8_t *reloLocation)
+   {      
+   int32_t result = -1 ;
+   switch (self()->type(reloTarget))
+      {
+      case TR_MethodCallAddress : 
+         result = reinterpret_cast<WASM::RelocationRecordMethodCallAddress*>(self())->applyRelocation(reloRuntime,reloTarget,reloLocation); 
+         break;
+      case TR_DataAddress : 
+         result = reinterpret_cast<WASM::RelocationRecordDataAddress*>(self())->applyRelocation(reloRuntime,reloTarget,reloLocation);
+         break;
+      case TR_BranchTable : 
+         result = reinterpret_cast<WASM::RelocationRecordBranchTable*>(self())->applyRelocation(reloRuntime,reloTarget,reloLocation);
+         break;
+      default:
+         std::cout<<"CANNOT APPLY WASM RELOCATION RECORD WITH KIND"<<std::endl;
+      }
+   return result;
+   }
+
+
+void WASM::RelocationRecord::preparePrivateData(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget)
+   {      
+   switch (self()->type(reloTarget))
+      {
+      case TR_MethodCallAddress : 
+         reinterpret_cast<WASM::RelocationRecordMethodCallAddress*>(self())->preparePrivateData(reloRuntime,reloTarget); 
+         break;
+      case TR_DataAddress : 
+         reinterpret_cast<WASM::RelocationRecordDataAddress*>(self())->preparePrivateData(reloRuntime,reloTarget); 
+         break;
+      case TR_BranchTable : 
+         reinterpret_cast<WASM::RelocationRecordBranchTable*>(self())->preparePrivateData(reloRuntime,reloTarget);
+         break;
+      default:
+         std::cout<<"CANNOT APPLY WASM RELOCATION RECORD WITH KIND"<<std::endl;
+      }
+   }
+
+int32_t WASM::RelocationRecord::applyRelocation(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, uint8_t *reloLocationLow, uint8_t *reloLocationHigh)
+   {      
+      TR_UNIMPLEMENTED();
    }
 
 int32_t WASM::RelocationRecordMethodCallAddress::applyRelocation(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, uint8_t *reloLocation)
@@ -87,6 +142,12 @@ int32_t WASM::RelocationRecordMethodCallAddress::applyRelocation(TR::RelocationR
 int32_t WASM::RelocationRecordMethodCallAddress::applyRelocation(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, uint8_t *reloLocationLow, uint8_t *reloLocationHigh)
    {      
       return -1;
+   }
+uint8_t*
+WASM::RelocationRecordDataAddress::address(TR::RelocationTarget *reloTarget)
+   {
+   RelocationRecordWithOffsetBinaryTemplate *reloData = reinterpret_cast<RelocationRecordWithOffsetBinaryTemplate *>(_record);
+   return reloTarget->loadAddress(reinterpret_cast<uint8_t *>(&reloData->_offset));
    }
 
 uint8_t*
@@ -109,32 +170,46 @@ WASM::RelocationRecordWithOffset::offset(TR::RelocationTarget *reloTarget)
    return reloTarget->loadRelocationRecordValue(reinterpret_cast<uintptr_t *>( &(reinterpret_cast<RelocationRecordWithOffsetBinaryTemplate *>(_record))->_offset));
    }
 
+uintptr_t
+WASM::RelocationRecordBranchTable::offset(TR::RelocationTarget *reloTarget)
+   {
+   return reloTarget->loadRelocationRecordValue(reinterpret_cast<uintptr_t *>( &(reinterpret_cast<RelocationRecordWithOffsetBinaryTemplate *>(_record))->_offset));
+   }
+
 void WASM::RelocationRecordWithOffset::setOffset(TR::RelocationTarget *reloTarget, UDATA offset) { reloTarget->storePointer(reinterpret_cast<uint8_t *>(offset), reinterpret_cast<uint8_t *>(&reinterpret_cast<WASM::RelocationRecordWithOffsetBinaryTemplate*>(_record)->_offset)); }
 
 
-WASM::RelocationRecordDataAddress::RelocationRecordDataAddress():WASM::RelocationRecordWithOffset(){
+WASM::RelocationRecordDataAddress::RelocationRecordDataAddress():WASM::WASMRelocationRecordConnector(){
 
 }
 
-WASM::RelocationRecordDataAddress::RelocationRecordDataAddress(TR::RelocationRuntime *reloRuntime, TR::RelocationRecordBinaryTemplate *record):WASM::RelocationRecordWithOffset(reloRuntime, record){
+WASM::RelocationRecordDataAddress::RelocationRecordDataAddress(TR::RelocationRuntime *reloRuntime, TR::RelocationRecordBinaryTemplate *record):WASMRelocationRecordConnector(reloRuntime, record){
 
 }
-/*
+
 void 
 WASM::RelocationRecordDataAddress::preparePrivateData(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget){
-   TR::RelocationRecordMethodCallPrivateData *reloPrivateData = &(privateData()->methodCall)  ;
+  TR::RelocationRecordMethodCallPrivateData *reloPrivateData = reinterpret_cast<TR::RelocationRecordMethodCallPrivateData *>(&(privateData()->storage))  ;
    uint8_t *baseLocation = 0;
    uint8_t *callTargetAddress = computeTargetMethodAddress(reloRuntime, reloTarget, baseLocation);
    //reloPrivateData->callTargetOffset = (callTargetAddress - baseLocation);
-   reloPrivateData->callTargetOffset = callTargetAddress;
-}*/
+   reloPrivateData->callTargetOffset = reinterpret_cast<uintptr_t>(callTargetAddress);
+}
 
+void 
+WASM::RelocationRecordBranchTable::preparePrivateData(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget){
+   // Does nothing for now, can potentially save up some  time by caching the value
+}
+void 
+WASM::RelocationRecordWithOffset::preparePrivateData(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget){
+   // Does nothing for now, can potentially save up some  time by caching the value
+}
 int32_t 
 WASM::RelocationRecordDataAddress::applyRelocation(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, uint8_t *reloLocation)
    {
    TR::AOTRelocationRuntime *rr = reinterpret_cast<TR::AOTRelocationRuntime*>(reloRuntime);
    char *name = reinterpret_cast<char *>(&reinterpret_cast<WASM::RelocationRecordWithOffsetBinaryTemplate*>(_record)->_offset);
-   reloTarget->storeAddress(reinterpret_cast<uint8_t*>(rr->persistedItemAddress(const_cast<char*>(name))), reloLocation);
+   reloTarget->storeAddress(reinterpret_cast<uint8_t*>(rr->persistedItemAddress(name)), reloLocation);
    return 0;
    }
 
