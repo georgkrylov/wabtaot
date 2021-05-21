@@ -27,9 +27,7 @@ unsigned short JitEnvironment::instance_count_ = 0;
 JitEnvironment::JitEnvironment() {
   if (instance_count_ == 0)
      initializeJitWithOptions("-Xjit:acceptHugeMethods,enableBasicBlockHoisting,"
-			      "omitFramePointer,useILValidator,enableRelocatableELFGeneration,"
-			      //"traceIlGen,traceFull,log=trtrace.log,"
-			      "objectFile=tempmod.o");
+			      "omitFramePointer,useILValidator");
   ++instance_count_;
 }
 
