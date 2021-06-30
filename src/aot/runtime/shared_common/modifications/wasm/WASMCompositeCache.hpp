@@ -46,7 +46,7 @@ public:
 
   UDATA baseSharedCacheAddress();
 
-  void* loadEntry(const char *elementName);
+  TR::AOTMethodHeader* loadEntry(const char *elementName);
 
   void storeCallAddressToHeaders(void *calleeMethod,size_t methodNameTemplateOffset,void *calleeCodeCacheAddress);
 
