@@ -1972,12 +1972,22 @@ wabt::Result ReadBinaryInterp(Environment* env,
 
   std::unique_ptr<OutputBuffer> istream = env->ReleaseIstream();
   IstreamOffset istream_offset = istream->size();
-  //DefinedModule* module = new DefinedModule();
-
+  // If module is interpreted, it will reach here as a null pointer
+  // otherwise, it will already be instantiated in aot-cd.cc
+  // The boolean interpreted flag is to be removed once (if) the 
+  // interpreter will be equipped with aot compiler
+  bool interpreted = false;
+  
+  if (*module == nullptr){
+    *module = new DefinedModule();
+    interpreted = true;
+  }
 
   BinaryReaderInterp reader(env, module, std::move(istream), errors,
                             options.features);
-  //env->EmplaceBackModule(module);
+  if (interpreted){   
+  env->EmplaceBackModule(*module);
+  }
 
   wabt::Result result = ReadBinary(data, size, &reader, options);
   env->SetIstream(reader.ReleaseOutputBuffer());

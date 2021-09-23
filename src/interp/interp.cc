@@ -2076,7 +2076,7 @@ Result Thread::Run(int num_instructions) {
 	  }
           PopCall();
         } else {
-	  printf("interpreting...\n");
+	  // printf("interpreting...\n");
           CHECK_TRAP(PushCall(pc));
           GOTO(offset);
           //in_jit_ = false;
