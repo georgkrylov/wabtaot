@@ -548,7 +548,7 @@ int main(int argc, char** argv) {
   
   Environment env;
   s_stdout_stream = FileStream::CreateStdout();
-  s_log_stream = FileStream::CreateStderr();
+  s_log_stream = FileStream::CreateStdout();
   wabt::Result compile_result;
   for(uint32_t i = 1;i<=no_of_modules;i++) {
     registerModules(argv[i],&env);

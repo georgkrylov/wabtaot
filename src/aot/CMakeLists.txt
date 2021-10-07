@@ -1,7 +1,10 @@
 cmake_minimum_required(VERSION 3.13)
 set(WABTAOT_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 add_subdirectory(compiler)
-
+if (WASM_SHARED_CACHE) 
+  add_subdirectory(runtime/shared_common/modifications/wasm)
+  add_subdirectory(runtime/shared_common/modifications)
+endif ()
 add_executable(wabtaot
   trap-with.cc
   aot-type-dictionary.cc
