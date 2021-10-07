@@ -30,7 +30,13 @@ set(TR_TARGET_BITS ${TR_HOST_BITS})
 
 add_wabtaot_subdirectory(codegen)
 add_wabtaot_subdirectory(runtime)
-add_wabtaot_subdirectory(env)
+if(WASM_SHARED_CACHE)
+	add_wabtaot_subdirectory(env)
+endif()
+if(OMR_ELF_SHARED_OBJECT)
+	add_wabtaot_subdirectory(elfso/env)
+endif()
+
 add_wabtaot_subdirectory(${TR_TARGET_ARCH})
 
 set(WABTAOT_INCLUDES
@@ -63,3 +69,7 @@ target_include_directories(jitbuilder  BEFORE PRIVATE
 		${WABTAOT_SOURCE_DIR}/
 )
 
+if(OMR_ELF_SHARED_OBJECT)
+	target_include_directories(jitbuilder BEFORE PRIVATE 
+		${WABTAOT_SOURCE_DIR}/compiler/elfso)
+endif()

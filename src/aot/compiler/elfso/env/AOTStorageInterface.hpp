@@ -22,16 +22,18 @@
 #ifndef TR_AOTSTORAGEINTERFACE_INCL
 #define TR_AOTSTORAGEINTERFACE_INCL
 
-#include "env/WASMStorageInterface.hpp"
+#include "codegen/ELFSharedStorageGenerator.hpp"
 
-namespace TR
-{
-  class AOTStorageInterface : public AOTStorageInterfaceConnector
-  {
-  public:
+namespace TR{
 
-  AOTStorageInterface() : AOTStorageInterfaceConnector() {}
-
-  };
+class OMR_EXTENSIBLE AOTStorageInterface : public ELF::AOTStorageInterfaceConnector
+   {
+public:
+   AOTStorageInterface() : ELF::AOTStorageInterfaceConnector(TR::RawAllocator())
+      { };
+   
+   };
 }
-#endif
+
+#endif //TR_AOTSTORAGEINTERFACE_INCL
+
