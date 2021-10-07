@@ -23,6 +23,7 @@ struct Result {
   enum Enum {
     Ok,
     Error,
+    Emit,
   };
 
   Result() : Result(Ok) {}

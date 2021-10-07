@@ -1,1 +1,2 @@
 ./test/jit/brif_brunless.txt
+./test/jit/truncation.txt

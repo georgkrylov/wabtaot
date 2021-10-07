@@ -125,7 +125,7 @@ bool WASMCompositeCache::storeEntry(const char* elementName, TR::AOTMethodHeader
 {
   uint32_t allocSize = hdr->sizeOfSerializedVersion();
   uint8_t* data = (uint8_t*)malloc (sizeof(char)*allocSize);
-  hdr->serialize(data);
+  hdr->serializeMethod(data,allocSize);
   UDATA freeSpace = dataSectionFreeSpace();
 
   if(freeSpace < allocSize) {
@@ -159,7 +159,8 @@ bool WASMCompositeCache::storeEntry(const char* elementName, TR::AOTMethodHeader
 }
 
 //TODO: should copy to the code cache (not scc) when code cache becomes available
-void* WASMCompositeCache::loadEntry(const char *elementName) {
+TR::AOTMethodHeader* 
+WASMCompositeCache::loadEntry(const char *elementName) {
 //if(!_loadedMethods[methodName]){
     WASMCacheEntry *entry = _codeEntries[elementName];
     // if(entry) {
@@ -168,10 +169,14 @@ void* WASMCompositeCache::loadEntry(const char *elementName) {
     //   codeLength = entry->codeLength;
     //   entry++;
     // }
+    TR::AOTMethodHeader* result = NULL;
     void *rawData = NULL;
-    if (entry)
+    if (entry){
       rawData = (void*) (entry+1);
-    return rawData;
+      result = new TR::AOTMethodHeader (reinterpret_cast<uint8_t*>(rawData));
+    }
+
+    return result;
 //  void * methodArea =  mmap(NULL,
 //            codeLength,
 //            PROT_READ | PROT_WRITE | PROT_EXEC,
