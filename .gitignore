@@ -1,4 +1,6 @@
 /bin
+/reference-bin
+/build-em
 /build
 /out
 /fuzz-out

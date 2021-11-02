@@ -13,3 +13,6 @@
 	path = third_party/omr
 	branch = "AOTRelocationsWIP-wabt-elf"
 	url = git@gitlab.casa.cs.unb.ca:gkrylov/omr.git
+[submodule "em-interp"]
+	path = em-interp
+	url = git@gitlab.casa.cs.unb.ca:pjelenko/em-interp.git
