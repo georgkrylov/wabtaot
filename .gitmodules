@@ -16,3 +16,6 @@
 [submodule "em-interp"]
 	path = em-interp
 	url = git@gitlab.casa.cs.unb.ca:pjelenko/em-interp.git
+[submodule "polybench"]
+	path = polybench
+	url = git@gitlab.casa.cs.unb.ca:pjelenko/polybench.git
