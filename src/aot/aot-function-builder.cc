@@ -1924,9 +1924,11 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
 
     case Opcode::F32DemoteF64: {
       auto* value = Pop(b, "f64");
-      Push(b, "f32",
-      b->  ConvertTo(Float, value));
-	   //     pc);
+      TR::IlValue* result = b->  ConvertTo(Float, value);
+      TR::IlBuilder* isNanBuilder = nullptr;
+      b->IfThen(&isNanBuilder, EmitIsNan<double>(b, value));
+      isNanBuilder->StoreOver(result,isNanBuilder->ConvertTo(Float,isNanBuilder->ConstInt64(0xFFFFFFFFFFFFFFFF)));
+      Push(b, "f32", result);
       break;
     }
 

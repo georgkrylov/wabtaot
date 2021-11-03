@@ -4,7 +4,7 @@ TESTS_DIR="./test/jit"
 GOLDEN_DIR="$TESTS_DIR/golden_results"
 
 #This could be extracted from artifact name???
-EXEC="./bin/wasm-interp"
+EXEC="./leo-bin/wasm-interp"
 WAT2WASM="wat2wasm"
 
 RESULTS_FOLDER="test_results"

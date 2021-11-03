@@ -1894,9 +1894,11 @@ Result Thread::Run(int num_instructions) {
         TRAP(Unreachable);
         break;
 
-      case Opcode::I32Const:
-        CHECK_TRAP(Push<uint32_t>(ReadU32(&pc)));
+      case Opcode::I32Const:{
+        uint32_t  const_value = ReadU32(&pc);
+        CHECK_TRAP(Push<uint32_t>(const_value));
         break;
+      }
 
       case Opcode::I64Const:
         CHECK_TRAP(Push<uint64_t>(ReadU64(&pc)));
@@ -1936,10 +1938,11 @@ Result Thread::Run(int num_instructions) {
         break;
       }
 
-      case Opcode::LocalTee:
-        Pick(ReadU32(&pc)) = Top();
+      case Opcode::LocalTee:{
+        uint32_t thingy = ReadU32(&pc);
+        Pick(thingy) = Top();
         break;
-
+      }
       case Opcode::Call: {
         IstreamOffset offset = ReadU32(&pc);
         Environment::JITedFunction jit_fn;
