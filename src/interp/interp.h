@@ -46,73 +46,6 @@ class AOTFunctionBuilder;
 }
 
 namespace interp {
-  
-class ELFLoader
-{
-public:
-  ELFLoader(char *elfFileName);
-
-  ~ELFLoader();
-  void *getTextSection();
-  Elf64_Sym *getSymbolTable();
-  unsigned int *getCustomSection();
-  void printHeader();
-  void printSymbolTable();
-  
-protected:
-  typedef Elf64_Ehdr ELFEHeader;
-  typedef Elf64_Shdr ELFSectionHeader;
-  typedef Elf64_Phdr ELFProgramHeader;
-  typedef Elf64_Addr ELFAddress;
-  typedef Elf64_Sym  ELFSymbol;
-  typedef Elf64_Rela ELFRela;
-  typedef Elf64_Off  ELFOffset;
-#define ELF_ST_INFO(bind, type) ELF64_ST_INFO(bind,type)
-#define ELF_ST_VISIBILITY(visibility) ELF64_ST_VISIBILITY(visibility)
-#define ELF_R_INFO(bind, type) ELF64_R_INFO(bind, type)
-#define ELFClass ELFCLASS64;
-#define BIT(x,n) (((x)>>(n))&1)
-
-  char       *_elfFileName;
-  FILE       *_elfFile;
-  ELFEHeader *_header;
-  
-  ELFSectionHeader *_zeroSection;
-  char              _zeroSectionName[1];
-  ELFSectionHeader *_textSection;
-  char              _textSectionName[6];
-  ELFSectionHeader *_relaSection;
-  char              _relaSectionName[11];
-  ELFSectionHeader *_dynSymSection;
-  char              _dynSymSectionName[8];
-  ELFSectionHeader *_shStrTabSection;
-  char              _shStrTabSectionName[10];
-  ELFSectionHeader *_dynStrSection;
-  char              _dynStrSectionName[8];
-  ELFSectionHeader *_customSection;
-  char              _customSectionName[8];
-
-  void *_text;
-  Elf64_Sym *_symtab;
-  char *_dynstr;
-  Elf64_Rela *_rela;
-  unsigned int *_custom;
-
-  void initialize();
-  void loadTextSection();
-  void loadSymTab();
-  void loadDynStr();
-  void loadRela();
-  void loadCustom();
-  char *typeString(ELFSectionHeader *);
-  char *flagString(ELFSectionHeader *);
-  char *symTypeString(Elf64_Sym);
-  char *symBindString(Elf64_Sym);
-  char *symVisString(Elf64_Sym);
-  char *symNdxString(Elf64_Sym);
-  char *symNameString(Elf64_Sym);
-  
-}; //class ELFLoader
 
 
 #define FOREACH_INTERP_RESULT(V)                                            \
@@ -668,7 +601,6 @@ class Environment {
 
   void Disassemble(Stream* stream, IstreamOffset from, IstreamOffset to);
   void DisassembleModule(Stream* stream, Module*);
-  void LoadDLib(char *filename);
   void FillMemories();
   void FillTables();
   uint64_t *indirectCallParams = new uint64_t[8]();
@@ -713,7 +645,6 @@ class Environment {
 
   jit::JitEnvironment jit_env_;
   std::unordered_map<IstreamOffset, JitMeta> jit_meta_;
-  ELFLoader *elfLoader = nullptr;
   char **mems = nullptr;
   Func **tabs = nullptr;
 };
