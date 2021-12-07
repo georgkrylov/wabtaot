@@ -1839,9 +1839,11 @@ Result Thread::Run(int num_instructions) {
   TempPc tpc(this);
   const uint8_t*& istream = tpc.istream;
   const uint8_t*& pc = tpc.pc;
-
+  int throroro = 0;
   for (int i = 0; i < num_instructions; ++i) {
     Opcode opcode = ReadOpcode(&pc);
+    throroro = throroro + 1;
+    printf("\ni is: %li, opcode is: %li ",throroro,opcode);
     assert(!opcode.IsInvalid());
     switch (opcode) {
       case Opcode::Select: {
@@ -1944,7 +1946,13 @@ Result Thread::Run(int num_instructions) {
       case Opcode::Call: {
         IstreamOffset offset = ReadU32(&pc);
         Environment::JITedFunction jit_fn;
-	DefinedFunc *df;
+        DefinedFunc *df;
+        if( (uint32_t)offset < env_->funcs_.size()){
+        Func* func = env_->GetFunc((uint32_t)offset );
+        if (func != NULL && func->is_compiled){
+            printf("Hello, about to call compiled func  at offset %i", (uint32_t)offset );
+        }
+        } else
 
         if (env_->TryJit(this, offset, &jit_fn,df)) {
 
