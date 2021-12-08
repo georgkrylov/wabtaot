@@ -21,7 +21,7 @@
 #include <cstdarg>
 #include <cstdio>
 #include <vector>
-
+#include <iostream>
 #include "src/binary-reader-nop.h"
 #include "src/cast.h"
 #include "src/feature.h"
@@ -422,6 +422,7 @@ FuncSignature* BinaryReaderInterp::GetSignatureByModuleIndex(Index sig_index) {
 
 Index BinaryReaderInterp::TranslateFuncIndexToEnv(Index func_index) {
   assert(func_index < func_index_mapping_.size());
+  // std::cout << "Function index accessed is" << func_index<<", and stuff returned is:"<< func_index_mapping_[func_index]<<std::flush<<std::endl;
   return func_index_mapping_[func_index];
 }
 
@@ -602,12 +603,22 @@ wabt::Result BinaryReaderInterp::EmitFuncOffset(DefinedFunc* func,
     Index defined_index = TranslateModuleFuncIndexToDefined(func_index);
     CHECK_RESULT(AppendFixup(&func_fixups_, defined_index));
   }
+  /**
+   * @brief It seems in interpreted setting, the number of function imports are offset by the em-interp,
+   * while wataot needs to bump them artificially in binary-reader-interp:emitFuncOffset
+   *
+   */
 
   if(!func->is_host && func->offset == 0)
+  {
+    std::cout << "Function index is" << func->offset + num_func_imports_ << std::endl<<std::flush;
     CHECK_RESULT(EmitI32(func->offset + num_func_imports_));
+  }
   else
+  {
+    std::cout << "Function index is" << func->offset << std::endl<<std::flush;
     CHECK_RESULT(EmitI32(func->offset));
-
+  }
   return wabt::Result::Ok;
 }
 
@@ -1556,11 +1567,16 @@ wabt::Result BinaryReaderInterp::OnCallExpr(Index func_index) {
 
   if (func->is_host) {
     CHECK_RESULT(EmitOpcode(Opcode::InterpCallHost));
-    CHECK_RESULT(EmitI32(TranslateFuncIndexToEnv(func_index)));
+//  CHECK_RESULT(EmitI32(TranslateFuncIndexToEnv(func_index)));
   } else {
     CHECK_RESULT(EmitOpcode(Opcode::Call));
-    CHECK_RESULT(EmitFuncOffset(cast<DefinedFunc>(func), func_index));
+/**
+  *  CHECK_RESULT(EmitFuncOffset(cast<DefinedFunc>(func), func_index));
+  *  This function was used for wabtaot
+  */
   }
+
+  CHECK_RESULT(EmitI32(TranslateFuncIndexToEnv(func_index)));
 
   return wabt::Result::Ok;
 }

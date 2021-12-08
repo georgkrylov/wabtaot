@@ -1843,7 +1843,7 @@ Result Thread::Run(int num_instructions) {
   for (int i = 0; i < num_instructions; ++i) {
     Opcode opcode = ReadOpcode(&pc);
     throroro = throroro + 1;
-    printf("\ni is: %li, opcode is: %li ",throroro,opcode);
+    // printf("\ni is: %li, opcode is: %li ",throroro,opcode);
     assert(!opcode.IsInvalid());
     switch (opcode) {
       case Opcode::Select: {
@@ -1943,156 +1943,183 @@ Result Thread::Run(int num_instructions) {
         Pick(thingy) = Top();
         break;
       }
-      case Opcode::Call: {
-        IstreamOffset offset = ReadU32(&pc);
-        Environment::JITedFunction jit_fn;
-        DefinedFunc *df;
-        if( (uint32_t)offset < env_->funcs_.size()){
-        Func* func = env_->GetFunc((uint32_t)offset );
-        if (func != NULL && func->is_compiled){
-            printf("Hello, about to call compiled func  at offset %i", (uint32_t)offset );
-        }
-        } else
-
-        if (env_->TryJit(this, offset, &jit_fn,df)) {
-
-          TRAP_IF(!jit_fn, FailedJITCompilation);
-
-          in_jit_ = true;
-
-          if(env_->enable_load_from_dlib) {
-	    /*uint64_t (*func)(Value *,uint32_t *) = reinterpret_cast<uint64_t(*)(Value *,uint32_t *)>(jit_fn);
-	    auto result = func(value_stack_.data(),&value_stack_top_);
-	    Push<uint64_t>(result);*/
-	    // void(*func)(Thread*) = reinterpret_cast<void(*)(Thread*)>(jit_fn);
-	    //func(this);
-	    //Push<uint64_t>(7);
-	    //vs_top_-=2;
-	    /*void *handle = dlopen("/hdd/wasmjit-omr/tempmod1.so",RTLD_LAZY);
-	      const void *funct = dlsym(handle,std::string{"func_1"}.c_str());*/
-	    void(*func)(Thread*) = reinterpret_cast<void(*)(Thread*)>(jit_fn);
-	    auto previous_top = vs_top_;
-	    func(this);
-	    if(trapFlag) {
-	      tpc.Reload();
-	      trapFlag = false;
-	      return trapResult;
-	    }
-	    int change = vs_top_ - previous_top;
-	    /*(change==0){
-	      value_stack_top_=1;
-	      if((*value_stack_.data()).i32==0)
-		value_stack_top_=0;
-	    }else
-	    value_stack_top_=1+change;*/
-	    value_stack_top_ +=change;
-	    //jit_fn();
-	  } else if(env_->enable_load_thunk) {
-	    void *handle = dlopen(env_->infile,RTLD_LAZY);
-	    void *func = dlsym(handle,df->dbg_name_.c_str());
-	    int numCalleeParams = env_->GetFuncSignature(df->sig_index)->param_types.size();
-	   int memglcount = 0;
-	    if(env_->GetMemoryCount()>0){
-	      numCalleeParams++;
-	      memglcount++;
-	    }
-	    if(env_->GetGlobalCount()>0) {
-	      numCalleeParams++;
-	      memglcount++;
-	    }
-	    Value* params = new Value[numCalleeParams+1]();
-	    char** mems = nullptr;
-	    Value** globs = nullptr;
-	    if(env_->GetMemoryCount()>0){
-	      /*mems = new long*[env_->GetMemoryCount()];
-	      for(int j=0;j<env_->memories_.size();j++){
-		mems[j] = new long[env_->memories_[j].data.size()];
-		for(int k=0;k<env_->memories_[j].data.size();k++){
-		  memcpy(&mems[j][k],&env_->memories_[j].data[k],sizeof(long));
-		}
-		}*/
-	      mems = new char*[env_->GetMemoryCount()];
-	      for(int j=0;j<env_->memories_.size();j++){
-		mems[j] = env_->memories_[j].data.data();
-	       }
-	      memcpy(params,&mems,sizeof(char*));
-	    }
-	    if(env_->GetGlobalCount()>0) {
-	      globs = new Value*[env_->GetGlobalCount()]();
-	      for(int i=0;i<env_->globals_.size();i++){
-		globs[i] = &env_->globals_[i].typed_value.value;
-	      }
-	      if(env_->GetMemoryCount()>0)
-		memcpy(params+1,&globs,sizeof(void*));
-	      else
-		memcpy(params,&globs,sizeof(void*));
-	    }
-	    for(int i=numCalleeParams-1;i>=memglcount;i--) {//because thom's aot is using params in revers
-		params[i] = Pop();
-	    }
-	    Value res{0};
-	    if(env_->GetFuncSignature(df->sig_index)->result_types.size()>0){
-	      if (env_->GetFuncSignature(df->sig_index)->result_types.front()==
-		  Type::F32)
-	      {
-		  float(*fn)(void*,Value*) = (float(*)(void*,Value*))(jit_fn);
-		  float res1 = fn(func,params);
-		  memcpy(&res.f32_bits,&res1,sizeof(float));
-		  //res.f32_bits = res1;
-	      }else if (env_->GetFuncSignature(df->sig_index)->result_types.front()==
-			  Type::F64){
-		double(*fn)(void*,Value*) = (double(*)(void*,Value*))(jit_fn);
-		double res1 = fn(func,params);
-		memcpy(&res,&res1,sizeof(double));
-		//res.f64_bits = res1;
-	      }else{
-		Value(*fn)(void*,Value*) = (Value(*)(void*,Value*))(jit_fn);
-		res = fn(func,params);
-	      }
-	      if(trapFlag) {
-		tpc.Reload();
-		trapFlag = false;
-		return trapResult;
-	      }
-	      CHECK_TRAP(Push(res));
-	    }else{
-	      void(*fn)(void*,Value*) = (void(*)(void*,Value*))(jit_fn);
-	      fn(func,params);
-	      if(trapFlag) {
-		tpc.Reload();
-		trapFlag = false;
-		return trapResult;
-	      }
-	    }
-	    /*if(env_->GetMemoryCount()>0){
-	      for(int j=0;j<env_->memories_.size();j++){
-		for(int k=0;k<env_->memories_[j].data.size();k++){
-		  memcpy(&env_->memories_[j].data[k],&mems[j][k],sizeof(long));
-		}
-	      }
-	      }*/
-	    delete [] mems;
-	    delete [] globs;
-	    delete [] params;
-	  } else {
-	    auto result = jit_fn();
-	    if (result != Result::Ok) {
-            // We don't want to overwrite the pc of the JITted function if it traps
-	      tpc.Reload();
-
-	      return result;
-	    }
-	  }
-          PopCall();
-        } else {
-	  // printf("interpreting...\n");
-          CHECK_TRAP(PushCall(pc));
-          GOTO(offset);
-          //in_jit_ = false;
-          //GOTO(PopCall());
-        }
-        break;
-      }
+      case Opcode::Call:
+         {
+         IstreamOffset offset = ReadU32(&pc);
+         Environment::JITedFunction jit_fn;
+         DefinedFunc *df;
+         if((uint32_t)offset < env_->funcs_.size())
+            {
+            Func* func = env_->GetFunc((uint32_t)offset );
+            DefinedFunc* fn = cast<DefinedFunc>(env_->GetFunc(offset));
+            uint32_t interp_offset = fn->offset;
+            if (func != NULL && func->is_compiled)
+               {
+               printf("Hello, about to call compiled func  at offset %i", (uint32_t)offset );
+               }
+            else if (env_->TryJit(this, offset, &jit_fn,df))
+               {
+               TRAP_IF(!jit_fn, FailedJITCompilation);
+               in_jit_ = true;
+               if(env_->enable_load_from_dlib)
+                  {
+                  // uint64_t (*func)(Value *,uint32_t *) = reinterpret_cast<uint64_t(*)(Value *,uint32_t *)>(jit_fn);
+                  // auto result = func(value_stack_.data(),&value_stack_top_);
+                  // Push<uint64_t>(result);
+                  // void(*func)(Thread*) = reinterpret_cast<void(*)(Thread*)>(jit_fn);
+                  //func(this);
+                  //Push<uint64_t>(7);
+                  //vs_top_-=2;
+                  /*void *handle = dlopen("/hdd/wasmjit-omr/tempmod1.so",RTLD_LAZY);
+                  const void *funct = dlsym(handle,std::string{"func_1"}.c_str());*/
+                  void(*func)(Thread*) = reinterpret_cast<void(*)(Thread*)>(jit_fn);
+                  auto previous_top = vs_top_;
+                  func(this);
+                  if(trapFlag)
+                     {
+                     tpc.Reload();
+                     trapFlag = false;
+                     return trapResult;
+                     }
+                  int change = vs_top_ - previous_top;
+                  /*(change==0){
+                  value_stack_top_=1;
+                  if((*value_stack_.data()).i32==0)
+                  value_stack_top_=0;
+                  }else
+                  value_stack_top_=1+change;*/
+                  value_stack_top_ +=change;
+                  //jit_fn();
+                  }
+               else if(env_->enable_load_thunk)
+                  {
+                  void *handle = dlopen(env_->infile,RTLD_LAZY);
+                  void *func = dlsym(handle,df->dbg_name_.c_str());
+                  int numCalleeParams = env_->GetFuncSignature(df->sig_index)->param_types.size();
+                  int memglcount = 0;
+                  if(env_->GetMemoryCount()>0)
+                     {
+                     numCalleeParams++;
+                     memglcount++;
+                     }
+                  if(env_->GetGlobalCount()>0)
+                     {
+                     numCalleeParams++;
+                     memglcount++;
+                     }
+                  Value* params = new Value[numCalleeParams+1]();
+                  char** mems = nullptr;
+                  Value** globs = nullptr;
+                  if(env_->GetMemoryCount()>0)
+                     {
+                     // mems = new long*[env_->GetMemoryCount()];
+                     // for(int j=0;j<env_->memories_.size();j++){
+                     // mems[j] = new long[env_->memories_[j].data.size()];
+                     // for(int k=0;k<env_->memories_[j].data.size();k++){
+                     // memcpy(&mems[j][k],&env_->memories_[j].data[k],sizeof(long));
+                     // }
+                     // }
+                     mems = new char*[env_->GetMemoryCount()];
+                     for(int j=0;j<env_->memories_.size();j++)
+                     {
+                        mems[j] = env_->memories_[j].data.data();
+                     }
+                     memcpy(params,&mems,sizeof(char*));
+                     }
+                  if(env_->GetGlobalCount()>0)
+                     {
+                     globs = new Value*[env_->GetGlobalCount()]();
+                     for(int i=0;i<env_->globals_.size();i++)
+                        {
+                        globs[i] = &env_->globals_[i].typed_value.value;
+                        }
+                     if(env_->GetMemoryCount()>0)
+                        memcpy(params+1,&globs,sizeof(void*));
+                     else
+                        memcpy(params,&globs,sizeof(void*));
+                     }
+                  for(int i=numCalleeParams-1;i>=memglcount;i--)
+                     {//because thom's aot is using params in revers
+                     params[i] = Pop();
+                     }
+                     Value res{0};
+                  if(env_->GetFuncSignature(df->sig_index)->result_types.size()>0)
+                     {
+                     if (env_->GetFuncSignature(df->sig_index)->result_types.front()==Type::F32)
+                        {
+                        float(*fn)(void*,Value*) = (float(*)(void*,Value*))(jit_fn);
+                        float res1 = fn(func,params);
+                        memcpy(&res.f32_bits,&res1,sizeof(float));
+                        //res.f32_bits = res1;
+                        }
+                     else if (env_->GetFuncSignature(df->sig_index)->result_types.front()==Type::F64)
+                        {
+                        double(*fn)(void*,Value*) = (double(*)(void*,Value*))(jit_fn);
+                        double res1 = fn(func,params);
+                        memcpy(&res,&res1,sizeof(double));
+                        //res.f64_bits = res1;
+                        }
+                     else
+                        {
+                        Value(*fn)(void*,Value*) = (Value(*)(void*,Value*))(jit_fn);
+                        res = fn(func,params);
+                        }
+                     if(trapFlag)
+                        {
+                        tpc.Reload();
+                        trapFlag = false;
+                        return trapResult;
+                        }
+                     CHECK_TRAP(Push(res));
+                     }
+                  else
+                     {
+                     void(*fn)(void*,Value*) = (void(*)(void*,Value*))(jit_fn);
+                     fn(func,params);
+                     if(trapFlag)
+                        {
+                        tpc.Reload();
+                        trapFlag = false;
+                        return trapResult;
+                        }
+                     }
+                     // if(env_->GetMemoryCount()>0)
+                     //    {
+                     //    for(int j=0;j<env_->memories_.size();j++)
+                     //       {
+                     //       for(int k=0;k<env_->memories_[j].data.size();k++)
+                     //          {
+                     //          memcpy(&env_->memories_[j].data[k],&mems[j][k],sizeof(long));
+                     //          }
+                     //       }
+                     //    }
+                     delete [] mems;
+                     delete [] globs;
+                     delete [] params;
+                  }
+               else
+                  {
+                  auto result = jit_fn();
+                  if (result != Result::Ok)
+                     {
+                     // We don't want to overwrite the pc of the JITted function if it traps
+                     tpc.Reload();
+                     return result;
+                     }
+                  }
+               PopCall();
+               }
+            else
+               {
+               // printf("interpreting...\n");
+               CHECK_TRAP(PushCall(pc));
+               GOTO(interp_offset);
+               //in_jit_ = false;
+               // GOTO(PopCall());
+               }
+            }
+         break;
+         }
 
       case Opcode::CallIndirect: {
         Table* table = ReadTable(&pc);
