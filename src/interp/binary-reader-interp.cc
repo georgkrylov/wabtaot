@@ -611,12 +611,12 @@ wabt::Result BinaryReaderInterp::EmitFuncOffset(DefinedFunc* func,
 
   if(!func->is_host && func->offset == 0)
   {
-    std::cout << "Function index is" << func->offset + num_func_imports_ << std::endl<<std::flush;
+    // std::cout << "Function index is" << func->offset + num_func_imports_ << std::endl<<std::flush;
     CHECK_RESULT(EmitI32(func->offset + num_func_imports_));
   }
   else
   {
-    std::cout << "Function index is" << func->offset << std::endl<<std::flush;
+    // std::cout << "Function index is" << func->offset << std::endl<<std::flush;
     CHECK_RESULT(EmitI32(func->offset));
   }
   return wabt::Result::Ok;
@@ -1564,19 +1564,23 @@ wabt::Result BinaryReaderInterp::OnCallExpr(Index func_index) {
   Func* func = GetFuncByModuleIndex(func_index);
   FuncSignature* sig = env_->GetFuncSignature(func->sig_index);
   CHECK_RESULT(typechecker_.OnCall(sig->param_types, sig->result_types));
-
+// An experiment to allow different behavior based on the build flags.
+// Em-interp will work, regular interp will not, will need to think about it
+#if defined(EMSCRIPTEN_DEBUG_OUTPUT)
+   // std::cout << "Interpreting"<<std::endl;
   if (func->is_host) {
     CHECK_RESULT(EmitOpcode(Opcode::InterpCallHost));
-//  CHECK_RESULT(EmitI32(TranslateFuncIndexToEnv(func_index)));
+    // CHECK_RESULT(EmitI32(TranslateFuncIndexToEnv(func_index)));
   } else {
     CHECK_RESULT(EmitOpcode(Opcode::Call));
-/**
-  *  CHECK_RESULT(EmitFuncOffset(cast<DefinedFunc>(func), func_index));
-  *  This function was used for wabtaot
-  */
+    // CHECK_RESULT(EmitFuncOffset(cast<DefinedFunc>(func), func_index));
   }
-
   CHECK_RESULT(EmitI32(TranslateFuncIndexToEnv(func_index)));
+#else
+  // std::cout << "Full AOT"<<std::endl;
+  CHECK_RESULT(EmitOpcode(Opcode::Call));
+  CHECK_RESULT(EmitFuncOffset(cast<DefinedFunc>(func), func_index));
+#endif
 
   return wabt::Result::Ok;
 }
