@@ -4,10 +4,13 @@
 	url = git@gitlab.casa.cs.unb.ca:gkrylov/omr.git
 [submodule "em-interp"]
 	path = em-interp
+	branch = "development"
 	url = git@gitlab.casa.cs.unb.ca:pjelenko/em-interp.git
 [submodule "polybench"]
 	path = polybench
+	branch = "main"
 	url = git@gitlab.casa.cs.unb.ca:pjelenko/polybench.git
 [submodule "wabtaot-private-additions"]
 	path = wabtaot-private-additions
+	branch = "main"
 	url = git@gitlab.casa.cs.unb.ca:gkrylov/wabtaot-private-additions.git
