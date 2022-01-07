@@ -1566,7 +1566,7 @@ wabt::Result BinaryReaderInterp::OnCallExpr(Index func_index) {
   CHECK_RESULT(typechecker_.OnCall(sig->param_types, sig->result_types));
 // An experiment to allow different behavior based on the build flags.
 // Em-interp will work, regular interp will not, will need to think about it
-#if defined(EMSCRIPTEN_DEBUG_OUTPUT)
+#if defined(EMSCRIPTEN_INTERPRETER_BUILD)
    // std::cout << "Interpreting"<<std::endl;
   if (func->is_host) {
     CHECK_RESULT(EmitOpcode(Opcode::InterpCallHost));
