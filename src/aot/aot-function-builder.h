@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef FUNCTIONBUILDER_HPP
-#define FUNCTIONBUILDER_HPP
+#ifndef AOT_FUNCTIONBUILDER_HPP
+#define AOT_FUNCTIONBUILDER_HPP
 
 #include "aot-type-dictionary.h"
 #include "ilgen/BytecodeBuilder.hpp"
