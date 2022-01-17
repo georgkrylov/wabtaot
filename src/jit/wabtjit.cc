@@ -30,9 +30,11 @@ extern int32_t internal_compileMethodBuilder(TR::MethodBuilder * methodBuilder, 
 namespace wabt{
 namespace jit {
 
-JITedFunction compile(interp::Thread* thread, interp::Func* fn) {
+// TODO Georgiy: look at this, it was needed for jit.
+JITedFunction compile(interp::Thread* thread, interp::DefinedFunc* fn) {
+
   TypeDictionary types;
-  FunctionBuilder builder(thread, dynamic_cast<interp::DefinedFunc*>(fn), &types);
+  FunctionBuilder builder(thread, fn, &types);
   void* function = nullptr;
   
   if (internal_compileMethodBuilder(&builder, &function) == 0) {
@@ -42,7 +44,20 @@ JITedFunction compile(interp::Thread* thread, interp::Func* fn) {
   }
 }
 
-JITedFunction loadCompiled(interp::Thread* thread, interp::Func* fn,
+AOTedFunction compile(interp::Thread* thread, interp::Func* fn) {
+
+  TypeDictionary types;
+  FunctionBuilder builder(thread, dynamic_cast<interp::DefinedFunc*>(fn), &types);
+  void* function = nullptr;
+
+  if (internal_compileMethodBuilder(&builder, &function) == 0) {
+    return reinterpret_cast<AOTedFunction>(function);
+  } else {
+    return nullptr;
+  }
+}
+
+AOTedFunction loadCompiled(interp::Thread* thread, interp::Func* fn,
 			   interp::Environment& env) {
   /*TypeDictionary types;
   //unsigned int numCalleeParams = env.GetFuncSignature(fn->sig_index)->param_types.size();
@@ -67,7 +82,7 @@ JITedFunction loadCompiled(interp::Thread* thread, interp::Func* fn,
     return nullptr;
   }
   void *funct = dlsym(handle,fn->dbg_name_.c_str());
-  return reinterpret_cast<JITedFunction>(funct);
+  return reinterpret_cast<AOTedFunction>(funct);
 }
 /*
 JITedFunction loadThunk(interp::Thread* thread, interp::Func* fn,

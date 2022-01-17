@@ -227,7 +227,7 @@ void AOTFunctionBuilder::defineImportFunction(const std::string& name, FunctionI
 		 static_cast<TR::IlType**>(import.param_types_.data()));
 }
 
-
+#if not defined(EMSCRIPTEN_INTERPRETER_BUILD)
 uint64_t AOTFunctionBuilder::CallIndirectHelper(Index table_index, Index sig_index, Index entry_index) {
   using namespace wabt::interp;
   
@@ -318,7 +318,7 @@ uint64_t AOTFunctionBuilder::CallIndirectHelper(Index table_index, Index sig_ind
   }
   return static_cast<Result_t>(interp::Result::Ok);
 }
-
+#endif
 //Currently the memory is not actually resized, only the data on the number of pages
 uint32_t AOTFunctionBuilder::GrowMemory(uint32_t mem, uint32_t grow_pages) {
   //printf("Grow by: %ud",grow_pages);
@@ -1100,9 +1100,9 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
     case Opcode::InterpCallHost:
     case Opcode::Call: {
       auto offset = ReadU32(&pc);
-      auto meta_it = env_.jit_meta_.find(offset);
+      auto meta_it = env_.aot_meta_.find(offset);
 
-    if(meta_it != env_.jit_meta_.end()) {
+    if(meta_it != env_.aot_meta_.end()) {
 	auto* fn = meta_it->second.wasm_fn;
     //auto *fn = env_.GetFunc(offset);
 	auto& builder = aotManager_.getFB(fn->offset);

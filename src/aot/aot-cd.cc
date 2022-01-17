@@ -298,7 +298,7 @@ wabt::Result compileAOT(interp::Environment& env, DefinedModule* module, char * 
 
     aotManager.broadcastNames();
     aotManager.broadcastImports();
-    module->compiled_functions.reserve(func_count);
+    module->aot_compiled_functions.reserve(func_count);
     auto module_func_count = module->funcs.size();
 
   int flag = 0;
@@ -315,7 +315,7 @@ wabt::Result compileAOT(interp::Environment& env, DefinedModule* module, char * 
         storeCodeEntry((char *)fn->dbg_name_.c_str());
 	      function = getCodeEntry(const_cast<char*>(fn->dbg_name_.c_str()));
       }
-      module->compiled_functions.push_back(function);
+      module->aot_compiled_functions.push_back(function);
       env.GetFunc(i)->is_compiled = true;
 
     }
@@ -458,9 +458,9 @@ void relocateAOT(interp::Environment& env,DefinedModule *module)
   }
   setCodeEntry(const_cast<char*>("Params"), reinterpret_cast<void*>(&env.indirectCallParams));
   // uint16_t compiled_function_index = 0;
-  for(Index i = 0; i < module->compiled_functions.size(); ++i) {
+  for(Index i = 0; i < module->aot_compiled_functions.size(); ++i) {
     // if(!env.GetFunc(i)->is_host) {
-    if(module->compiled_functions[i]){
+    if(module->aot_compiled_functions[i]){
       auto* fn = static_cast<DefinedFunc*>(module->funcs[i]);
       relocateCodeEntry(const_cast<char *>(fn->dbg_name_.c_str()));
       // compiled_function_index++;
@@ -483,7 +483,7 @@ void runExports(interp::Environment& env,DefinedModule *module, int run_all_expo
 
     for(uint32_t i = 0;i<module->funcs.size();i++){
       if(!funcname.compare(module->funcs[i]->dbg_name_)){
-        fn = module->compiled_functions[i];
+        fn = module->aot_compiled_functions[i];
         break;
       }
     }

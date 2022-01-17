@@ -35,6 +35,7 @@
 #include "JitBuilder.hpp"
 #include <dlfcn.h>
 
+#include "src/jit/thread.h"
 #include "src/jit/wabtjit.h"
 
 namespace wabt {
@@ -143,14 +144,17 @@ Environment::Environment() : istream_(new OutputBuffer()) {}
 
 Environment::~Environment() {
   std::vector<unsigned int> *offsets = new std::vector<unsigned int>();
-  for(auto kv:jit_meta_) {
+#if not defined(EMSCRIPTEN_INTERPRETER_BUILD)
+  for(auto kv:aot_meta_) {
     offsets->push_back(kv.first);
   }
+#endif
   jit_env_.offsets = offsets;
   delete [] indirectCallParams;
 }
-
-int Environment::JitMeta::numOfFunction = 0;
+#if not defined(EMSCRIPTEN_INTERPRETER_BUILD)
+int Environment::AOTMeta::numOfFunction = 0;
+#endif
 
 Index Environment::FindModuleIndex(string_view name) const {
   auto iter = module_bindings_.find(name.to_string());
@@ -179,9 +183,19 @@ Thread::Options::Options(uint32_t value_stack_size, uint32_t call_stack_size)
 Thread::Thread(Environment* env, const Options& options)
     : env_(env),
       value_stack_(options.value_stack_size),
-      call_stack_(options.call_stack_size) {
+      call_stack_(options.call_stack_size)
+#if defined(EMSCRIPTEN_INTERPRETER_BUILD)
+,
+      jit_th_(new jit::ThreadInfo()) {
+  jit_th_->call_stack_max = call_stack_.data() + call_stack_.size();
+  jit_th_->jit_fn_table = nullptr;
+  jit_th_->thread = this;
+}
+#else
+{
   vs_top_ = value_stack_.data()-1;
 }
+#endif
 
 FuncSignature::FuncSignature(std::vector<Type> param_types,
                              std::vector<Type> result_types)
@@ -420,6 +434,10 @@ void Environment::ResetToMarkPoint(const MarkPoint& mark) {
   elem_segments_.erase(elem_segments_.begin() + mark.elem_segments_size,
                        elem_segments_.end());
   istream_->data.resize(mark.istream_size);
+#if defined(EMSCRIPTEN_INTERPRETER_BUILD)
+
+  jit_funcs_.erase(jit_funcs_.begin() + mark.funcs_size, jit_funcs_.end());
+#endif
 }
 
 HostModule* Environment::AppendHostModule(string_view name) {
@@ -1695,15 +1713,37 @@ ValueTypeRep<R> SimdReplaceLane(V value, uint32_t lane_idx, T lane_val) {
   return ToRep(Bitcast<R>(simd_data_0));
 }
 
-bool Environment::TryJit(Thread* t, IstreamOffset offset, Environment::JITedFunction* fn) {
+
+Result Environment::TryJit(Thread* t, DefinedFunc* fn, Index ind) {
+  if (!enable_jit) {
+    return Result::Ok;
+  }
+
+  if (!fn->tried_jit_) {
+    fn->num_calls_++;
+
+    if (fn->num_calls_ >= jit_threshold) {
+      fn->jit_fn_ = jit::compile(t, fn);
+      fn->tried_jit_ = true;
+
+      if (fn->jit_fn_)
+        jit_funcs_[ind] = fn->jit_fn_;
+    }
+  }
+
+  TRAP_IF(fn->tried_jit_ && !fn->jit_fn_ && trap_on_failed_comp, FailedJITCompilation);
+  return Result::Ok;
+}
+
+bool Environment::TryAOT(Thread* t, IstreamOffset offset, Environment::AOTedFunction* fn) {
   if (!enable_jit) {
     *fn = nullptr;
     return false;
   }
 
-  auto meta_it = jit_meta_.find(offset);
+  auto meta_it = aot_meta_.find(offset);
 
-  if (meta_it != jit_meta_.end()) {
+  if (meta_it != aot_meta_.end()) {
     auto* meta = &meta_it->second;
     if (!meta->tried_jit) {
       meta->num_calls++;
@@ -1730,15 +1770,15 @@ bool Environment::TryJit(Thread* t, IstreamOffset offset, Environment::JITedFunc
   }
 }
 
-bool Environment::TryJit(Thread* t, IstreamOffset offset, Environment::JITedFunction* fn,DefinedFunc *&df) {
+bool Environment::TryAOT(Thread* t, IstreamOffset offset, Environment::AOTedFunction* fn,DefinedFunc *&df) {
   if (!enable_jit) {
     *fn = nullptr;
     return false;
   }
 
-  auto meta_it = jit_meta_.find(offset);
+  auto meta_it = aot_meta_.find(offset);
 
-  if (meta_it != jit_meta_.end()) {
+  if (meta_it != aot_meta_.end()) {
     auto* meta = &meta_it->second;
     if (!meta->tried_jit) {
       meta->num_calls++;
@@ -1770,6 +1810,7 @@ bool Environment::TryJit(Thread* t, IstreamOffset offset, Environment::JITedFunc
     return trap_on_failed_comp;
   }
 }
+
 
 bool Environment::FuncSignaturesAreEqual(Index sig_index_0,
                                          Index sig_index_1) const {
@@ -1943,10 +1984,45 @@ Result Thread::Run(int num_instructions) {
         Pick(thingy) = Top();
         break;
       }
+#if defined(EMSCRIPTEN_INTERPRETER_BUILD)
+      case Opcode::Call: {
+        Index func_index = ReadU32(&pc);
+        DefinedFunc* fn = cast<DefinedFunc>(env_->GetFunc(func_index));
+
+        CHECK_TRAP(PushCall(pc));
+        GOTO(fn->offset);
+        CHECK_TRAP(env_->TryJit(this, fn, func_index));
+
+        if (fn->jit_fn_) {
+          in_jit_ = true;
+
+          jit_th_->pc = fn->offset;
+          jit_th_->in_jit = true;
+          jit_th_->call_stack = call_stack_.data() + call_stack_top_;
+          jit_th_->jit_fn_table = env_->jit_funcs_.data();
+
+          auto result = static_cast<Result>(fn->jit_fn_(jit_th_.get(), func_index));
+          call_stack_top_ = jit_th_->call_stack - call_stack_.data();
+
+          if (result != Result::Ok) {
+            pc_ = jit_th_->pc;
+            in_jit_ = jit_th_->in_jit;
+
+            // We don't want to overwrite the pc of the JITted function if it traps
+            tpc.Reload();
+            return result;
+          }
+
+          in_jit_ = false;
+          GOTO(PopCall());
+        }
+        break;
+      }
+#else
       case Opcode::Call:
          {
          IstreamOffset offset = ReadU32(&pc);
-         Environment::JITedFunction jit_fn;
+         Environment::AOTedFunction jit_fn;
          DefinedFunc *df;
          if((uint32_t)offset < env_->funcs_.size())
             {
@@ -1957,7 +2033,7 @@ Result Thread::Run(int num_instructions) {
                {
                printf("Hello, about to call compiled func  at offset %i", (uint32_t)offset );
                }
-            else if (env_->TryJit(this, offset, &jit_fn,df))
+            else if (env_->TryAOT(this, offset, &jit_fn,df))
                {
                TRAP_IF(!jit_fn, FailedJITCompilation);
                in_jit_ = true;
@@ -2120,6 +2196,7 @@ Result Thread::Run(int num_instructions) {
             }
          break;
          }
+#endif
 
       case Opcode::CallIndirect: {
         Table* table = ReadTable(&pc);
@@ -2134,27 +2211,48 @@ Result Thread::Run(int num_instructions) {
         if (func->is_host) {
           CHECK_TRAP(CallHost(cast<HostFunc>(func)));
         } else {
+#if defined(EMSCRIPTEN_INTERPRETER_BUILD)
+          auto* fn = cast<DefinedFunc>(func);
+
+          CHECK_TRAP(PushCall(pc));
+          GOTO(fn->offset);
+          CHECK_TRAP(env_->TryJit(this, fn, func_index));
+
+          if (fn->jit_fn_) {
+            in_jit_ = true;
+
+            jit_th_->pc = fn->offset;
+            jit_th_->in_jit = true;
+            jit_th_->call_stack = call_stack_.data() + call_stack_top_;
+            jit_th_->jit_fn_table = env_->jit_funcs_.data();
+
+            auto result = static_cast<Result>(fn->jit_fn_(jit_th_.get(), func_index));
+            call_stack_top_ = jit_th_->call_stack - call_stack_.data();
+
+            if (result != Result::Ok) {
+              pc_ = jit_th_->pc;
+              in_jit_ = jit_th_->in_jit;
+#else
           auto* dfn = cast<DefinedFunc>(func);
-          Environment::JITedFunction jit_fn;
+          Environment::AOTedFunction aot_fn;
 
           CHECK_TRAP(PushCall(pc));
           GOTO(dfn->offset);
 
-          if (env_->TryJit(this, dfn->offset, &jit_fn)) {
-            TRAP_IF(!jit_fn, FailedJITCompilation);
+          if (env_->TryAOT(this, dfn->offset, &aot_fn)) {
+            TRAP_IF(!aot_fn, FailedJITCompilation);
 
             in_jit_ = true;
 
-            auto result = jit_fn();
+            auto result = aot_fn();
             if (result != Result::Ok) {
+#endif
               // We don't want to overwrite the pc of the JITted function if it traps
               tpc.Reload();
-
               return result;
             }
 
             in_jit_ = false;
-
             GOTO(PopCall());
           }
         }
@@ -2420,7 +2518,9 @@ Result Thread::Run(int num_instructions) {
         PUSH_NEG_1_AND_BREAK_IF(new_page_size > max_page_size);
         PUSH_NEG_1_AND_BREAK_IF(
             static_cast<uint64_t>(new_page_size) * WABT_PAGE_SIZE > UINT32_MAX);
-        //memory->data.resize(new_page_size * WABT_PAGE_SIZE);
+#if defined(EMSCRIPTEN_INTERPRETER_BUILD)
+        memory->data.resize(new_page_size * WABT_PAGE_SIZE);
+#endif
         memory->page_limits.initial = new_page_size;
         CHECK_TRAP(Push<uint32_t>(old_page_size));
         break;
@@ -3927,7 +4027,7 @@ exit_loop:
 }
 
 
-
+#if not defined(EMSCRIPTEN_INTERPRETER_BUILD)
 void Environment::FillMemories(){
   if(mems==nullptr) {
      mems = new char*[GetMemoryCount()];
@@ -3936,9 +4036,8 @@ void Environment::FillMemories(){
      }
   }
 }
-
+#endif
 static void PrintCallFrame(Stream* s, Environment* e, const CallFrame* frame) {
-
   DefinedFunc* best_fn = nullptr;
 
   for (Index i = 0; i < e->GetFuncCount(); i++) {
@@ -4096,7 +4195,8 @@ void Executor::CopyResults(const FuncSignature* sig, TypedValues* out_results) {
 
   out_results->clear();
   for (size_t i = 0; i < expected_results; ++i)
-      out_results->emplace_back(sig->result_types[i], thread_.ValueAt(i));
+    out_results->emplace_back(sig->result_types[i], thread_.ValueAt(i));
 }
+
 }  // namespace interp
 }  // namespace wabt

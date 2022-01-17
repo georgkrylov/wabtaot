@@ -20,14 +20,17 @@
 #include "src/common.h"
 //#include "type-dictionary.h"
 #include "src/interp/interp.h"
+#include "src/jit/environment.h"
 
 namespace wabt {
 namespace jit {
 
-using JITedFunction = interp::Result (*)();
+JITedFunction compile(interp::Thread* thread, interp::DefinedFunc* fn);
+using AOTedFunction = interp::Result (*)();
+
 
 //wabt::Result compileAOT(interp::Thread*, interp::Environment&);
-JITedFunction compile(interp::Thread* thread, interp::Func*);
+AOTedFunction compile(interp::Thread* thread, interp::Func*);
 /*OMR::JitBuilder::IlType* TypeFieldType(const char* t);
 OMR::JitBuilder::IlType* TypeFieldType(Type t);
 OMR::JitBuilder::IlType* functionReturnType(interp::DefinedFunc* fn,interp::Environment& env,
