@@ -45,7 +45,7 @@ class FunctionBuilder;
 }
 
 namespace aot {
-class AOTFunctionBuilder;  
+class AOTFunctionBuilder;
 }
 
 namespace interp {
@@ -98,11 +98,7 @@ namespace interp {
   /* the expected export kind doesn't match. */                             \
   V(ExportKindMismatch, "export kind mismatch")
 
-#if defined(EMSCRIPTEN_INTERPRETER_BUILD)
-enum class Result {
-#else
 enum class Result : int32_t {
-#endif
 #define V(Name, str) Name,
   FOREACH_INTERP_RESULT(V)
 #undef V
@@ -296,6 +292,7 @@ struct Func {
   Func(Index sig_index, bool is_host)
       : sig_index(sig_index), is_host(is_host)
 #if defined(EMSCRIPTEN_INTERPRETER_BUILD)
+// problematic
 {}
 #else
 ,offset(kInvalidIstreamOffset) {}
@@ -314,6 +311,7 @@ struct DefinedFunc : Func {
   DefinedFunc(Index sig_index)
       : Func(sig_index, false),
 #if defined(EMSCRIPTEN_INTERPRETER_BUILD)
+//problematic
         offset(kInvalidIstreamOffset),
 #endif
         local_decl_count(0),
@@ -321,6 +319,7 @@ struct DefinedFunc : Func {
 
   static bool classof(const Func* func) {
 #if defined(EMSCRIPTEN_INTERPRETER_BUILD)
+//Problematic
    return !func->is_host;
 #else
     return true;
@@ -328,6 +327,7 @@ struct DefinedFunc : Func {
   }
 
 #if defined(EMSCRIPTEN_INTERPRETER_BUILD)
+// problematic
   std::string dbg_name_ = "???";
 #endif
   bool has_dbg_name_ = false;
@@ -337,6 +337,7 @@ struct DefinedFunc : Func {
   bool tried_jit_ = false;
   jit::JITedFunction jit_fn_ = nullptr;
 #if defined(EMSCRIPTEN_INTERPRETER_BUILD)
+// potentially problematic
   IstreamOffset offset;
 #endif
   Index local_decl_count;
@@ -362,6 +363,7 @@ struct HostFunc : Func {
         field_name(field_name.to_string()),
         callback(callback)
 #if defined(EMSCRIPTEN_INTERPRETER_BUILD)
+// potentially problematic
         {}
 #else
         {is_compiled = true; }
@@ -569,15 +571,12 @@ class Environment {
   template <typename... Args>
   Func* EmplaceBackFunc(Args&&... args) {
     funcs_.emplace_back(std::forward<Args>(args)...);
-#if defined(EMSCRIPTEN_INTERPRETER_BUILD)
+    // This was commented out for wabtaot
     jit_funcs_.emplace_back(funcs_.back()->is_host ? jit::HostCallThunk : jit::InterpThunk);
-
     Func* f = funcs_.back().get();
 
     return f;
-#else
-    return funcs_.back().get();
-#endif
+
   }
 
 
@@ -639,9 +638,13 @@ class Environment {
   }
 
   uint64_t memoriesLoc(){ return reinterpret_cast<uint64_t>(memories_[0].data.data()); }
-#if not defined(EMSCRIPTEN_INTERPRETER_BUILD)
+  /**
+   * @brief Get the Mems object
+   *
+   * @return char** AOT memories pointer
+   */
   char **GetMems() {return mems;}
-#endif
+
   HostModule* AppendHostModule(string_view name);
   void AppendDefModule(DefinedModule*);
 
@@ -659,12 +662,10 @@ class Environment {
  private:
   friend class Thread;
   friend class wabt::jit::FunctionBuilder;
-#if defined(EMSCRIPTEN_INTERPRETER_BUILD)
   friend jit::Result_t jit::InterpThunk(jit::ThreadInfo*, Index);
   friend jit::Result_t jit::HostCallThunk(jit::ThreadInfo*, Index);
-#else
   friend class wabt::aot::AOTFunctionBuilder;
-#endif
+
 
   using AOTedFunction = interp::Result (*)();
 
@@ -684,9 +685,10 @@ class Environment {
     static int numOfFunction;
   };
   Result TryJit(Thread* t, DefinedFunc* fn, Index ind);
+#if defined (unnecessary)
   bool TryAOT(Thread* t, IstreamOffset offset, AOTedFunction* fn);
   bool TryAOT(Thread* t, IstreamOffset offset, AOTedFunction* fn,DefinedFunc *&);
-
+#endif 
   std::vector<std::unique_ptr<Module>> modules_;
   std::vector<FuncSignature> sigs_;
   std::vector<std::unique_ptr<Func>> funcs_;
@@ -756,17 +758,14 @@ class Thread {
 
   void Trace(Stream*);
   Result Run(int num_instructions = 1);
-#if not defined(EMSCRIPTEN_INTERPRETER_BUILD)
+#if defined (unneeded)
   Result CallThunk(Environment::AOTedFunction,Func*);
 #endif
-
   Result CallHost(HostFunc*);
 
  private:
   friend class jit::FunctionBuilder;
-#if defined(EMSCRIPTEN_INTERPRETER_BUILD)
   friend jit::Result_t jit::InterpThunk(jit::ThreadInfo*, Index);
-#endif
   friend class wabt::aot::AOTFunctionBuilder;
   friend class ThreadOffset;
   friend class Executor;
@@ -865,9 +864,7 @@ class Thread {
   IstreamOffset pc_ = 0;
   bool in_jit_ = false;
 
-#if defined(EMSCRIPTEN_INTERPRETER_BUILD)
   std::unique_ptr<jit::ThreadInfo> jit_th_;
-#endif
 };
 
 struct ThreadOffset {

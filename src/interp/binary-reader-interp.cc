@@ -604,6 +604,7 @@ wabt::Result BinaryReaderInterp::EmitFuncOffset(DefinedFunc* func,
     CHECK_RESULT(AppendFixup(&func_fixups_, defined_index));
   }
 #if defined(EMSCRIPTEN_INTERPRETER_BUILD)
+// problematic
   CHECK_RESULT(EmitI32(func->offset));
 #else
   /**
@@ -835,17 +836,13 @@ wabt::Result BinaryReaderInterp::OnImportFunc(Index import_index,
     PrintError("import signature mismatch");
     return wabt::Result::Error;
   }
-#if defined(EMSCRIPTEN_INTERPRETER_BUILD)
 
-  func_index_mapping_.push_back(export_->index);
-#else
   func->offset = func_index;
   func->dbg_name_.assign(field_name.to_string());
   env_->AddAOTMetadata(func);
   func_env_index = export_->index;
-  //}
-  func_index_mapping_.push_back(func_env_index);
-#endif
+  func_index_mapping_.push_back(export_->index);
+
   num_func_imports_++;
   return wabt::Result::Ok;
 }
@@ -868,15 +865,16 @@ wabt::Result BinaryReaderInterp::OnImportTable(Index import_index,
   CHECK_RESULT(FindRegisteredModule(import->module_name, &import_module));
 
   Export* export_;
-#if defined(EMSCRIPTEN_INTERPRETER_BUILD)
+// #if defined(EMSCRIPTEN_INTERPRETER_BUILD)
+//problematic
   CHECK_RESULT(GetModuleExport(import_module, import->field_name, &export_));
-#else
+// #else
   if(import_module->is_host) {
       CHECK_RESULT(GetModuleExport(import_module, import->field_name, import->kind, &export_));
   } else {
       CHECK_RESULT(GetModuleExport(import_module, import->field_name, &export_));
   }
-#endif
+// #endif
   CHECK_RESULT(CheckImportKind(import, export_->kind));
 
   Table* table = env_->GetTable(export_->index);
@@ -905,6 +903,7 @@ wabt::Result BinaryReaderInterp::OnImportMemory(Index import_index,
 
   Export* export_;
 #if defined(EMSCRIPTEN_INTERPRETER_BUILD)
+//problematic
   CHECK_RESULT(GetModuleExport(import_module, import->field_name, &export_));
 #else
   if(import_module->is_host) {
@@ -1286,23 +1285,19 @@ wabt::Result BinaryReaderInterp::BeginFunctionBody(Index index, Offset size) {
   FuncSignature* sig = env_->GetFuncSignature(func->sig_index);
 
   func->offset = GetIstreamOffset();
-#if not defined(EMSCRIPTEN_INTERPRETER_BUILD)
   bool offset_zero = false;
   // needed to differentiate first function and first import
   if (func->offset == 0) {
       func->offset += num_func_imports_;
       offset_zero = true;
   }
-#endif
   func->local_decl_count = 0;
   func->local_count = 0;
 
-#if not defined(EMSCRIPTEN_INTERPRETER_BUILD)
   /* wasmjit-omr: emit JIT metadata now that func->offset is known */
   env_->AddAOTMetadata(func);
   if (offset_zero)
       func->offset = 0;
-#endif
 
   current_func_ = func;
   depth_fixups_.clear();
@@ -1588,6 +1583,7 @@ wabt::Result BinaryReaderInterp::OnCallExpr(Index func_index) {
 // An experiment to allow different behavior based on the build flags.
 // Em-interp will work, regular interp will not, will need to think about it
 #if defined(EMSCRIPTEN_INTERPRETER_BUILD)
+// problematic
    // std::cout << "Interpreting"<<std::endl;
   if (func->is_host) {
     CHECK_RESULT(EmitOpcode(Opcode::InterpCallHost));
@@ -1639,7 +1635,7 @@ wabt::Result BinaryReaderInterp::OnReturnCallExpr(Index func_index) {
     CHECK_RESULT(EmitOpcode(Opcode::Return));
   } else {
     CHECK_RESULT(EmitOpcode(Opcode::ReturnCall));
-#if defined(EMSCRIPTEN_INTERPRETER_BULD)
+#if defined(unneeded)
     CHECK_RESULT(EmitI32(TranslateFuncIndexToEnv(func_index)));
 #else
     CHECK_RESULT(EmitFuncOffset(cast<DefinedFunc>(func), func_index));

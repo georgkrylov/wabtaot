@@ -32,7 +32,6 @@ namespace jit {
 
 // TODO Georgiy: look at this, it was needed for jit.
 JITedFunction compile(interp::Thread* thread, interp::DefinedFunc* fn) {
-
   TypeDictionary types;
   FunctionBuilder builder(thread, fn, &types);
   void* function = nullptr;

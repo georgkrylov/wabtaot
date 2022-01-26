@@ -46,7 +46,6 @@ wabt::jit::TypeDictionary::TypeDictionary() : TR::TypeDictionary() {
     auto pCallFrame = PointerTo(LookupStruct("CallFrame"));
 
 // TODO Georgiy: look at this, it was needed for jit.
-#if defined(EMSCRIPTEN_INTERPRETER_BUILD)
     DefineStruct("ThreadInfo");
     DefineField("ThreadInfo", "pc", Int32);
     DefineField("ThreadInfo", "in_jit", Int32);
@@ -55,7 +54,6 @@ wabt::jit::TypeDictionary::TypeDictionary() : TR::TypeDictionary() {
     DefineField("ThreadInfo", "jit_fn_table", toIlType<void**>(this));
     DefineField("ThreadInfo", "thread", toIlType<void*>(this));
     CloseStruct("ThreadInfo");
-#endif
 }
 /*
 wabt::jit::AOTTypeDictionary::AOTTypeDictionary() : OMR::JitBuilder::TypeDictionary() {

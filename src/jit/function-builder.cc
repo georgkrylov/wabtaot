@@ -16,9 +16,7 @@
 
 #include "function-builder.h"
 #include "wabtjit.h"
-#if defined(EMSCRIPTEN_INTERPRETER_BUILD)
 #include "thread.h"
-#endif
 #include "src/cast.h"
 #include "src/interp/interp.h"
 #include "src/interp/interp-internal.h"
@@ -32,7 +30,6 @@
 namespace wabt {
 namespace jit {
 
-#if defined(EMSCRIPTEN_INTERPRETER_BUILD)
 Result_t FunctionBuilder::CallIndirectHelper(ThreadInfo* th, Index table_index, Index sig_index, Index entry_index) {
   using namespace wabt::interp;
   auto* env = th->thread->env_;
@@ -58,7 +55,8 @@ Result_t FunctionBuilder::CallIndirectHelper(ThreadInfo* th, Index table_index, 
 
   return result;
 }
-#else
+
+#if defined (unneeded)
 #define CHECK_TRAP_IN_HELPER(...)                \
   do {                                           \
     wabt::interp::Result result = (__VA_ARGS__); \
@@ -73,8 +71,7 @@ Result_t FunctionBuilder::CallIndirectHelper(ThreadInfo* th, Index table_index, 
     if (WABT_UNLIKELY(cond)) \
       TRAP(type);            \
   } while (0)
-
-FunctionBuilder::Result_t FunctionBuilder::CallHelper(wabt::interp::Thread* th, wabt::interp::IstreamOffset offset, uint8_t* current_pc) {
+FunctionBuilder::Result_t FunctionBuilder::AOTCallHelper(wabt::interp::Thread* th, wabt::interp::IstreamOffset offset, uint8_t* current_pc) {
   CHECK_TRAP_IN_HELPER(th->PushCall(current_pc, true));
   th->set_pc(offset);
 
@@ -106,7 +103,7 @@ FunctionBuilder::Result_t FunctionBuilder::CallHelper(wabt::interp::Thread* th, 
   return static_cast<Result_t>(wabt::interp::Result::Ok);
 }
 
-FunctionBuilder::Result_t FunctionBuilder::CallIndirectHelper(wabt::interp::Thread* th, Index table_index, Index sig_index, Index entry_index, uint8_t* current_pc) {
+FunctionBuilder::Result_t FunctionBuilder::AOTCallIndirectHelper(wabt::interp::Thread* th, Index table_index, Index sig_index, Index entry_index, uint8_t* current_pc) {
   using namespace wabt::interp;
   auto* env = th->env_;
 
@@ -124,14 +121,14 @@ FunctionBuilder::Result_t FunctionBuilder::CallIndirectHelper(wabt::interp::Thre
     if (result != static_cast<Result_t>(interp::Result::Ok))
       return result;
   } else {
-    auto result = CallHelper(th, cast<DefinedFunc>(func)->offset, current_pc);
+    auto result = AOTCallHelper(th, cast<DefinedFunc>(func)->offset, current_pc);
     if (result != static_cast<Result_t>(interp::Result::Ok))
       return result;
   }
   return static_cast<Result_t>(interp::Result::Ok);
 }
 
-FunctionBuilder::Result_t FunctionBuilder::CallHostHelper(wabt::interp::Thread* th, Index func_index) {
+FunctionBuilder::Result_t FunctionBuilder::AOTCallHostHelper(wabt::interp::Thread* th, Index func_index) {
   return static_cast<Result_t>(th->CallHost(cast<wabt::interp::HostFunc>(th->env_->funcs_[func_index].get())));
 }
 #endif
@@ -156,15 +153,11 @@ FunctionBuilder::FunctionBuilder(interp::Thread* thread, interp::DefinedFunc* fn
   DefineFile(__FILE__);
   DefineName(fn->dbg_name_.c_str());
 
-#if defined(EMSCRIPTEN_INTERPRETER_BUILD)
   DefineParameter("thread", types->PointerTo(types->LookupStruct("ThreadInfo")));
-#endif
   DefineParameter("index", Int32);
   DefineReturnType(toIlType<Result_t>(types));
 
-#if defined(EMSCRIPTEN_INTERPRETER_BUILD)
   DefineFunction("wasm_fn", __FILE__, "0", nullptr, toIlType<Result_t>(types), 2, Address, Int32);
-#endif
   DefineFunction("f32_sqrt", __FILE__, "0",
                  reinterpret_cast<void*>(static_cast<float (*)(float)>(std::sqrt)),
                  Float,
@@ -175,36 +168,43 @@ FunctionBuilder::FunctionBuilder(interp::Thread* thread, interp::DefinedFunc* fn
                  Double,
                  1,
                  Double);
-#if not defined(EMSCRIPTEN_INTERPRETER_BUILD)
-  DefineFunction("CallHelper", __FILE__, "0",
-                 reinterpret_cast<void*>(CallHelper),
+#if defined(unneeded)
+/*  DefineFunction("CallHelper", __FILE__, "0",
+                 reinterpret_cast<void*>(AOTCallHelper),
                  toIlType<Result_t>(types),
                  3,
                  toIlType<void*>(types),
                  toIlType<wabt::interp::IstreamOffset>(types),
-                 types->PointerTo(Int8));
+                 types->PointerTo(Int8));*/
 #endif
+
   DefineFunction("CallIndirectHelper", __FILE__, "0",
                  reinterpret_cast<void*>(CallIndirectHelper),
                  toIlType<Result_t>(types),
-#if not defined(EMSCRIPTEN_INTERPRETER_BUILD)
-                 5,
-#else
                  4,
-#endif
                  toIlType<void*>(types),
                  toIlType<Index>(types),
                  toIlType<Index>(types),
-#if not defined(EMSCRIPTEN_INTERPRETER_BUILD)
+                 toIlType<Index>(types));
+#if defined(unneeded)
+  DefineFunction("CallIndirectHelper", __FILE__, "0",
+                 reinterpret_cast<void*>(AOTCallIndirectHelper),
+                 toIlType<Result_t>(types),
+                 5,
+                 toIlType<void*>(types),
                  toIlType<Index>(types),
-                 types->PointerTo(Int8));
+                 toIlType<Index>(types),
+                 toIlType<Index>(types),
+                 types->PointerTo(Int8));*/
+#endif
+#if defined(unneeded)
   DefineFunction("CallHostHelper", __FILE__, "0",
-                 reinterpret_cast<void*>(CallHostHelper),
+                 reinterpret_cast<void*>(AOTCallHostHelper),
                  toIlType<Result_t>(types),
                  2,
                  toIlType<void*>(types),
-#endif
                  toIlType<Index>(types));
+#endif
   DefineFunction("MemoryTranslationHelper", __FILE__, "0",
                  reinterpret_cast<void*>(MemoryTranslationHelper),
                  toIlType<void*>(types),
@@ -547,16 +547,24 @@ TR::IlValue* FunctionBuilder::EmitMemoryPreAccess(TR::IlBuilder* b, const uint8_
 
 void FunctionBuilder::EmitTrap(TR::IlBuilder* b, TR::IlValue* result, const uint8_t* pc) {
   if (pc != nullptr) {
-#if defined(EMSCRIPTEN_INTERPRETER_BUILD)
     b->StoreIndirect("ThreadInfo", "pc", b->Load("thread"), b->ConstInt32(pc - thread_->GetIstream()));
-#else
     b->StoreAt(b->ConstAddress(&thread_->pc_),
                b->ConstInt32(pc - thread_->GetIstream()));
-#endif
   }
 
   b->Return(result);
 }
+
+#if defined (unneeded)
+void FunctionBuilder::EmitAOTTrap(TR::IlBuilder* b, TR::IlValue* result, const uint8_t* pc) {
+  if (pc != nullptr) {
+    b->StoreAt(b->ConstAddress(&thread_->pc_),
+               b->ConstInt32(pc - thread_->GetIstream()));
+  }
+
+  b->Return(result);
+}
+#endif
 
 void FunctionBuilder::EmitCheckTrap(TR::IlBuilder* b, TR::IlValue* result, const uint8_t* pc) {
   TR::IlBuilder* trap_handler = nullptr;
@@ -882,7 +890,6 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
       break;
     }
 
-#if defined(EMSCRIPTEN_INTERPRETER_BUILD)
     case Opcode::Call:
     case Opcode::InterpCallHost: {
       auto fn_ind = interp::ReadU32(&pc);
@@ -927,7 +934,7 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
       MoveFromPhysStack(b, &stack, sig->result_types);
       break;
     }
-#else
+#if defined (unneeded)
     case Opcode::Call: {
       auto th_addr = b->ConstAddress(thread_);
       auto offset = interp::ReadU32(&pc);
@@ -958,7 +965,6 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
       break;
     }
 #endif
-#if defined(EMSCRIPTEN_INTERPRETER_BUILD)
     case Opcode::CallIndirect: {
       auto table_index = b->ConstInt32(interp::ReadU32(&pc));
       auto sig_index = interp::ReadU32(&pc);
@@ -984,7 +990,7 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
       MoveFromPhysStack(b, &stack, sig->result_types);
       break;
     }
-#else
+#if defined(unneeded)
     case Opcode::CallIndirect: {
       auto th_addr = b->ConstAddress(thread_);
       auto table_index = b->ConstInt32(interp::ReadU32(&pc));
@@ -997,7 +1003,7 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
       MoveToPhysStack(b, pc, &stack, sig->param_types.size());
 
       b->Store("result",
-      b->      Call("CallIndirectHelper", 5, th_addr, table_index, b->ConstInt32(sig_index), entry_index, current_pc));
+      b->      Call("AOTCallIndirectHelper", 5, th_addr, table_index, b->ConstInt32(sig_index), entry_index, current_pc));
 
       // Don't pass the pc since a trap in a called function should not update the thread's pc
       EmitCheckTrap(b, b->Load("result"), nullptr);

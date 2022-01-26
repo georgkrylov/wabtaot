@@ -144,17 +144,13 @@ Environment::Environment() : istream_(new OutputBuffer()) {}
 
 Environment::~Environment() {
   std::vector<unsigned int> *offsets = new std::vector<unsigned int>();
-#if not defined(EMSCRIPTEN_INTERPRETER_BUILD)
   for(auto kv:aot_meta_) {
     offsets->push_back(kv.first);
   }
-#endif
   jit_env_.offsets = offsets;
   delete [] indirectCallParams;
 }
-#if not defined(EMSCRIPTEN_INTERPRETER_BUILD)
 int Environment::AOTMeta::numOfFunction = 0;
-#endif
 
 Index Environment::FindModuleIndex(string_view name) const {
   auto iter = module_bindings_.find(name.to_string());
@@ -183,19 +179,15 @@ Thread::Options::Options(uint32_t value_stack_size, uint32_t call_stack_size)
 Thread::Thread(Environment* env, const Options& options)
     : env_(env),
       value_stack_(options.value_stack_size),
-      call_stack_(options.call_stack_size)
-#if defined(EMSCRIPTEN_INTERPRETER_BUILD)
-,
+      call_stack_(options.call_stack_size),
       jit_th_(new jit::ThreadInfo()) {
   jit_th_->call_stack_max = call_stack_.data() + call_stack_.size();
   jit_th_->jit_fn_table = nullptr;
   jit_th_->thread = this;
-}
-#else
-{
+  // AOT code
   vs_top_ = value_stack_.data()-1;
 }
-#endif
+
 
 FuncSignature::FuncSignature(std::vector<Type> param_types,
                              std::vector<Type> result_types)
@@ -434,10 +426,8 @@ void Environment::ResetToMarkPoint(const MarkPoint& mark) {
   elem_segments_.erase(elem_segments_.begin() + mark.elem_segments_size,
                        elem_segments_.end());
   istream_->data.resize(mark.istream_size);
-#if defined(EMSCRIPTEN_INTERPRETER_BUILD)
-
+  // potentially problematic
   jit_funcs_.erase(jit_funcs_.begin() + mark.funcs_size, jit_funcs_.end());
-#endif
 }
 
 HostModule* Environment::AppendHostModule(string_view name) {
@@ -1734,7 +1724,7 @@ Result Environment::TryJit(Thread* t, DefinedFunc* fn, Index ind) {
   TRAP_IF(fn->tried_jit_ && !fn->jit_fn_ && trap_on_failed_comp, FailedJITCompilation);
   return Result::Ok;
 }
-
+#if defined (unneeded)
 bool Environment::TryAOT(Thread* t, IstreamOffset offset, Environment::AOTedFunction* fn) {
   if (!enable_jit) {
     *fn = nullptr;
@@ -1810,7 +1800,7 @@ bool Environment::TryAOT(Thread* t, IstreamOffset offset, Environment::AOTedFunc
     return trap_on_failed_comp;
   }
 }
-
+#endif
 
 bool Environment::FuncSignaturesAreEqual(Index sig_index_0,
                                          Index sig_index_1) const {
@@ -1984,7 +1974,6 @@ Result Thread::Run(int num_instructions) {
         Pick(thingy) = Top();
         break;
       }
-#if defined(EMSCRIPTEN_INTERPRETER_BUILD)
       case Opcode::Call: {
         Index func_index = ReadU32(&pc);
         DefinedFunc* fn = cast<DefinedFunc>(env_->GetFunc(func_index));
@@ -2018,7 +2007,7 @@ Result Thread::Run(int num_instructions) {
         }
         break;
       }
-#else
+#if defined(unneeded)
       case Opcode::Call:
          {
          IstreamOffset offset = ReadU32(&pc);
@@ -2211,7 +2200,7 @@ Result Thread::Run(int num_instructions) {
         if (func->is_host) {
           CHECK_TRAP(CallHost(cast<HostFunc>(func)));
         } else {
-#if defined(EMSCRIPTEN_INTERPRETER_BUILD)
+
           auto* fn = cast<DefinedFunc>(func);
 
           CHECK_TRAP(PushCall(pc));
@@ -2232,7 +2221,7 @@ Result Thread::Run(int num_instructions) {
             if (result != Result::Ok) {
               pc_ = jit_th_->pc;
               in_jit_ = jit_th_->in_jit;
-#else
+#if defined(unneeded)
           auto* dfn = cast<DefinedFunc>(func);
           Environment::AOTedFunction aot_fn;
 
@@ -2519,6 +2508,7 @@ Result Thread::Run(int num_instructions) {
         PUSH_NEG_1_AND_BREAK_IF(
             static_cast<uint64_t>(new_page_size) * WABT_PAGE_SIZE > UINT32_MAX);
 #if defined(EMSCRIPTEN_INTERPRETER_BUILD)
+// potentially problematic
         memory->data.resize(new_page_size * WABT_PAGE_SIZE);
 #endif
         memory->page_limits.initial = new_page_size;
@@ -4027,7 +4017,6 @@ exit_loop:
 }
 
 
-#if not defined(EMSCRIPTEN_INTERPRETER_BUILD)
 void Environment::FillMemories(){
   if(mems==nullptr) {
      mems = new char*[GetMemoryCount()];
@@ -4036,7 +4025,6 @@ void Environment::FillMemories(){
      }
   }
 }
-#endif
 static void PrintCallFrame(Stream* s, Environment* e, const CallFrame* frame) {
   DefinedFunc* best_fn = nullptr;
 

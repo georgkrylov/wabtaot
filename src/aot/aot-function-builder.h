@@ -104,7 +104,7 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
     return fn_name_;
   }
 
-  static uint64_t CallIndirectHelper(Index table_index, Index sig_index, Index entry_index);
+  static uint64_t AOTCallIndirectHelper(Index table_index, Index sig_index, Index entry_index);
   static uint32_t GrowMemory(uint32_t,uint32_t);
 
  private:
@@ -170,7 +170,7 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
   template <typename>
   TR::IlValue* CalculateShiftAmount(TR::IlBuilder* b, TR::IlValue* amount);
 
-#if not defined(EMSCRIPTEN_INTERPRETER_BUILD)
+
   using Result_t = std::underlying_type<wabt::interp::Result>::type;
 
   static Result_t CallHelper(wabt::interp::Thread* th, wabt::interp::IstreamOffset offset, uint8_t* current_pc);
@@ -181,7 +181,7 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
   static Result_t CallHostHelper(wabt::interp::Thread* th, Index func_index);
 
   static void* MemoryTranslationHelper(interp::Thread* th, uint32_t memory_id, uint64_t address, uint32_t size);
-#endif
+
   std::vector<BytecodeWorkItem> workItems_;
 
   AOTTypeDictionary* types_;

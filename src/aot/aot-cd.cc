@@ -394,7 +394,7 @@ void relocateAOT(interp::Environment& env,DefinedModule *module)
   setCodeEntry("copysign",reinterpret_cast<void*>(cpsign));
   setCodeEntry("sqrtf",reinterpret_cast<void*>(sqrtf));
   setCodeEntry("copysignf",reinterpret_cast<void*>(copysignf));
-  setCodeEntry("CallIndi",reinterpret_cast<void*>(wabt::aot::AOTFunctionBuilder::CallIndirectHelper));
+  setCodeEntry("CallIndi",reinterpret_cast<void*>(wabt::aot::AOTFunctionBuilder::AOTCallIndirectHelper));
   setCodeEntry("GrowMem",reinterpret_cast<void*>(wabt::aot::AOTFunctionBuilder::GrowMemory));
   setCodeEntry("fd_write",reinterpret_cast<void*>(printaa));
   setCodeEntry("__lock",reinterpret_cast<void*>(1));

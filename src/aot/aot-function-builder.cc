@@ -84,7 +84,7 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFu
 		 Int32);
 
   DefineFunction("CallIndi", __FILE__, "0",
-		 reinterpret_cast<void*>(CallIndirectHelper),
+		 reinterpret_cast<void*>(AOTCallIndirectHelper),
 		 Int64,
 		 3,
 		 Int64, Int64, Int64);
@@ -227,8 +227,8 @@ void AOTFunctionBuilder::defineImportFunction(const std::string& name, FunctionI
 		 static_cast<TR::IlType**>(import.param_types_.data()));
 }
 
-#if not defined(EMSCRIPTEN_INTERPRETER_BUILD)
-uint64_t AOTFunctionBuilder::CallIndirectHelper(Index table_index, Index sig_index, Index entry_index) {
+
+uint64_t AOTFunctionBuilder::AOTCallIndirectHelper(Index table_index, Index sig_index, Index entry_index) {
   using namespace wabt::interp;
   
   Environment *env = ::getEnvironment();
@@ -318,7 +318,7 @@ uint64_t AOTFunctionBuilder::CallIndirectHelper(Index table_index, Index sig_ind
   }
   return static_cast<Result_t>(interp::Result::Ok);
 }
-#endif
+
 //Currently the memory is not actually resized, only the data on the number of pages
 uint32_t AOTFunctionBuilder::GrowMemory(uint32_t mem, uint32_t grow_pages) {
   //printf("Grow by: %ud",grow_pages);

@@ -13,8 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-#EMSCRIPTEN_INTERPRETER_BUILD
-if(EMSCRIPTEN_INTERP_BUILD)
+
 add_library(wabtjit STATIC
   environment.cc
   type-dictionary.cc
@@ -24,21 +23,12 @@ add_library(wabtjit STATIC
   vms_hack.cc
   thunk.cc
 )
-else()
-add_library(wabtjit STATIC
-  environment.cc
-  type-dictionary.cc
-  function-builder.cc
-  wabtjit.cc
-  stack.cc
-  vms_hack.cc
-)
-endif()
 
 # Mark JitBuilder include directories as "system" include directories. For most compilers, this
 # suppresses any warnings they would otherwise generate.
 set(JITBUILDER_EXTRA_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/../../third_party/omr/compiler ${CMAKE_CURRENT_SOURCE_DIR}/../../third_party/omr)
 get_property(JITBUILDER_INCLUDE TARGET jitbuilder PROPERTY INTERFACE_INCLUDE_DIRECTORIES)
+#EMSCRIPTEN_INTERPRETER_BUILD
 if(EMSCRIPTEN_INTERP_BUILD)
 else()
 add_dependencies(wabtjit jitbuilder)

@@ -27,7 +27,6 @@
 
 #include <type_traits>
 
-#if defined(EMSCRIPTEN_INTERPRETER_BUILD)
 #define CHECK_TRAP_HELPER(...)                \
   do {                                           \
     wabt::interp::Result result = (__VA_ARGS__); \
@@ -43,7 +42,6 @@
       TRAP_HELPER(type);            \
   } while (0)
 
-#endif
 namespace wabt {
 namespace jit {
 
@@ -110,6 +108,9 @@ class FunctionBuilder : public TR::MethodBuilder {
   TR::IlValue* EmitMemoryPreAccess(TR::IlBuilder* b, const uint8_t** pc, VirtualStack* stack);
 
   void EmitTrap(TR::IlBuilder* b, TR::IlValue* result, const uint8_t* pc);
+#if defined(unneeded)
+  void EmitAOTTrap(TR::IlBuilder* b, TR::IlValue* result, const uint8_t* pc);
+#endif
   void EmitCheckTrap(TR::IlBuilder* b, TR::IlValue* result, const uint8_t* pc);
   void EmitTrapIf(TR::IlBuilder* b, TR::IlValue* condition, TR::IlValue* result, const uint8_t* pc);
 
@@ -129,16 +130,15 @@ class FunctionBuilder : public TR::MethodBuilder {
   template <typename>
   TR::IlValue* CalculateShiftAmount(TR::IlBuilder* b, TR::IlValue* amount);
 
-#if defined(EMSCRIPTEN_INTERPRETER_BUILD)
   static Result_t CallIndirectHelper(ThreadInfo* th, Index table_index, Index sig_index, Index entry_index);
-#else
+#if defined(unneeded)
   using Result_t = std::underlying_type<wabt::interp::Result>::type;
 
-  static Result_t CallHelper(wabt::interp::Thread* th, wabt::interp::IstreamOffset offset, uint8_t* current_pc);
+  static Result_t AOTCallHelper(wabt::interp::Thread* th, wabt::interp::IstreamOffset offset, uint8_t* current_pc);
 
-  static Result_t CallIndirectHelper(wabt::interp::Thread* th, Index table_index, Index sig_index, Index entry_index, uint8_t* current_pc);
+  static Result_t AOTCallIndirectHelper(wabt::interp::Thread* th, Index table_index, Index sig_index, Index entry_index, uint8_t* current_pc);
 
-  static Result_t CallHostHelper(wabt::interp::Thread* th, Index func_index);
+  static Result_t  AOTCallHostHelper(wabt::interp::Thread* th, Index func_index);
 #endif
   static void* MemoryTranslationHelper(interp::Thread* th, uint32_t memory_id, uint64_t address, uint32_t size);
 
