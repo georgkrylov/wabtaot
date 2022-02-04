@@ -2,6 +2,7 @@
 /reference-bin
 /build-em
 /build
+/build_interp
 /out
 /fuzz-out
 /emscripten
