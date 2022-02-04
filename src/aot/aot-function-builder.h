@@ -106,7 +106,14 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
 
   static uint64_t AOTCallIndirectHelper(Index table_index, Index sig_index, Index entry_index);
   static uint32_t GrowMemory(uint32_t,uint32_t);
-
+  /**
+   * @brief This funciton should return the size of the memory provided by index
+   * @param index of memory queried for size
+   * 
+   * @return uint32_t size of the memory
+   */
+  static uint32_t CalculateMemorySize(uint32_t);
+  static uint32_t PrintSomething(uint32_t);
  private:
   struct BytecodeWorkItem {
     TR::BytecodeBuilder* builder;

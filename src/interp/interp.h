@@ -137,22 +137,22 @@ struct Memory {
   Memory() = default;
   explicit Memory(const Limits& limits)
       : page_limits(limits)
-#if defined(EMSCRIPTEN_INTERPRETER_BUILD)
+// #if defined(EMSCRIPTEN_INTERPRETER_BUILD)
 , data(limits.initial * WABT_PAGE_SIZE) {}
-#else
-  {
-	madvise(data.data(), 2368709120*sizeof(char), MADV_SEQUENTIAL);
-	madvise(data.data(), 2368709120*sizeof(char), MADV_HUGEPAGE);
-	madvise(data.data(), 2368709120*sizeof(char), MADV_WILLNEED);
-  }
-#endif
+// #else
+//   {
+// 	madvise(data.data(), 2368709120*sizeof(char), MADV_SEQUENTIAL);
+// 	madvise(data.data(), 2368709120*sizeof(char), MADV_HUGEPAGE);
+// 	madvise(data.data(), 2368709120*sizeof(char), MADV_WILLNEED);
+//   }
+// #endif
 
   Limits page_limits;
-#if defined(EMSCRIPTEN_INTERPRETER_BUILD)
+// #if defined(EMSCRIPTEN_INTERPRETER_BUILD)
   std::vector<char> data;
-#else
-  alignas(4096) std::array<char,2368709120> data;
-#endif
+// #else
+  // alignas(4096) std::array<char,2368709120> data;
+// #endif
 
 };
 
@@ -655,6 +655,10 @@ class Environment {
 
   void Disassemble(Stream* stream, IstreamOffset from, IstreamOffset to);
   void DisassembleModule(Stream* stream, Module*);
+  /**
+   * @brief This fucntion is responsible for memory allocation
+   * for memories
+   */
   void FillMemories();
   void FillTables();
   uint64_t *indirectCallParams = new uint64_t[8]();
@@ -705,7 +709,7 @@ class Environment {
   jit::JitEnvironment jit_env_;
   std::unordered_map<IstreamOffset, AOTMeta> aot_meta_;
   /**
-   * @brief memories for AOT compiler
+   * @brief memories for AOT compiler, set in env.FillMemories()
    *
    */
   char **mems = nullptr;

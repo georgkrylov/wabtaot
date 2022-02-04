@@ -4018,9 +4018,14 @@ exit_loop:
 
 
 void Environment::FillMemories(){
+  // If wabtaot memories were not created
   if(mems==nullptr) {
+    // we allocate the array (to have a 2-d structure)
      mems = new char*[GetMemoryCount()];
+     //and initialize for all memory counts
      for(int j=0;j<memories_.size();j++){
+       // as mems in wabtaot are  alignas(4096) std::array<char,2368709120> data;
+       // instead of  std::vector<char> data; as it is in interpreter
        	mems[j] = memories_[j].data.data();
      }
   }

@@ -98,11 +98,21 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFu
 		 Int64,
 		 1,
 		 Int32);
-  DefineFunction("GrowMem", __FILE__, "0",
+  DefineFunction("GrowMem", __FILE__, "34",
 		 reinterpret_cast<void*>(GrowMemory),
 		 Int32,
-		 1,
+		 2,
 		 Int32,
+		 Int32);
+  DefineFunction("PrintSt", __FILE__, "34",
+		 reinterpret_cast<void*>(PrintSomething),
+		 Int32,
+		 1,
+		 Int32);
+  DefineFunction("MemSize", __FILE__, "17",
+		 reinterpret_cast<void*>(CalculateMemorySize),
+		 Int32,
+		 1,
 		 Int32);
   DefineFunction("funpr", __FILE__, "0",
 		 reinterpret_cast<void*>(sqrt),
@@ -319,14 +329,31 @@ uint64_t AOTFunctionBuilder::AOTCallIndirectHelper(Index table_index, Index sig_
   return static_cast<Result_t>(interp::Result::Ok);
 }
 
+uint32_t AOTFunctionBuilder::CalculateMemorySize(uint32_t index) {
+  // printf("Grow by: %ud",grow_pages);
+  Memory *memory = envPointer->GetMemory(index);
+  uint32_t old_page_size = memory->page_limits.initial;
+  return old_page_size;
+}
+
+uint32_t AOTFunctionBuilder::PrintSomething(uint32_t index) {
+  //printf("Grow by: %ud",grow_pages);
+  Memory *memory = envPointer->GetMemory(index);
+  uint32_t old_page_size = memory->page_limits.initial;
+  // printf("Hello from index %u, pageSize of memory[0] is%u\n",index,old_page_size);
+  return old_page_size;
+}
 //Currently the memory is not actually resized, only the data on the number of pages
 uint32_t AOTFunctionBuilder::GrowMemory(uint32_t mem, uint32_t grow_pages) {
   //printf("Grow by: %ud",grow_pages);
   Memory *memory = envPointer->GetMemory(mem);
+
   uint32_t old_page_size = memory->page_limits.initial;
   uint32_t new_page_size = old_page_size + grow_pages;
-  //memory->data.resize(new_page_size * WABT_PAGE_SIZE);
+  // printf("Hello from GrowMemory, memory index is %u, old_page_size is %u, old data size is %u, new page size is %u\n",mem,old_page_size,memory->data.size(),  new_page_size);
+  memory->data.resize(new_page_size * WABT_PAGE_SIZE);
   memory->page_limits.initial = new_page_size;
+  // printf("Hello from GrowMemory second time, memory->data.size is %u memory->page_limits.initial are %u\n",memory->data.size(),memory->page_limits.initial);
   return old_page_size;
 }
 
@@ -2078,13 +2105,21 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
 //      EmitTruncation<uint64_t, double>(b, pc);
 //      break;
 
-    case Opcode::MemorySize:
-        Push(b, "i64", b->ConstInt64(64*1024));
+    case Opcode::MemorySize:{
+        // CHECK_TRAP(Push<uint32_t>(ReadMemory(&pc)->page_limits.initial));
+       TR::IlValue **args = new TR::IlValue*[1]();
+       uint32_t tsk = ReadU32(&pc);
+      //  printf("Stuff read when compiled MemorySize%u\n", tsk);
+      args[0] = b->ConstInt32(tsk);
+      auto* value = b->Call("MemSize",1,args);
+      Push(b,"i32",value);
         break;
-
+    }
     case Opcode::MemoryGrow: {
       TR::IlValue **args = new TR::IlValue*[2]();
-      args[0] = ConstInt32(ReadU32(&pc));
+      uint32_t tsk = ReadU32(&pc);
+      //  printf("Stuff read when compiled MemoryGrow%u\n", tsk);
+      args[0] =b-> ConstInt32(tsk);
       args[1] = Pop(b,"i32");
       auto* value = b->Call("GrowMem",2,args);
       Push(b,"i64",value);
