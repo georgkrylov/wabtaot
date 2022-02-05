@@ -277,6 +277,8 @@ wabt::Result compileAOT(interp::Environment& env, DefinedModule* module, char * 
       aotManager.push_back_FB(fn->offset, std::move(builder_ptr), std::move(types));
       
       env.GetFunc(i)->dbg_name_ = "f" + std::to_string(j) +"m"+module->name.substr(0,3);
+      //** Trying to assign debug name, might be problematic if that's an import **/
+      reinterpret_cast<DefinedFunc*>(env.GetFunc(i))->dbg_name_ = "f" + std::to_string(j) +"m"+module->name.substr(0,3);
       j++;
       module->funcs.emplace_back(env.GetFunc(i));
       
@@ -478,13 +480,18 @@ void runExports(interp::Environment& env,DefinedModule *module, int run_all_expo
   for(auto exported:module->exports){
     if(exported.kind != ExternalKind::Func) { continue;}
     std::string index = std::to_string(exported.index);
-    std::string funcname = env.GetFunc(exported.index)->dbg_name_;
+    std::string funcname = reinterpret_cast<DefinedFunc*>(env.GetFunc(exported.index))->dbg_name_;
+    // std::cout<<"Funcname is:"<<funcname<<std::endl;
     void *fn = nullptr;
     if (run_all_exports != 1)
        if(exported.name != "_start") continue;
 
     for(uint32_t i = 0;i<module->funcs.size();i++){
       if(!funcname.compare(module->funcs[i]->dbg_name_)){
+        fn = module->aot_compiled_functions[i];
+        break;
+      }
+      if(!funcname.compare(reinterpret_cast<DefinedFunc*>(module->funcs[i])->dbg_name_)){
         fn = module->aot_compiled_functions[i];
         break;
       }
