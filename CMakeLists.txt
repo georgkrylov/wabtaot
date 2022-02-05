@@ -298,6 +298,12 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DLINUX ")
 
 add_omr()
 add_subdirectory(src/jit)
+
+add_subdirectory(src/aot)
+# add_subdirectory(src/mix-aot)
+add_subdirectory(em-interp)
+#target_link_libraries(libwabt PUBLIC wabtjit)
+
 target_link_libraries(wabt PUBLIC wabtjit)
 
 if (NOT EMSCRIPTEN)

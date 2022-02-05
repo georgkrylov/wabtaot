@@ -603,7 +603,7 @@ wabt::Result BinaryReaderInterp::EmitFuncOffset(DefinedFunc* func,
     Index defined_index = TranslateModuleFuncIndexToDefined(func_index);
     CHECK_RESULT(AppendFixup(&func_fixups_, defined_index));
   }
-#if defined(EMSCRIPTEN_INTERPRETER_BUILD)
+#if not defined(unneeded)
 // problematic
   CHECK_RESULT(EmitI32(func->offset));
 #else
@@ -615,12 +615,12 @@ wabt::Result BinaryReaderInterp::EmitFuncOffset(DefinedFunc* func,
 
   if(!func->is_host && func->offset == 0)
   {
-    // std::cout << "Function index is" << func->offset + num_func_imports_ << std::endl<<std::flush;
+    std::cout << "EmitFuncOffset, for importedFunction: Function offset is" << func->offset + num_func_imports_ << std::endl<<std::flush;
     CHECK_RESULT(EmitI32(func->offset + num_func_imports_));
   }
   else
   {
-    // std::cout << "Function index is" << func->offset << std::endl<<std::flush;
+    std::cout << "EmitFuncOffset: Function index is" << func->offset << std::endl<<std::flush;
     CHECK_RESULT(EmitI32(func->offset));
   }
 #endif
@@ -828,7 +828,8 @@ wabt::Result BinaryReaderInterp::OnImportFunc(Index import_index,
     // imports.
     CHECK_RESULT(GetModuleExport(import_module, import->field_name, &export_));
   }
-
+  // Import into one module are exports from the other module
+  // memories can be exports and functions can also be exported
   CHECK_RESULT(CheckImportKind(import, export_->kind));
 
   Func* func = env_->GetFunc(export_->index);
@@ -836,10 +837,11 @@ wabt::Result BinaryReaderInterp::OnImportFunc(Index import_index,
     PrintError("import signature mismatch");
     return wabt::Result::Error;
   }
-
+  // for wabtaot, record the index within other module
   func->offset = func_index;
+  // for wabtaot, record the index within other module
   func->dbg_name_.assign(field_name.to_string());
-  env_->AddAOTMetadata(func);
+  env_->AddAOTMetadata(func,func_index);
   func_env_index = export_->index;
   func_index_mapping_.push_back(export_->index);
 
@@ -902,7 +904,7 @@ wabt::Result BinaryReaderInterp::OnImportMemory(Index import_index,
   CHECK_RESULT(FindRegisteredModule(import->module_name, &import_module));
 
   Export* export_;
-#if defined(EMSCRIPTEN_INTERPRETER_BUILD)
+#if defined(unneeded)
 //problematic
   CHECK_RESULT(GetModuleExport(import_module, import->field_name, &export_));
 #else
@@ -1291,11 +1293,12 @@ wabt::Result BinaryReaderInterp::BeginFunctionBody(Index index, Offset size) {
       func->offset += num_func_imports_;
       offset_zero = true;
   }
+  // printf("Within BeginFunctionBody, func offset is set to %u, offset zero is %i\n",func->offset,offset_zero);
   func->local_decl_count = 0;
   func->local_count = 0;
 
   /* wasmjit-omr: emit JIT metadata now that func->offset is known */
-  env_->AddAOTMetadata(func);
+  env_->AddAOTMetadata(func,index);
   if (offset_zero)
       func->offset = 0;
 
@@ -1582,7 +1585,7 @@ wabt::Result BinaryReaderInterp::OnCallExpr(Index func_index) {
 
 // An experiment to allow different behavior based on the build flags.
 // Em-interp will work, regular interp will not, will need to think about it
-#if defined(EMSCRIPTEN_INTERPRETER_BUILD)
+#if not defined(unneeded)
 // problematic
    // std::cout << "Interpreting"<<std::endl;
   if (func->is_host) {

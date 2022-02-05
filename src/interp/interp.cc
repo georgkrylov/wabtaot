@@ -2507,10 +2507,10 @@ Result Thread::Run(int num_instructions) {
         PUSH_NEG_1_AND_BREAK_IF(new_page_size > max_page_size);
         PUSH_NEG_1_AND_BREAK_IF(
             static_cast<uint64_t>(new_page_size) * WABT_PAGE_SIZE > UINT32_MAX);
-#if defined(EMSCRIPTEN_INTERPRETER_BUILD)
+// #if defined(EMSCRIPTEN_INTERPRETER_BUILD)
 // potentially problematic
         memory->data.resize(new_page_size * WABT_PAGE_SIZE);
-#endif
+// #endif
         memory->page_limits.initial = new_page_size;
         CHECK_TRAP(Push<uint32_t>(old_page_size));
         break;

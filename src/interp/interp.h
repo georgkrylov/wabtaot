@@ -291,7 +291,7 @@ struct Func {
   WABT_DISALLOW_COPY_AND_ASSIGN(Func);
   Func(Index sig_index, bool is_host)
       : sig_index(sig_index), is_host(is_host)
-#if defined(EMSCRIPTEN_INTERPRETER_BUILD)
+#if not defined(unneeded)
 // problematic
 {}
 #else
@@ -310,7 +310,7 @@ struct Func {
 struct DefinedFunc : Func {
   DefinedFunc(Index sig_index)
       : Func(sig_index, false),
-#if defined(EMSCRIPTEN_INTERPRETER_BUILD)
+#if not defined(unneeded)
 //problematic
         offset(kInvalidIstreamOffset),
 #endif
@@ -318,7 +318,7 @@ struct DefinedFunc : Func {
         local_count(0) {}
 
   static bool classof(const Func* func) {
-#if defined(EMSCRIPTEN_INTERPRETER_BUILD)
+#if not defined(unneeded)
 //Problematic
    return !func->is_host;
 #else
@@ -326,7 +326,7 @@ struct DefinedFunc : Func {
 #endif
   }
 
-#if defined(EMSCRIPTEN_INTERPRETER_BUILD)
+#if not defined(unneeded)
 // problematic
   std::string dbg_name_ = "???";
 #endif
@@ -336,8 +336,11 @@ struct DefinedFunc : Func {
   uint32_t num_calls_ = 0;
   bool tried_jit_ = false;
   jit::JITedFunction jit_fn_ = nullptr;
-#if defined(EMSCRIPTEN_INTERPRETER_BUILD)
-// potentially problematic
+#if not defined(unneeded)
+  /**
+   * @brief  Offset in defined function is to the bytes stream
+   * potentially problematic if uncommented
+   */
   IstreamOffset offset;
 #endif
   Index local_decl_count;
@@ -362,7 +365,7 @@ struct HostFunc : Func {
         module_name(module_name.to_string()),
         field_name(field_name.to_string()),
         callback(callback)
-#if defined(EMSCRIPTEN_INTERPRETER_BUILD)
+#if not defined(unneeded)
 // potentially problematic
         {}
 #else
@@ -580,14 +583,29 @@ class Environment {
   }
 
 
-  void AddAOTMetadata(DefinedFunc* fn) {
+/**
+ * @brief  This function is called when we have offset to the memory
+ * containing bytecode
+ *
+ * @param fn Function with offset into memory within this module
+ * @param index - signature index, hopefully within environment
+ */
+  void AddAOTMetadata(DefinedFunc* fn, Index index) {
     assert(fn->offset != kInvalidIstreamOffset);
-    this->aot_meta_.insert({ fn->offset, AOTMeta(fn) });
+    this->aot_meta_.insert({ index, AOTMeta(fn) });
   }
 
-  void AddAOTMetadata(Func* fn) {
+/**
+ * @brief This function is called when we are adding an import
+ * 
+ * @param fn imported_function, offset  to bytecodes is not defined
+ * @param index index - signature index, hopefully within environment
+ */
+  void AddAOTMetadata(Func* fn, Index index) {
     assert(fn->offset != kInvalidIstreamOffset);
-    this->aot_meta_.insert({ fn->offset, AOTMeta(fn) });
+    AOTMeta meta = AOTMeta(fn);
+    meta.isImport();
+    this->aot_meta_.insert({ index, meta });
   }
 
 
@@ -685,7 +703,13 @@ class Environment {
       // wasm_fn->dbg_name_= "f" + wasm_fn-> +"m"+modules_[0]->name.substr(0,3);
       numOfFunction++;
     }
+    int isImport(){ return _isImport;}
+    void setIsImport() {_isImport = 1;}
     private:
+    /**
+     * @brief if _isImport = 1 then it is import
+     */
+    int _isImport = 0;
     static int numOfFunction;
   };
   Result TryJit(Thread* t, DefinedFunc* fn, Index ind);

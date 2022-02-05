@@ -1127,13 +1127,16 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
     case Opcode::InterpCallHost:
     case Opcode::Call: {
       auto offset = ReadU32(&pc);
+      // printf("offset to env is %u,",offset);
+
       auto meta_it = env_.aot_meta_.find(offset);
 
     if(meta_it != env_.aot_meta_.end()) {
 	auto* fn = meta_it->second.wasm_fn;
+  // printf("sig index within module is %u",fn->sig_index);
+    // printf("offset is %u\n",reinterpret_cast<DefinedFunc*>(fn)->offset);
     //auto *fn = env_.GetFunc(offset);
 	auto& builder = aotManager_.getFB(fn->offset);
-
 	//std::vector<TR::IlValue*> args;
 	int size = env_.GetFuncSignature(fn->sig_index)->param_types.size();
 	//TR::IlValue **args1 = new TR::IlValue*[size]();
