@@ -1975,6 +1975,7 @@ Result Thread::Run(int num_instructions) {
         break;
       }
       case Opcode::Call: {
+        // 6928965ac8a7caaa71c7bd6c3fb36e7575cddddc
         Index func_index = ReadU32(&pc);
         DefinedFunc* fn = cast<DefinedFunc>(env_->GetFunc(func_index));
 
@@ -2256,6 +2257,9 @@ Result Thread::Run(int num_instructions) {
 
       case Opcode::ReturnCall: {
         IstreamOffset offset = ReadU32(&pc);
+        // 6928965ac8a7caaa71c7bd6c3fb36e7575cddddc
+        // the following line was used for jit:
+        // cast<DefinedFunc>(env_->GetFunc(ReadU32(&pc)))->offset;
         GOTO(offset);
 
         break;
@@ -4023,7 +4027,7 @@ void Environment::FillMemories(){
     // we allocate the array (to have a 2-d structure)
      mems = new char*[GetMemoryCount()];
      //and initialize for all memory counts
-     for(int j=0;j<memories_.size();j++){
+     for(unsigned int j=0;j<memories_.size();j++){
        // as mems in wabtaot are  alignas(4096) std::array<char,2368709120> data;
        // instead of  std::vector<char> data; as it is in interpreter
        	mems[j] = memories_[j].data.data();
