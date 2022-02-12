@@ -300,6 +300,7 @@ add_omr()
 add_subdirectory(src/jit)
 
 add_subdirectory(src/aot)
+
 # add_subdirectory(src/mix-aot)
 add_subdirectory(em-interp)
 #target_link_libraries(libwabt PUBLIC wabtjit)
