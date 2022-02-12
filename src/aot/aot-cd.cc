@@ -32,8 +32,8 @@
 using namespace wabt;
 using namespace wabt::interp;
 /*
-class WasmInterpHostImportDelegate : public HostImportDelegate {
  public:
+class WasmInterpHostImportDelegate : public HostImportDelegate {
   wabt::Result ImportFunc(interp::FuncImport* import,
                           interp::Func* func,
                           interp::FuncSignature* func_sig,
@@ -239,9 +239,9 @@ char* getSOFilename(char * filename)
          }
          size_t lenFilename = last_dot - last_path;
   
-        char *substr = (char *)malloc(lenFilename);
-        strncpy(substr, filename + last_path + 1, lenFilename - 1);
-        substr[lenFilename - 1] = '\0';
+        char *substr = (char *)malloc(lenFilename+1);
+        strncpy(substr, filename + last_path, lenFilename);
+        substr[lenFilename] = '\0';
         char *so = ".so";
         char *soFilename = (char *) malloc(1 + strlen(substr)+ strlen(so));  
         strcpy(soFilename, substr);
@@ -266,7 +266,6 @@ wabt::Result compileAOT(interp::Environment& env, DefinedModule* module, char * 
       std::unique_ptr<AOTTypeDictionary> types(new (PERSISTENT_NEW) AOTTypeDictionary());
       //static AOTTypeDictionary types;
       std::string name = "f" + std::to_string(j) +"m" +module->name.substr(0,3);
-      
       AOTFunctionBuilder* builder = new (PERSISTENT_NEW) AOTFunctionBuilder(&thread, fn,
 							   std::move(name),
 							   types.get(),
@@ -316,6 +315,7 @@ wabt::Result compileAOT(interp::Environment& env, DefinedModule* module, char * 
         internal_compileMethodBuilder(&builder, &function);
         storeCodeEntry((char *)fn->dbg_name_.c_str());
 	      function = getCodeEntry(const_cast<char*>(fn->dbg_name_.c_str()));
+        assert(function!=NULL);
       }
       module->aot_compiled_functions.push_back(function);
       env.GetFunc(i)->is_compiled = true;
@@ -539,7 +539,7 @@ int main(int argc, char** argv) {
   }
   //TODO rewrite using the infrastructure
   int run_all_exports = 0;
-  int no_of_modules = 0;
+  uint32_t no_of_modules = 0;
 
   if (argc >= 2) {
     for (int i = 0 ; i < argc; i++){
@@ -571,7 +571,7 @@ int main(int argc, char** argv) {
 if(no_of_modules > 1){
     
     char* soFilename = "./wasmaot.so";
-    if( access( (const char *)soFilename, F_OK ) == 0 ) {
+    if( access( static_cast<const char *>(soFilename), F_OK ) == 0 ) {
       loadFileInMemory(soFilename);
       build_type = 1;
     }
@@ -585,10 +585,10 @@ if(no_of_modules > 1){
     
     char* soFilename = getSOFilename(src_filename);
     char *pre = "./";
-    char *slashFilename = (char *) malloc(1 + strlen(soFilename)+ strlen(pre));  
+    char *slashFilename = static_cast<char *>( malloc(1 + strlen(soFilename)+ strlen(pre)));
     strcpy(slashFilename, pre);
     strcat(slashFilename, soFilename);
-    if( access( (const char *)slashFilename, F_OK ) == 0 ) {
+    if( access( static_cast<const char *>(slashFilename), F_OK ) == 0 ) {
       loadFileInMemory(slashFilename);
       build_type = 1;
     } 

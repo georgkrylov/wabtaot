@@ -69,6 +69,7 @@ endif ()
 if(OMR_ELF_SHARED_OBJECT)
 	add_wabtaot_elf_subdirectory(codegen)
 	add_wabtaot_elf_subdirectory(runtime)
+	add_wabtaot_elf_subdirectory(compile)
 	add_wabtaot_elf_subdirectory(elfso/env)
 	add_wabtaot_elf_subdirectory(${TR_TARGET_ARCH})
 	set(WABTAOT_ELF_INCLUDES
@@ -76,6 +77,7 @@ if(OMR_ELF_SHARED_OBJECT)
 		${WABTAOT_SOURCE_DIR}/compiler/elfso
 		${WABTAOT_SOURCE_DIR}/compiler/${TR_TARGET_ARCH}/${TR_TARGET_SUBARCH}
 		${WABTAOT_SOURCE_DIR}/compiler/${TR_TARGET_ARCH}
+		${WABTAOT_SOURCE_DIR}/compiler/compile
 		${WABTAOT_SOURCE_DIR}/compiler/runtime
 		${WABTAOT_SOURCE_DIR}/compiler
 		${WABTAOT_SOURCE_DIR}/
@@ -118,20 +120,25 @@ if (WASM_SHARED_CACHE)
 		${WABTAOT_SOURCE_DIR}/compiler
 		${WABTAOT_SOURCE_DIR}/)
 endif ()
-
+get_property(JITBUILDER_INCLUDE TARGET jitbuilder PROPERTY INTERFACE_INCLUDE_DIRECTORIES)
 
 if(OMR_ELF_SHARED_OBJECT)
 	foreach( Thing ${WABTAOT_ELF_FILES})
 		message(STATUS "wabtaot elf files:" ${Thing})
 	endforeach()
-	target_sources(jitbuilder
-		PRIVATE
+	add_library(aotelfcomp STATIC
 		${WABTAOT_ELF_FILES})
 
-	target_include_directories(jitbuilder  BEFORE PRIVATE
+	target_include_directories(aotelfcomp PUBLIC
+		${WABTAOT_ELF_INCLUDES}
+	)
+	target_link_libraries(aotelfcomp PUBLIC jitbuilder )
+	target_link_libraries(jitbuilder PUBLIC aotelfcomp )
+	target_include_directories(jitbuilder BEFORE PUBLIC
 		${WABTAOT_SOURCE_DIR}/compiler/elfso
 		${WABTAOT_SOURCE_DIR}/compiler/${TR_TARGET_ARCH}/${TR_TARGET_SUBARCH}
 		${WABTAOT_SOURCE_DIR}/compiler/${TR_TARGET_ARCH}
+		${WABTAOT_SOURCE_DIR}/compiler/compile
 		${WABTAOT_SOURCE_DIR}/compiler/runtime
 		${WABTAOT_SOURCE_DIR}/compiler
 		${WABTAOT_SOURCE_DIR}/
