@@ -7,7 +7,7 @@
 //#include "/home/petar/wasmjit-omr/third_party/omr/compiler/ilgen/VirtualMachineOperandStack.hpp"
 //#include "infra/Assert.hpp"
 #include "ilgen/VirtualMachineState.hpp"
-
+#include "aot-compiler-lib.hpp"
 #include <cmath>
 #include <limits>
 #include <type_traits>
@@ -241,7 +241,7 @@ void AOTFunctionBuilder::defineImportFunction(const std::string& name, FunctionI
 uint64_t AOTFunctionBuilder::AOTCallIndirectHelper(Index table_index, Index sig_index, Index entry_index) {
   using namespace wabt::interp;
   
-  Environment *env = ::getEnvironment();
+  Environment *env = envPointer;
 
 //  Index table_index = reinterpret_cast<Index>(params[0]);
   Table* table = &env->tables_[table_index];
@@ -267,7 +267,7 @@ uint64_t AOTFunctionBuilder::AOTCallIndirectHelper(Index table_index, Index sig_
       //return result;
   } else {
     uint64_t (*fn)();
-    ::getCompiledFunction(func->dbg_name_.c_str(),reinterpret_cast<void(**)()>(&fn));
+    WABTAOTCompilerLib::getCompiledFunction(func->dbg_name_.c_str(),reinterpret_cast<void(**)()>(&fn));
 
     //since calls are made regularly, every possible number and type of parameters requires a case
     switch(count) {
@@ -2094,10 +2094,10 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
       EmitTruncation<int64_t, float>(b);//pc);
       break;
 
-//    UNSIGNED TYPE NOT HANDLED
-//    case Opcode::I64TruncUF32:
-//      EmitTruncation<uint64_t, float>(b, pc);
-//      break;
+  //  UNSIGNED TYPE NOT HANDLED
+  //  case Opcode::I64TruncUF32:
+  //    EmitTruncation<uint64_t, float>(b, pc);
+  //    break;
 
     case Opcode::I64TruncF64S:
       EmitTruncation<int64_t, double>(b);//pc);

@@ -30,8 +30,8 @@
 
 
 extern void getCompiledFunction(const char *,void (**)());
-extern wabt::interp::Environment *getEnvironment();
 
+static  wabt::interp::Environment *envPointer;
 namespace wabt {
 namespace aot {
 

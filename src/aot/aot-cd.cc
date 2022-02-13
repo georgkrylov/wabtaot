@@ -5,7 +5,7 @@
 #include "../cast.h"
 #include "../error-formatter.h"
 #include "../feature.h"
-#include "../interp/interp.h"
+
 #include "../literal.h"
 #include "../option-parser.h"
 #include "../resolve-names.h"
@@ -17,8 +17,8 @@
 #include "aot-type-dictionary.h"
 #include "aot-function-builder.h"
 #include "trap-with.h"
+#include "aot-compiler-lib.hpp"
 
-#include "JitBuilder.hpp"
 #include <algorithm>
 #include <iostream>
 #include <memory>
@@ -91,7 +91,7 @@ class WasmInterpHostImportDelegate : public HostImportDelegate {
   }
 };*/
 
-static Environment *envPointer;
+
 
 extern int32_t internal_compileMethodBuilder(TR::MethodBuilder * methodBuilder, void ** entryPoint);
 
@@ -209,15 +209,6 @@ static wabt::Result ReadModule(const char* module_filename,
   return result;
 }
 
-void getCompiledFunction(const char *name, void (**fn)())
-{
-  *fn = reinterpret_cast<void(*)()>(getCodeEntry(const_cast<char*>(name)));
-}
-
-wabt::interp::Environment *getEnvironment()
-{
-  return envPointer;
-}
 
 char* getSOFilename(char * filename)
 {
@@ -563,6 +554,7 @@ int main(int argc, char** argv) {
     registerModules(argv[i],&env);
   }
   envPointer = &env;
+  WABTAOTCompilerLib compilerLib = WABTAOTCompilerLib();
   char* src_filename;
 
   

@@ -6,6 +6,7 @@ add_library(wabtaotcomp STATIC
 trap-with.cc
 aot-type-dictionary.cc
 aot-function-builder.cc
+aot-compiler-lib.cc
 ../interp/binary-reader-interp.cc
 
 )

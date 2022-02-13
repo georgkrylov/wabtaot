@@ -38,6 +38,8 @@
 #include "src/jit/thread.h"
 #include "src/jit/wabtjit.h"
 
+#include "../aot/aot-function-builder.h"
+#include "../aot/aot-type-dictionary.h"
 namespace wabt {
 namespace interp {
 
@@ -1705,6 +1707,11 @@ ValueTypeRep<R> SimdReplaceLane(V value, uint32_t lane_idx, T lane_val) {
 
 
 Result Environment::TryJit(Thread* t, DefinedFunc* fn, Index ind) {
+/* In-development feature that needs to resume
+  if (0 == TryAOT(t, ind,fn)){
+    printf("TryAOT returned 0\n");
+  }
+  */
   if (!enable_jit) {
     return Result::Ok;
   }
@@ -1724,42 +1731,47 @@ Result Environment::TryJit(Thread* t, DefinedFunc* fn, Index ind) {
   TRAP_IF(fn->tried_jit_ && !fn->jit_fn_ && trap_on_failed_comp, FailedJITCompilation);
   return Result::Ok;
 }
-#if defined (unneeded)
-bool Environment::TryAOT(Thread* t, IstreamOffset offset, Environment::AOTedFunction* fn) {
-  if (!enable_jit) {
-    *fn = nullptr;
-    return false;
-  }
 
-  auto meta_it = aot_meta_.find(offset);
+bool Environment::TryAOT(Thread* t, Index ind, DefinedFunc* fn) {
+  // Want to create things
+    using namespace wabt::aot;
 
-  if (meta_it != aot_meta_.end()) {
-    auto* meta = &meta_it->second;
-    if (!meta->tried_jit) {
-      meta->num_calls++;
+  AOTManager aotManager;
+  this->FillMemories();
+  if(!fn->is_compiled)
+  {
+      std::unique_ptr<AOTTypeDictionary> types(new (PERSISTENT_NEW) AOTTypeDictionary());
+      std::string name = "f" + std::to_string(ind) +"m" +this->GetModule(1)->name.substr(0,3);
+      AOTFunctionBuilder* builder = new (PERSISTENT_NEW) AOTFunctionBuilder(t, fn,
+                  std::move(name),
+                  types.get(),
+                  *this, aotManager);
 
-      if (meta->num_calls >= jit_threshold) {
-	/*if(enable_load_from_dlib) {
-	//if(0){
-	  meta->jit_fn = jit::loadCompiled(t,meta->wasm_fn,*this);
-	  meta->tried_jit = true;
-	}else{*/
-	  meta->jit_fn = jit::compile(t, meta->wasm_fn);
-	  meta->tried_jit = true;
-	//}
-      } else {
-        *fn = nullptr;
-        return false;
-      }
+      std::unique_ptr<AOTFunctionBuilder> builder_ptr(builder);
+
+      aotManager.push_back_FB(fn->offset, std::move(builder_ptr), std::move(types));
+      fn->dbg_name_ = "f" + std::to_string(ind) +"m"+this->GetModule(1)->name.substr(0,3);
+      //** Trying to assign debug name, might be problematic if that's an import **/
+      reinterpret_cast<DefinedFunc*>(fn)->dbg_name_ = "f" + std::to_string(ind) +"m"+this->GetModule(1)->name.substr(0,3);
+      reinterpret_cast<DefinedModule*>(this->GetModule(1))->funcs.emplace_back(fn);
     }
-    *fn = meta->jit_fn;
-    return trap_on_failed_comp || *fn;
-  } else {
-    *fn = nullptr;
-    return trap_on_failed_comp;
-  }
+    else
+    {
+      aotManager.push_back_import(fn->dbg_name_,fn);
+      // for(Index j = 0;j<env.GetModuleCount();j++){
+      //   for(auto exp:env.GetModule(j)->exports){
+      //     if(!exp.name.compare(dynamic_cast<HostFunc*>(env.GetFunc(i))->field_name)){
+      //       aotManager.push_back_import("f" + std::to_string(exp.index) +"m"+env.GetModule(j)->name.substr(0,3),env.GetFunc(i));
+      //       env.GetFunc(i)->dbg_name_ = "f" + std::to_string(exp.index) +"m"+env.GetModule(j)->name.substr(0,3),env.GetFunc(i);
+      //     }
+      //   }
+      // }
+      
+    }
 }
 
+
+#if defined (unneeded)
 bool Environment::TryAOT(Thread* t, IstreamOffset offset, Environment::AOTedFunction* fn,DefinedFunc *&df) {
   if (!enable_jit) {
     *fn = nullptr;

@@ -689,7 +689,7 @@ class Environment {
   friend class wabt::aot::AOTFunctionBuilder;
 
 
-  using AOTedFunction = interp::Result (*)();
+  using AOTedFunction = interp::DefinedFunc*;
 
   struct AOTMeta {
     Func* wasm_fn;
@@ -713,8 +713,9 @@ class Environment {
     static int numOfFunction;
   };
   Result TryJit(Thread* t, DefinedFunc* fn, Index ind);
+
+  bool TryAOT(Thread* t, IstreamOffset offset, DefinedFunc* fn);
 #if defined (unnecessary)
-  bool TryAOT(Thread* t, IstreamOffset offset, AOTedFunction* fn);
   bool TryAOT(Thread* t, IstreamOffset offset, AOTedFunction* fn,DefinedFunc *&);
 #endif 
   std::vector<std::unique_ptr<Module>> modules_;
