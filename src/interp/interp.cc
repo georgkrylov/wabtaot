@@ -40,6 +40,8 @@
 
 #include "../aot/aot-function-builder.h"
 #include "../aot/aot-type-dictionary.h"
+#include "../aot/aot-manager.h"
+#include "JitBuilder.hpp"
 namespace wabt {
 namespace interp {
 
@@ -1707,11 +1709,11 @@ ValueTypeRep<R> SimdReplaceLane(V value, uint32_t lane_idx, T lane_val) {
 
 
 Result Environment::TryJit(Thread* t, DefinedFunc* fn, Index ind) {
-/* In-development feature that needs to resume
-  if (0 == TryAOT(t, ind,fn)){
+// In-development feature that needs to resume
+  if (true == TryAOT(t, ind,fn)){
     printf("TryAOT returned 0\n");
   }
-  */
+
   if (!enable_jit) {
     return Result::Ok;
   }
@@ -1735,29 +1737,42 @@ Result Environment::TryJit(Thread* t, DefinedFunc* fn, Index ind) {
 bool Environment::TryAOT(Thread* t, Index ind, DefinedFunc* fn) {
   // Want to create things
     using namespace wabt::aot;
-
-  AOTManager aotManager;
+  // Looks like AOTManager in aot-cd.cc is aware of all functions, whereas TryAOT currently recreates AOTManager every time
+  // Such awareness allows calls
+  //  if (aotManager == NULL){
+    aotManager = new AOTManager();
+  //  }
   this->FillMemories();
+  DefinedModule* modulee;
   if(!fn->is_compiled)
   {
       std::unique_ptr<AOTTypeDictionary> types(new (PERSISTENT_NEW) AOTTypeDictionary());
-      std::string name = "f" + std::to_string(ind) +"m" +this->GetModule(1)->name.substr(0,3);
+      // Two here is hardcoded as em-module.hpp appends two modules and there's an env module
+      modulee = reinterpret_cast<DefinedModule*>(this->GetModule(2));
+      /**This line is used to construct debug name, limited to 8 symbols as relocation infrastructure does not
+       * support longer names
+       */
+      std::string name = "f" + std::to_string(ind) +"m" +modulee->name.substr(0,3);
       AOTFunctionBuilder* builder = new (PERSISTENT_NEW) AOTFunctionBuilder(t, fn,
                   std::move(name),
                   types.get(),
-                  *this, aotManager);
+                  *this, *aotManager);
 
       std::unique_ptr<AOTFunctionBuilder> builder_ptr(builder);
 
-      aotManager.push_back_FB(fn->offset, std::move(builder_ptr), std::move(types));
-      fn->dbg_name_ = "f" + std::to_string(ind) +"m"+this->GetModule(1)->name.substr(0,3);
-      //** Trying to assign debug name, might be problematic if that's an import **/
-      reinterpret_cast<DefinedFunc*>(fn)->dbg_name_ = "f" + std::to_string(ind) +"m"+this->GetModule(1)->name.substr(0,3);
-      reinterpret_cast<DefinedModule*>(this->GetModule(1))->funcs.emplace_back(fn);
+      aotManager->push_back_FB(fn->offset, std::move(builder_ptr), std::move(types));
+      // This line is used to construct debug name, limited to 8 symbols as relocation infrastructure does not
+      // support longer names
+      fn->dbg_name_ = "f" + std::to_string(ind) +"m"+modulee->name.substr(0,3);
+      /** Trying to assign debug name, might be problematic if that's an import
+       * Two here is hardcoded as em-module.hpp appends two modules and there's an env module
+       */
+      reinterpret_cast<DefinedFunc*>(fn)->dbg_name_ = "f" + std::to_string(ind) +"m"+this->GetModule(2)->name.substr(0,3);
+      reinterpret_cast<DefinedModule*>(this->GetModule(2))->funcs.emplace_back(fn);
     }
     else
     {
-      aotManager.push_back_import(fn->dbg_name_,fn);
+      aotManager->push_back_import(fn->dbg_name_,fn);
       // for(Index j = 0;j<env.GetModuleCount();j++){
       //   for(auto exp:env.GetModule(j)->exports){
       //     if(!exp.name.compare(dynamic_cast<HostFunc*>(env.GetFunc(i))->field_name)){
@@ -1766,8 +1781,13 @@ bool Environment::TryAOT(Thread* t, Index ind, DefinedFunc* fn) {
       //     }
       //   }
       // }
-      
     }
+    aotManager->broadcastNames();
+    aotManager->broadcastImports();
+    modulee->aot_compiled_functions.reserve(modulee->aot_compiled_functions.size()+1);
+    void* function = aotManager->AOTCompileAFunction(this,ind,fn);
+    modulee->aot_compiled_functions.push_back(function);
+    return true;
 }
 
 

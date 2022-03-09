@@ -18,6 +18,7 @@
 #define AOT_FUNCTIONBUILDER_HPP
 
 #include "aot-type-dictionary.h"
+#include "aot-manager.h"
 #include "ilgen/BytecodeBuilder.hpp"
 #include "ilgen/MethodBuilder.hpp"
 #include "ilgen/VirtualMachineOperandStack.hpp"
@@ -234,59 +235,8 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
   bool Emit(TR::BytecodeBuilder* b, const uint8_t* istream, const uint8_t* pc);
 };
 
-class FunctionImport {
-  public:
-    FunctionImport(interp::Func *fn):fn_(fn){}
 
-    std::vector<TR::IlType*> param_types_;
-    interp::Func *fn_;
-};
 
-class AOTManager {
- public:
-  void push_back_FB(uint32_t offset, std::unique_ptr<AOTFunctionBuilder>&& b,
-		    std::unique_ptr<AOTTypeDictionary>&& t)
-  {
-    func_index_[offset] = {std::move(b), std::move(t)};
-  }
-
-  void push_back_import(std::string name, interp::Func* fn){
-    import_index_.emplace_back(name,fn);
-  }
-  
-  AOTFunctionBuilder& getFB(uint32_t i) {
-    return *func_index_[i].first;
-  }
-
-  AOTTypeDictionary* getTD(uint32_t i) {
-    return func_index_[i].second.get();
-  }
-  
-  void broadcastNames() {
-    for(auto& builder_kv: func_index_) {
-      for(auto& inner_kv: func_index_) {
-	auto& builder_fn = builder_kv.second.first;
-	inner_kv.second.first->defineFunction(builder_fn->getName(),
-					      builder_fn->getFn());
-      }
-    }
-  }
-
-  void broadcastImports() {
-    for(auto& builder: func_index_) {
-      for(auto& import: import_index_) {
-        builder.second.first->defineImportFunction(import.first,import.second);
-      }
-    }
-  }
-
- private:
-  std::map<uint32_t, std::pair<std::unique_ptr<AOTFunctionBuilder>,
-                               std::unique_ptr<AOTTypeDictionary>>>
-    func_index_;
-
-  std::vector<std::pair<std::string,FunctionImport>> import_index_;
-};
 
 
 

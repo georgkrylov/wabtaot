@@ -7,6 +7,7 @@ trap-with.cc
 aot-type-dictionary.cc
 aot-function-builder.cc
 aot-compiler-lib.cc
+aot-manager.cc
 ../interp/binary-reader-interp.cc
 
 )

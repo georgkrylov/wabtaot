@@ -46,6 +46,7 @@ class FunctionBuilder;
 
 namespace aot {
 class AOTFunctionBuilder;
+class AOTManager;
 }
 
 namespace interp {
@@ -729,7 +730,7 @@ class Environment {
   std::unique_ptr<OutputBuffer> istream_;
   BindingHash module_bindings_;
   BindingHash registered_module_bindings_;
-
+  aot::AOTManager* aotManager = NULL;
   std::vector<jit::JITedFunction> jit_funcs_;
   jit::JitEnvironment jit_env_;
   std::unordered_map<IstreamOffset, AOTMeta> aot_meta_;
