@@ -18,6 +18,7 @@
 #include "aot-function-builder.h"
 #include "trap-with.h"
 #include "aot-compiler-lib.hpp"
+#include "aot-manager.h"
 
 #include <algorithm>
 #include <iostream>
@@ -42,7 +43,7 @@ class WasmInterpHostImportDelegate : public HostImportDelegate {
       cast<HostFunc>(func)->callback = PrintCallback;
       return wabt::Result::Ok;
     } else {
-      
+
       return wabt::Result::Error;
     }
   }
@@ -81,7 +82,7 @@ class WasmInterpHostImportDelegate : public HostImportDelegate {
     TypedValues vec_results(out_results, out_results + num_results);
 
     printf("called host ");
-    
+
     return interp::Result::Ok;
   }
 
@@ -132,7 +133,7 @@ static wabt::Result ReadModule(const char* module_filename,
     }
 
     return kInvalidIndex;
-    
+
   };
 
   HostModule *wasi = env->AppendHostModule("wasi_unstable");
@@ -147,7 +148,7 @@ static wabt::Result ReadModule(const char* module_filename,
     }
 
     return kInvalidIndex;
-    
+
    };
 
   HostModule *envi = env->AppendHostModule("env");
@@ -162,14 +163,14 @@ static wabt::Result ReadModule(const char* module_filename,
     }
 
     return kInvalidIndex;
-    
+
   };
 
   envi->on_unknown_export =
       [](Environment* env, HostModule* module, string_view name, ExternalKind kind)
          -> Index {
     if (name != "") {
-      
+
       switch(kind) {
           case ExternalKind::Memory: {
               auto pair = module->AppendMemoryExport(name, Limits(256, 256));
@@ -183,7 +184,7 @@ static wabt::Result ReadModule(const char* module_filename,
     }
 
     return kInvalidIndex;
-    
+
   };
 
   // *out_module = nullptr;
@@ -210,43 +211,13 @@ static wabt::Result ReadModule(const char* module_filename,
 }
 
 
-char* getSOFilename(char * filename)
-{
-  size_t last_dot = 0, last_dot_flag = 0, last_path = 0, last_path_flag = 0;
-  for (int i = strlen(filename); i >= 0; i--)
-        {
-            if (filename[i] == '.' && last_dot_flag == 0)
-            {
-              last_dot = i;
-              last_dot_flag++;
-            }
-             if (filename[i] == '/' && last_path_flag == 0)
-            {
-              last_path = i;
-              last_path_flag++;
-            }
-            if(last_dot_flag == 1 && last_path_flag == 1)
-              break;
-         }
-         size_t lenFilename = last_dot - last_path;
-  
-        char *substr = (char *)malloc(lenFilename+1);
-        strncpy(substr, filename + last_path, lenFilename);
-        substr[lenFilename] = '\0';
-        char *so = ".so";
-        char *soFilename = (char *) malloc(1 + strlen(substr)+ strlen(so));  
-        strcpy(soFilename, substr);
-        strcat(soFilename, so); 
-
-        return soFilename;
-}
 
 wabt::Result compileAOT(interp::Environment& env, DefinedModule* module, char * filename)
 {
   using namespace wabt::aot;
 
   interp::Thread thread(&env);
-  
+
   auto func_count = env.GetFuncCount();
   AOTManager aotManager;
   env.FillMemories();
@@ -265,16 +236,16 @@ wabt::Result compileAOT(interp::Environment& env, DefinedModule* module, char * 
       std::unique_ptr<AOTFunctionBuilder> builder_ptr(builder);
 
       aotManager.push_back_FB(fn->offset, std::move(builder_ptr), std::move(types));
-      
+
       env.GetFunc(i)->dbg_name_ = "f" + std::to_string(j) +"m"+module->name.substr(0,3);
       //** Trying to assign debug name, might be problematic if that's an import **/
       reinterpret_cast<DefinedFunc*>(env.GetFunc(i))->dbg_name_ = "f" + std::to_string(j) +"m"+module->name.substr(0,3);
       j++;
       module->funcs.emplace_back(env.GetFunc(i));
-      
+
     }else{
       aotManager.push_back_import(env.GetFunc(i)->dbg_name_,env.GetFunc(i));
-        
+
       // for(Index j = 0;j<env.GetModuleCount();j++){
       //   for(auto exp:env.GetModule(j)->exports){
       //     if(!exp.name.compare(dynamic_cast<HostFunc*>(env.GetFunc(i))->field_name)){
@@ -283,9 +254,9 @@ wabt::Result compileAOT(interp::Environment& env, DefinedModule* module, char * 
       //     }
       //   }
       // }
-      
+
     }
-    
+
   }
 
     aotManager.broadcastNames();
@@ -295,7 +266,7 @@ wabt::Result compileAOT(interp::Environment& env, DefinedModule* module, char * 
 
   int flag = 0;
   for(Index i = 0; i < func_count; ++i) {
-    
+
     if(!env.GetFunc(i)->is_compiled) {
       auto* fn = cast<wabt::interp::DefinedFunc>(env.GetFunc(i));
       auto& builder = aotManager.getFB(fn->offset);
@@ -322,7 +293,7 @@ wabt::Result compileAOT(interp::Environment& env, DefinedModule* module, char * 
   }
 }
 
-uint32_t printaa(int32_t a,int32_t b,int32_t c,int32_t d) { 
+uint32_t printaa(int32_t a,int32_t b,int32_t c,int32_t d) {
   uint32_t bufferLoc = *(uint32_t*)(envPointer->GetMems()[0]+b);
   char *buffer = envPointer->GetMems()[0]+bufferLoc;
   uint32_t buffsize = *(uint32_t*)(envPointer->GetMems()[0]+b+4);
@@ -446,7 +417,7 @@ void relocateAOT(interp::Environment& env,DefinedModule *module)
   env.FillMemories();
   char memory_name[6];
   for(int i=0;i<env.GetMemoryCount();i++) {
-    
+
     sprintf(memory_name,"m%d",i);
     //global_names.emplace_back(global_name);
     setCodeEntry(const_cast<char*>(memory_name),reinterpret_cast<void*>(env.GetMems()+i));
@@ -499,7 +470,7 @@ void runExports(interp::Environment& env,DefinedModule *module, int run_all_expo
         double a = reinterpret_cast<double(*)()>(fn)();
         std::cout<<exported.name<<"() => f64:"<<a<<"\n";
         }
-      else if(env.GetFuncSignature(env.GetFunc(exported.index)->sig_index)->result_types.front() == Type::I32)  {	
+      else if(env.GetFuncSignature(env.GetFunc(exported.index)->sig_index)->result_types.front() == Type::I32)  {
       uint32_t a = reinterpret_cast<uint64_t(*)()>(fn)();
       std::cout<<exported.name<<"() => i32:"<<a<<"\n";
       }else
@@ -545,7 +516,7 @@ int main(int argc, char** argv) {
   }
   numOfArgs = argc-1;
   args_arr = argv;
-  
+
   Environment env;
   s_stdout_stream = FileStream::CreateStdout();
   s_log_stream = nullptr;
@@ -557,34 +528,29 @@ int main(int argc, char** argv) {
   WABTAOTCompilerLib compilerLib = WABTAOTCompilerLib();
   char* src_filename;
 
-  
+
  uint32_t build_type=0;
 #ifndef WASM_SHARED_CACHE
 if(no_of_modules > 1){
-    
+
     char* soFilename = "./wasmaot.so";
     if( access( static_cast<const char *>(soFilename), F_OK ) == 0 ) {
       loadFileInMemory(soFilename);
       build_type = 1;
     }
-   
+
 }
  #endif
   for(uint32_t i = 1;i<=no_of_modules;i++) {
     src_filename = argv[i];
 #ifndef WASM_SHARED_CACHE
   if(no_of_modules == 1){
-    
-    char* soFilename = getSOFilename(src_filename);
-    char *pre = "./";
-    char *slashFilename = static_cast<char *>( malloc(1 + strlen(soFilename)+ strlen(pre)));
-    strcpy(slashFilename, pre);
-    strcat(slashFilename, soFilename);
-    if( access( static_cast<const char *>(slashFilename), F_OK ) == 0 ) {
-      loadFileInMemory(slashFilename);
+
+    char* soFilename = WABTAOTCompilerLib::getSOFilename(src_filename);
+    if( access( static_cast<const char *>(soFilename), F_OK ) == 0 ) {
+      loadFileInMemory(soFilename);
       build_type = 1;
-    } 
-    
+    }
     }
   #endif
 
@@ -612,7 +578,7 @@ if(no_of_modules > 1){
     if(build_type != 1 || compile_result == 2)
     {
       if(no_of_modules == 1){
-        char* soFilename = getSOFilename(src_filename);
+        char* soFilename = WABTAOTCompilerLib::getSOFilename(src_filename);
         storeCodeEntries(soFilename);
       }
       else{
@@ -620,5 +586,5 @@ if(no_of_modules > 1){
         storeCodeEntries(soFilename);
       }
     }
-#endif  
+#endif
 }

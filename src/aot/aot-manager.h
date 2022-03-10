@@ -72,15 +72,6 @@ class AOTManager {
    * by JitBuilder
    */
   void* AOTCompileAFunction(wabt::interp::Environment* env, wabt::Index ind,wabt::interp::DefinedFunc* func);
-#ifndef WASM_SHARED_CACHE
-  /**
-   * @brief Transform module file name into a shared object file name
-   *
-   * @param filename - module name
-   * @return char* -  newly-allocated string containing the filename
-   */
-  char* getSOFilename(char * filename);
-#endif
 
  private:
   std::map<uint32_t, std::pair<std::unique_ptr<AOTFunctionBuilder>,
