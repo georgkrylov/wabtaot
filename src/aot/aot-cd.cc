@@ -212,58 +212,12 @@ static wabt::Result ReadModule(const char* module_filename,
 
 
 
-wabt::Result compileAOT(interp::Environment& env, DefinedModule* module, char * filename)
-{
+int compileAOT(interp::Environment& env, DefinedModule* module, char * filename){
   using namespace wabt::aot;
-
-  interp::Thread thread(&env);
-
-  auto func_count = env.GetFuncCount();
   AOTManager aotManager;
-  env.FillMemories();
-  Index j = 0;
-  for(Index i = 0; i < func_count; ++i) {
-    if(!env.GetFunc(i)->is_compiled) {
-      auto* fn = cast<wabt::interp::DefinedFunc>(env.GetFunc(i));
-      std::unique_ptr<AOTTypeDictionary> types(new (PERSISTENT_NEW) AOTTypeDictionary());
-      //static AOTTypeDictionary types;
-      std::string name = "f" + std::to_string(j) +"m" +module->name.substr(0,3);
-      AOTFunctionBuilder* builder = new (PERSISTENT_NEW) AOTFunctionBuilder(&thread, fn,
-							   std::move(name),
-							   types.get(),
-							   env, aotManager);
-
-      std::unique_ptr<AOTFunctionBuilder> builder_ptr(builder);
-
-      aotManager.push_back_FB(fn->offset, std::move(builder_ptr), std::move(types));
-
-      env.GetFunc(i)->dbg_name_ = "f" + std::to_string(j) +"m"+module->name.substr(0,3);
-      //** Trying to assign debug name, might be problematic if that's an import **/
-      reinterpret_cast<DefinedFunc*>(env.GetFunc(i))->dbg_name_ = "f" + std::to_string(j) +"m"+module->name.substr(0,3);
-      j++;
-      module->funcs.emplace_back(env.GetFunc(i));
-
-    }else{
-      aotManager.push_back_import(env.GetFunc(i)->dbg_name_,env.GetFunc(i));
-
-      // for(Index j = 0;j<env.GetModuleCount();j++){
-      //   for(auto exp:env.GetModule(j)->exports){
-      //     if(!exp.name.compare(dynamic_cast<HostFunc*>(env.GetFunc(i))->field_name)){
-      //       aotManager.push_back_import("f" + std::to_string(exp.index) +"m"+env.GetModule(j)->name.substr(0,3),env.GetFunc(i));
-      //       env.GetFunc(i)->dbg_name_ = "f" + std::to_string(exp.index) +"m"+env.GetModule(j)->name.substr(0,3),env.GetFunc(i);
-      //     }
-      //   }
-      // }
-
-    }
-
-  }
-
-    aotManager.broadcastNames();
-    aotManager.broadcastImports();
-    module->aot_compiled_functions.reserve(func_count);
-    auto module_func_count = module->funcs.size();
-
+   interp::Thread thread(&env);
+  WABTAOTCompilerLib::registerMethods(aotManager,env,module,filename,thread);
+  auto func_count = env.GetFuncCount();
   int flag = 0;
   for(Index i = 0; i < func_count; ++i) {
 
@@ -286,10 +240,10 @@ wabt::Result compileAOT(interp::Environment& env, DefinedModule* module, char * 
 
   }
   if(flag == 1){
-    return wabt::Result::Emit;
+    return 2;
   } else
   {
-    return wabt::Result::Ok;
+    return 0;
   }
 }
 
@@ -561,7 +515,7 @@ if(no_of_modules > 1){
     wabt::Result result = ReadModule(src_filename, &env, &errors, &module);
 
     if(Succeeded(result)) {
-      compile_result = compileAOT(env, module, src_filename);
+      compile_result = static_cast<wabt::Result::Enum>(compileAOT(env, module, src_filename));
     }else{
       std::cout<<"read failure\n";
     }
