@@ -892,12 +892,15 @@ bool FunctionBuilder::Emit(TR::BytecodeBuilder* b,
 
     case Opcode::Call:
     case Opcode::InterpCallHost: {
+      // We use this to retrieve the index of the function
       auto fn_ind = interp::ReadU32(&pc);
+      // The actual function opcodes are stored here
       auto fn = thread_->env_->GetFunc(fn_ind);
-
+      // This line is used to fetch function signature
       auto* sig = thread_->env()->GetFuncSignature(fn->sig_index);
-
+      // This line is to load a corresponding thread structure?
       auto* thread = b->Load("thread");
+      // This line is to load 
       auto* call_stack = b->LoadIndirect("ThreadInfo", "call_stack", thread);
 
       MoveToPhysStack(b, pc, &stack, sig->param_types.size());
