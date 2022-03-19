@@ -28,6 +28,12 @@ public:
     static void registerMethods(wabt::aot::AOTManager& aotManager,interp::Environment& env, DefinedModule* module, char * filename,interp::Thread& thread);
 
     /**
+     * @brief Method that allows compiling all methods.
+     *
+     * @param env - reference to the environment
+     */
+    static void compileEverything(interp::Environment& env,wabt::aot::AOTManager& aotManager,DefinedModule* module);
+    /**
      * @brief Module filename is needed for distinguishing between functions loaded,
      * when doing aot compilation, as we cannot guarantee the module name is always
      * the same. The function defines the module name for other threads to access it
@@ -36,7 +42,33 @@ public:
      * @param module to update the name
      */
     static void registerModuleNameForAOT(const char* module_filename, DefinedModule* module);
-#ifndef WASM_SHARED_CACHE
+
+    static void getCompiledFunction(const char *name, void (**fn)());
+
+    /**
+     * @brief This function currently serves double purpose, first it defines
+     * math functions and globals, and memories and alike, second it runs relocations using OMR
+     * relocation infrastructure
+     * @param env: pointer to the environment
+     * @param module: Defined module
+     */
+    static void relocateAOT(interp::Environment& env,DefinedModule *module);
+
+#ifndef WASM_SHARED_CACHE // This basically is only used in ELF-enabled runtime
+    /**
+     * @brief Attempt to load an SO file by filename
+     *
+     * @param moduleFilename
+     */
+    static void loadELFToMemory(const char* moduleFilename);
+
+    /**
+     * @brief If an so file does not exist and the compilation was successful,
+     * save the results into an .so file
+     * @param moduleFilename
+     */
+    static void createELFFile(const char* moduleFilename);
+
     /**
     * @brief Transform module file name into a shared object file name
     *
@@ -44,7 +76,17 @@ public:
     * @return char* -  newly-allocated string containing the filename
     */
     static char* getSOFilename(char * filename);
+    /**
+     * @brief Three variables controlling ELF compilation
+     * and loading
+     */
+    static int build_type;
+    static int no_of_modules;
+    /**
+     * @brief this variable is set to 1 when code
+     * for some function was not found
+     */
+    static int shouldReEmitELF;
 #endif
 
-    static void getCompiledFunction(const char *name, void (**fn)());
 };

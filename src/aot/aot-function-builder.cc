@@ -1176,6 +1176,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
 	delete args;
 //	aotManager_.addCallToRegistry(fn_name_,builder.fn_name_);
       } else {
+        assert(false);
 	throw std::runtime_error("Call: function not found!");
       }
 

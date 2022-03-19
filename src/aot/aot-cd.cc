@@ -499,14 +499,9 @@ if(no_of_modules > 1){
     src_filename = argv[i];
 #ifndef WASM_SHARED_CACHE
   if(no_of_modules == 1){
-
-    char* soFilename = WABTAOTCompilerLib::getSOFilename(src_filename);
-    if( access( static_cast<const char *>(soFilename), F_OK ) == 0 ) {
-      loadFileInMemory(soFilename);
-      build_type = 1;
+    WABTAOTCompilerLib::getSOFilename(src_filename);
     }
-    }
-  #endif
+#endif
 
     DefinedModule* module = nullptr; //new DefinedModule();
     //ErrorHandlerFile error_handler(Location::Type::Binary);
@@ -515,30 +510,23 @@ if(no_of_modules > 1){
     wabt::Result result = ReadModule(src_filename, &env, &errors, &module);
 
     if(Succeeded(result)) {
-      compile_result = static_cast<wabt::Result::Enum>(compileAOT(env, module, src_filename));
+      wabt::aot::AOTManager aotManager;
+      interp::Thread thread(&env);
+      WABTAOTCompilerLib::registerMethods(aotManager,env,module,const_cast<char*>(src_filename),thread);
+      WABTAOTCompilerLib::compileEverything(env,aotManager,module);
     }else{
       std::cout<<"read failure\n";
     }
   }
 
   for(uint32_t i = 1;i<=no_of_modules;i++) {
-    relocateAOT(env, dynamic_cast<DefinedModule*>(env.GetModule(i-1)));
+    WABTAOTCompilerLib::relocateAOT(env, dynamic_cast<DefinedModule*>(env.GetModule(i-1)));
   }
   for(uint32_t i = 1;i<=no_of_modules;i++) {
     runExports(env,dynamic_cast<DefinedModule*>(env.GetModule(i-1)),run_all_exports);
   }
 
 #ifndef WASM_SHARED_CACHE
-    if(build_type != 1 || compile_result == 2)
-    {
-      if(no_of_modules == 1){
-        char* soFilename = WABTAOTCompilerLib::getSOFilename(src_filename);
-        storeCodeEntries(soFilename);
-      }
-      else{
-        char* soFilename = "wasmaot.so";
-        storeCodeEntries(soFilename);
-      }
-    }
+  WABTAOTCompilerLib::createELFFile(src_filename);
 #endif
 }
