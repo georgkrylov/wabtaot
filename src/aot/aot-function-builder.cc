@@ -1139,6 +1139,9 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
     case Opcode::Call:
     case Opcode::InterpCallHost: {
       auto offset = ReadU32(&pc);
+      // Assumption is that the number of import functions per module
+      // is always the same
+      offset-=env_.aot_meta_.at(0).getNumberOfImports();
       // printf("offset to env is %u,",offset);
 
       auto meta_it = env_.aot_meta_.find(offset);

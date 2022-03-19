@@ -22,7 +22,8 @@ void WABTAOTCompilerLib::registerMethods(wabt::aot::AOTManager& aotManager,inter
   env.FillMemories();
   Index j = 0;
   for(Index i = 0; i < func_count; ++i) {
-    if(!env.GetFunc(i)->is_compiled) {
+    auto functionInQuestion = env.GetFunc(i);
+    if(functionInQuestion->is_compiled == false && functionInQuestion->is_host == false) {
       auto* fn = dynamic_cast<wabt::interp::DefinedFunc*>(env.GetFunc(i));
       std::unique_ptr<AOTTypeDictionary> types(new (PERSISTENT_NEW) AOTTypeDictionary());
       //static AOTTypeDictionary types;
@@ -43,6 +44,13 @@ void WABTAOTCompilerLib::registerMethods(wabt::aot::AOTManager& aotManager,inter
       module->funcs.emplace_back(env.GetFunc(i));
 
     }else{
+      for (int ii = 0 ; ii < env.GetModuleCount();ii++)
+        for (int j = 0 ; j < env.GetModule(ii)->exports.size();j++){
+          if (env.GetModule(ii)->exports[j].kind == wabt::ExternalKind::Func && env.GetModule(ii)->exports[j].index == i){
+            env.GetFunc(i)->dbg_name_= env.GetModule(ii)->exports[j].name;
+            env.AddAOTMetadata( env.GetFunc(i),i);
+          }
+        }
       aotManager.push_back_import(env.GetFunc(i)->dbg_name_,env.GetFunc(i));
 
       // for(Index j = 0;j<env.GetModuleCount();j++){
