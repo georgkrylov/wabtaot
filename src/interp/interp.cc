@@ -155,6 +155,7 @@ Environment::~Environment() {
   delete [] indirectCallParams;
 }
 int Environment::AOTMeta::numOfFunction = 0;
+unsigned int Environment::AOTMeta::numOfImports = 0;
 
 Index Environment::FindModuleIndex(string_view name) const {
   auto iter = module_bindings_.find(name.to_string());
@@ -299,7 +300,16 @@ Index HostModule::OnUnknownExport(string_view name, ExternalKind kind) {
   }
   return kInvalidIndex;
 }
-
+/**
+ * @brief ...
+ * Is also called when emscripten module appends it function. This version of the function
+ * just registers signature, whereas the overloaded generates the HostFunction and registers it,
+ * thereby increasing the number of exports
+ * @param name name
+ * @param sig signature tuples
+ * @param callback - actual function
+ * @return std::pair<HostFunc*, Index> 
+ */
 std::pair<HostFunc*, Index> HostModule::AppendFuncExport(
     string_view name,
     const FuncSignature& sig,

@@ -605,7 +605,7 @@ class Environment {
   void AddAOTMetadata(Func* fn, Index index) {
     assert(fn->offset != kInvalidIstreamOffset);
     AOTMeta meta = AOTMeta(fn);
-    meta.isImport();
+    meta.setIsImport();
     this->aot_meta_.insert({ index, meta });
   }
 
@@ -704,14 +704,26 @@ class Environment {
       // wasm_fn->dbg_name_= "f" + wasm_fn-> +"m"+modules_[0]->name.substr(0,3);
       numOfFunction++;
     }
+    static unsigned int getNumberOfImports(){
+            return numOfImports;
+    }
     int isImport(){ return _isImport;}
-    void setIsImport() {_isImport = 1;}
+    void setIsImport() {
+      _isImport = 1;
+      AOTMeta::numOfImports++;
+      }
     private:
     /**
      * @brief if _isImport = 1 then it is import
      */
     int _isImport = 0;
     static int numOfFunction;
+    /**
+     * @brief This variable is to track the number of imports. Can only work if the number
+     * of imports per module is the same, or if the number of imports is  uniquely
+     * registered per module. The variable is incremented per setImport
+     */
+    static unsigned int numOfImports;
   };
   Result TryJit(Thread* t, DefinedFunc* fn, Index ind);
 
