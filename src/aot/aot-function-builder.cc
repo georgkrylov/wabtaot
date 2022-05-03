@@ -1151,6 +1151,8 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
   // printf("sig index within module is %u",fn->sig_index);
     // printf("offset is %u\n",reinterpret_cast<DefinedFunc*>(fn)->offset);
     //auto *fn = env_.GetFunc(offset);
+
+    // This line retrieves the function we want to call.
 	auto& builder = aotManager_.getFB(fn->offset);
 	//std::vector<TR::IlValue*> args;
 	int size = env_.GetFuncSignature(fn->sig_index)->param_types.size();
@@ -1176,8 +1178,8 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
 	delete args;
 //	aotManager_.addCallToRegistry(fn_name_,builder.fn_name_);
       } else {
-        assert(false);
-	throw std::runtime_error("Call: function not found!");
+          assert(false);
+          throw std::runtime_error("Call: function not found!");
       }
 
       break;

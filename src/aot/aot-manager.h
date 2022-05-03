@@ -48,7 +48,7 @@ class AOTManager {
   }
 /**
  * @brief For all the functions known within AOTManager
- * (How are they known?), make the functions aware of existence
+ * defined through push_back_FB, make the functions aware of existence
  * of the other functions
  */
   void broadcastNames();

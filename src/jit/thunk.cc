@@ -7,6 +7,13 @@
 namespace wabt {
 namespace jit {
 
+/**
+ * @brief This function is called when reading functions section
+ * 
+ * @param th 
+ * @param ind 
+ * @return Result_t 
+ */
 Result_t InterpThunk(ThreadInfo* th, Index ind) {
   auto* env = th->thread->env();
   auto* func = cast<interp::DefinedFunc>(env->GetFunc(ind));
@@ -44,7 +51,13 @@ Result_t InterpThunk(ThreadInfo* th, Index ind) {
     return static_cast<Result_t>(interp::Result::Ok);
   }
 }
-
+/**
+ * @brief This function is called when reading functions section
+ * 
+ * @param th 
+ * @param ind 
+ * @return Result_t 
+ */
 Result_t HostCallThunk(ThreadInfo* th, Index ind) {
   auto* func = cast<interp::HostFunc>(th->thread->env()->GetFunc(ind));
   auto result = th->thread->CallHost(func);

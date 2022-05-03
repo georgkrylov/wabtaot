@@ -46,6 +46,17 @@ public:
     static void getCompiledFunction(const char *name, void (**fn)());
 
     /**
+     * @brief Get the Module Index By Function Index
+     * Works by iterating through all modules in the environment and looking up
+     * their exports. The assumption is that if a module exists it defines exports.
+     * if the current index is greater than sum of previous export counts but less
+     * than the sum of exports in the previous + next, we are looking at the right module.
+     * @param env - environment module to get modules and sizes of exports in particular
+     * @param Index  - index of the function in question
+     * @return unsigned int - computed index of the module
+     */
+    static int getModuleIndexByFunctionIndex(interp::Environment& env, unsigned int Index);
+    /**
      * @brief This function currently serves double purpose, first it defines
      * math functions and globals, and memories and alike, second it runs relocations using OMR
      * relocation infrastructure
