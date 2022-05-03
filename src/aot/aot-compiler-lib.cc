@@ -20,6 +20,43 @@ void  WABTAOTCompilerLib::registerModuleNameForAOT(const char* module_filename, 
   std::string module_name(module_filename);
   module->name = module_name.substr(module_name.find_last_of('/')+1,module_name.find_last_of('.')-module_name.find_last_of('/')-1);
 }
+int WABTAOTCompilerLib::getModuleIndexByFunctionIndex(interp::Environment& env, unsigned int Index){
+  unsigned int moduleIndex = 0;
+  unsigned int exportsSoFar = -1;
+  int result = 0;
+  for (moduleIndex = 0 ; moduleIndex < env.GetModuleCount(); moduleIndex++ ){
+    auto allExports = env.GetModule(moduleIndex)->exports;
+    // Functions are sometimes not exported, accessible by GetFunc i guess?
+    // Either I need to assign debug names in every variation of the runtime (including bin/wasm-interp)
+    // OR I need to enable TryAOT only in the AOT-enabled runtimes
+
+    // If it is the module in which we are working, we might need  DefinedMoudle instead (although not
+    // much more information added??)
+    // auto allFunctions = cast<DefinedModule>(env.GetModule(moduleIndex))->funcs;
+    // As there are multiple export kinds (tables, functions, memories, need only count functions)
+
+
+    for (unsigned int i = 0 ; i < allExports.size();i++){
+      if (allExports.at(i).kind==ExternalKind::Func){
+      exportsSoFar +=1;
+      result = moduleIndex;
+          // This function might be imprecise in case there are two modules and the first has one export
+          // and multiple local functions, and we are compiling a non-exported function
+        if (exportsSoFar > Index)
+        {
+          result = moduleIndex - 1 ;
+          break;
+        }
+        if (exportsSoFar == Index)
+        {
+
+          break;
+        }
+      }
+    }
+  }
+  return result;
+}
 
 void WABTAOTCompilerLib::relocateAOT(interp::Environment& env,DefinedModule *module)
 {

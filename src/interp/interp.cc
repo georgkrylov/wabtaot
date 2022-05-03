@@ -1745,7 +1745,7 @@ Result Environment::TryJit(Thread* t, DefinedFunc* fn, Index ind) {
 }
 
 bool Environment::TryAOT(Thread* t, Index ind, DefinedFunc* fn) {
-  // Want to create things
+    // DefinedFunc should have dbg_name_
     using namespace wabt::aot;
   // Looks like AOTManager in aot-cd.cc is aware of all functions, whereas TryAOT currently recreates AOTManager every time
   // Such awareness allows calls
@@ -1754,11 +1754,13 @@ bool Environment::TryAOT(Thread* t, Index ind, DefinedFunc* fn) {
   //  }
   this->FillMemories();
   DefinedModule* modulee;
+  Index moduleIndex =       WABTAOTCompilerLib::getModuleIndexByFunctionIndex(*this,ind);
+  modulee = reinterpret_cast<DefinedModule*>(this->GetModule(moduleIndex));
   if(!fn->is_compiled)
   {
       std::unique_ptr<AOTTypeDictionary> types(new (PERSISTENT_NEW) AOTTypeDictionary());
       // Two here is hardcoded as em-module.hpp appends two modules and there's an env module
-      modulee = reinterpret_cast<DefinedModule*>(this->GetModule(2));
+
       /**This line is used to construct debug name, limited to 8 symbols as relocation infrastructure does not
        * support longer names
        */
@@ -1777,8 +1779,8 @@ bool Environment::TryAOT(Thread* t, Index ind, DefinedFunc* fn) {
       /** Trying to assign debug name, might be problematic if that's an import
        * Two here is hardcoded as em-module.hpp appends two modules and there's an env module
        */
-      reinterpret_cast<DefinedFunc*>(fn)->dbg_name_ = "f" + std::to_string(ind) +"m"+this->GetModule(2)->name.substr(0,3);
-      reinterpret_cast<DefinedModule*>(this->GetModule(2))->funcs.emplace_back(fn);
+      reinterpret_cast<DefinedFunc*>(fn)->dbg_name_ = "f" + std::to_string(ind) +"m"+this->GetModule(moduleIndex)->name.substr(0,3);
+      reinterpret_cast<DefinedModule*>(this->GetModule(moduleIndex))->funcs.emplace_back(fn);
     }
     else
     {
@@ -1794,7 +1796,8 @@ bool Environment::TryAOT(Thread* t, Index ind, DefinedFunc* fn) {
     }
     aotManager->broadcastNames();
     aotManager->broadcastImports();
-    modulee->aot_compiled_functions.reserve(modulee->aot_compiled_functions.size()+1);
+    auto func_count = this->GetFuncCount();
+    modulee->aot_compiled_functions.reserve(func_count);
     void* function = aotManager->AOTCompileAFunction(this,ind,fn);
     modulee->aot_compiled_functions.push_back(function);
     return true;
