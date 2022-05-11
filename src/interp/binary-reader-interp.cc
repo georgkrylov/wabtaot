@@ -842,7 +842,7 @@ wabt::Result BinaryReaderInterp::OnImportFunc(Index import_index,
   // for wabtaot, record the index within other module
   func->dbg_name_.assign(field_name.to_string());
   // Either this or the  aot-compiler-lib.cc is unnecessary
-  // env_->AddAOTMetadata(func,func_index);
+  env_->AddAOTMetadata(func,func_index);
   func_env_index = export_->index;
   func_index_mapping_.push_back(export_->index);
 
@@ -1286,7 +1286,8 @@ void BinaryReaderInterp::PopLabel() {
 wabt::Result BinaryReaderInterp::BeginFunctionBody(Index index, Offset size) {
   auto* func = cast<DefinedFunc>(GetFuncByModuleIndex(index));
   FuncSignature* sig = env_->GetFuncSignature(func->sig_index);
-
+  /** Offset was previously swapped to point to index of the function in the environment instead 
+   * of the offset in the bytes stream??*/
   func->offset = GetIstreamOffset();
   bool offset_zero = false;
   // needed to differentiate first function and first import

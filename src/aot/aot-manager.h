@@ -43,6 +43,12 @@ class AOTManager {
     return *func_index_[i].first;
   }
 
+  /**
+   * @brief Get type dictionary
+   *
+   * @param i
+   * @return AOTTypeDictionary*
+   */
   AOTTypeDictionary* getTD(uint32_t i) {
     return func_index_[i].second.get();
   }
@@ -62,6 +68,21 @@ class AOTManager {
   void broadcastImports();
 
   /**
+   * @brief Set the Function That Manager Was Created For. Stores the pointer to a function to later modify
+   * AOT meta data and initiate call dependencies graphs.
+   *
+   * @param func
+   */
+  void setFunctionThatManagerWasCreatedFor(unsigned int func);
+
+  /**
+   * @brief Returns the Function That Manager Was Created For.
+   *
+   * @return functionIndex
+   */
+  unsigned int getFunctionThatManagerWasCreatedFor();
+
+  /**
    * @brief Function that tries to load the code, if the code is
    * was compiled before or calls for compiling the DefinedFunction
    *
@@ -72,12 +93,23 @@ class AOTManager {
    * by JitBuilder
    */
   void* AOTCompileAFunction(wabt::interp::Environment* env, wabt::Index ind,wabt::interp::DefinedFunc* func);
-
+  /**
+   * @brief Working from an assumption the dependencies need to be compiled before compiling the method
+   * 
+   * @param env environment, probably to fetch more AOTMetadatas
+   * @param ind - index, probably useful
+   * @param func  - Defined Function - reference to builders etc
+   * @return int - 0 for dependencies failed, 1 for set continuing compilation
+   */
+  int CheckDependenciesCompiled(wabt::interp::Environment* env, wabt::Index ind,wabt::interp::DefinedFunc* func);
  private:
   std::map<uint32_t, std::pair<std::unique_ptr<AOTFunctionBuilder>,
                                std::unique_ptr<AOTTypeDictionary>>>
     func_index_;
 
+
+
+  unsigned int _indexOfAFuncStartedAOTManager;
   std::vector<std::pair<std::string,FunctionImport>> import_index_;
 };
 }

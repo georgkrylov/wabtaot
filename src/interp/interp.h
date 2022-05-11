@@ -593,7 +593,7 @@ class Environment {
  */
   void AddAOTMetadata(DefinedFunc* fn, Index index) {
     assert(fn->offset != kInvalidIstreamOffset);
-    this->aot_meta_.insert({ index, AOTMeta(fn) });
+    this->aot_meta_.insert({ index, AOTMeta(index,fn) });
   }
 
 /**
@@ -604,7 +604,7 @@ class Environment {
  */
   void AddAOTMetadata(Func* fn, Index index) {
     assert(fn->offset != kInvalidIstreamOffset);
-    AOTMeta meta = AOTMeta(fn);
+    AOTMeta meta = AOTMeta(index,fn);
     meta.setIsImport();
     this->aot_meta_.insert({ index, meta });
   }
@@ -699,13 +699,83 @@ class Environment {
     bool tried_jit = false;
     AOTedFunction jit_fn = nullptr;
 
-    AOTMeta(Func* wasm_fn) : wasm_fn(wasm_fn) {
+    AOTMeta(unsigned int ind, Func* wasm_fn) : wasm_fn(wasm_fn) {
       //wasm_fn->dbg_name_= "func_" + std::to_string(numOfFunction);
       // wasm_fn->dbg_name_= "f" + wasm_fn-> +"m"+modules_[0]->name.substr(0,3);
+      dependencies = NULL;
+      index = ind;
       numOfFunction++;
+      dependenciesMaxSize = 0;
+      lastUsedIdxInDependenciesArray = 0;
     }
+      /**
+       * @brief Destroy the AOTMeta object
+       * To avoid memory leaks, freeing the dependencies object, if it is not NULL.
+       */
+    ~AOTMeta(){
+      //wasm_fn->dbg_name_= "func_" + std::to_string(numOfFunction);
+      // wasm_fn->dbg_name_= "f" + wasm_fn-> +"m"+modules_[0]->name.substr(0,3);
+
+      /** Ideally, this dynamically allocated memory should be free
+       * but it generates a segfault, so I will let it leak hoping destructors
+       * will pick it up themselves?
+      if (dependencies != NULL &&  dependenciesMaxSize!= 0)
+        {
+        delete [] dependencies;
+        dependencies = NULL;
+        dependenciesMaxSize = 0;
+        lastUsedIdxInDependenciesArray = 0;
+        }
+        */
+    }
+
+    void addDependency(unsigned int dep){
+      unsigned int thisFunction = getIndexOfAFunctionWithinModule();
+      if (dependenciesMaxSize == lastUsedIdxInDependenciesArray){
+        /* We have used up all the space in our dependencies array*/
+        if (dependenciesMaxSize  == 0){
+          /* Very first entry, will allocate space for 5 */
+          dependenciesMaxSize = 5;
+          dependencies = new unsigned int [dependenciesMaxSize];
+        }else if (lastUsedIdxInDependenciesArray <= 20)
+        {
+          /* we assume that if there aren't that many dependencies we can
+          increment array size by 5, otherwise we will grow it by doubling.*/
+          dependenciesMaxSize  = dependenciesMaxSize + 5;
+          unsigned int *temp = new unsigned int [dependenciesMaxSize];
+          for (int i = 0 ;  i< lastUsedIdxInDependenciesArray; i++){
+            temp[i] = dependencies[i];
+          }
+          delete [] dependencies;
+          dependencies = temp;
+          /*Does realloc automatically copy?*/
+          /* realloc(dependencies,(dependenciesMaxSize)*sizeof(unsigned int));*/
+        }else{
+          /* Unimplemented, more than 20 dependencies */
+          fprintf(stderr,"More than 20 dependencies encountered, need to fix in %s,%d\n",__FILE__,__LINE__);
+          assert(false);
+        }
+      }
+      dependencies[lastUsedIdxInDependenciesArray]=dep;
+      lastUsedIdxInDependenciesArray++;
+    }
+    /**
+     * @brief Get the Number Of Imports object
+     * Is used as a main source of offset computation for opcode::Call compilation,
+     * can be used in conjunction with WABTAOTCompilerLib::approximateFirstFunctionInAModule?
+     * @return unsigned int 
+     */
     static unsigned int getNumberOfImports(){
             return numOfImports;
+    }
+    /**
+     * @brief Get the Index Of A Function Within Module
+     * This function should be used to fetch index of the function within its module, regardless of the environment state
+     * Was not tested for the case of multiple active modules.
+     * @return unsigned int - an index updated by the number of already loaded functions (from the previous modules)
+     */
+    unsigned int getIndexOfAFunctionWithinModule(){
+            return index ; /* This might have been necessary in the case there are actually imports, but for now - no- numOfImports;*/
     }
     int isImport(){ return _isImport;}
     void setIsImport() {
@@ -724,6 +794,27 @@ class Environment {
      * registered per module. The variable is incremented per setImport
      */
     static unsigned int numOfImports;
+    /**
+     * @brief an array for tracking dependencies. Allocated dynamically.
+     * Will be incremented as a call to an unknown function is encountered.
+     */
+    unsigned int * dependencies = NULL;
+    /**
+     * @brief As we are going to serialize and deserialize the dependencies array,
+     * we want to keep track of the maximum size of the array.
+     */
+    unsigned int dependenciesMaxSize;
+    /**
+     * @brief Index of a function the AOT meta is created for. At the moment of initialization is off by some value
+     * (depending on the number of modules are read and their exports (which are imports to other modules?)).
+     * The proper value (for now) can be computed by subtracting AOTMeta::numberOfImports
+     */
+    unsigned int index;
+    /**
+     * @brief As we are going to serialize and deserialize the dependencies array,
+     * we want to keep track of the last used index in dependencies array.
+     */
+    unsigned int lastUsedIdxInDependenciesArray;
   };
   Result TryJit(Thread* t, DefinedFunc* fn, Index ind);
 

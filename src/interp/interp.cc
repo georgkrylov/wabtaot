@@ -41,6 +41,7 @@
 #include "../aot/aot-function-builder.h"
 #include "../aot/aot-type-dictionary.h"
 #include "../aot/aot-manager.h"
+#include "../aot/aot-compiler-lib.hpp"
 #include "JitBuilder.hpp"
 namespace wabt {
 namespace interp {
@@ -1721,7 +1722,7 @@ ValueTypeRep<R> SimdReplaceLane(V value, uint32_t lane_idx, T lane_val) {
 Result Environment::TryJit(Thread* t, DefinedFunc* fn, Index ind) {
 // In-development feature that needs to resume
   if (true == TryAOT(t, ind,fn)){
-    printf("TryAOT returned 0\n");
+    // printf("TryAOT returned 0\n");
   }
 
   if (!enable_jit) {
@@ -1752,12 +1753,13 @@ bool Environment::TryAOT(Thread* t, Index ind, DefinedFunc* fn) {
   //  if (aotManager == NULL){
     aotManager = new AOTManager();
   //  }
+  aotManager->setFunctionThatManagerWasCreatedFor(ind);
   this->FillMemories();
+  WABTAOTCompilerLib::registerAllImports(*aotManager,*this);
   DefinedModule* modulee;
   Index moduleIndex =       WABTAOTCompilerLib::getModuleIndexByFunctionIndex(*this,ind);
   modulee = reinterpret_cast<DefinedModule*>(this->GetModule(moduleIndex));
-  if(!fn->is_compiled)
-  {
+  if(fn->is_compiled == false && fn->is_host == false) {
       std::unique_ptr<AOTTypeDictionary> types(new (PERSISTENT_NEW) AOTTypeDictionary());
       // Two here is hardcoded as em-module.hpp appends two modules and there's an env module
 
@@ -1784,7 +1786,15 @@ bool Environment::TryAOT(Thread* t, Index ind, DefinedFunc* fn) {
     }
     else
     {
-      aotManager->push_back_import(fn->dbg_name_,fn);
+      // Need to fix imports probably.
+      //  for (int ii = 0 ; ii < this->GetModuleCount();ii++)
+      //   for (int j = 0 ; j <  this->GetModule(ii)->exports.size();j++){
+      //     if ( this->GetModule(ii)->exports[j].kind == wabt::ExternalKind::Func &&  this->GetModule(ii)->exports[j].index == i){
+      //        this->GetFunc(i)->dbg_name_=  this->GetModule(ii)->exports[j].name;
+      //        this->AddAOTMetadata(  this->GetFunc(i),i);
+      //     }
+      //   }
+      // aotManager->push_back_import(this->GetFunc(i)->dbg_name_, this->GetFunc(i));
       // for(Index j = 0;j<env.GetModuleCount();j++){
       //   for(auto exp:env.GetModule(j)->exports){
       //     if(!exp.name.compare(dynamic_cast<HostFunc*>(env.GetFunc(i))->field_name)){
@@ -1795,7 +1805,8 @@ bool Environment::TryAOT(Thread* t, Index ind, DefinedFunc* fn) {
       // }
     }
     aotManager->broadcastNames();
-    aotManager->broadcastImports();
+    // Need to fix imports probably.
+    // aotManager->broadcastImports();
     auto func_count = this->GetFuncCount();
     modulee->aot_compiled_functions.reserve(func_count);
     void* function = aotManager->AOTCompileAFunction(this,ind,fn);

@@ -42,6 +42,28 @@ public:
      * @param module to update the name
      */
     static void registerModuleNameForAOT(const char* module_filename, DefinedModule* module);
+    /**
+     * @brief To account with imports and externally defined functions and be able to properly
+     * calculate function indexes and offsets, we need to register imports. Potentailly it needs to
+     * define imports to every AOTManager that starts the compilation.
+     * This function now differentiates between the first and subsequent invocations of registerAllImports,
+     * depending on the value of registeredImportsOnce.
+     * This function is currently buggy, as it does define all exports as imports, which is true (?)
+     * for all other modules, but not within the module
+     * @param aotManager
+     * @param env
+     */
+    static void registerAllImports(wabt::aot::AOTManager& aotManager,interp::Environment& env);
+
+    /**
+     * @brief Computes (hopefully correctly, still need to verify) the offset to index in the compiling environment to
+     * be able to use while compilng Opcode::Call. This offset is due to other modules loaded.
+     * @param env  environment pointer
+     * @param Index the index of the current function
+     * @return int - an offset, how many were exported before (or somehow else defined in the environment, for instance,
+     * through the AppendExport).
+     */
+    static int approximateFirstFunctionInAModule(interp::Environment& env, unsigned int Index);
 
     static void getCompiledFunction(const char *name, void (**fn)());
 
@@ -92,6 +114,7 @@ public:
      * and loading
      */
     static int build_type;
+    static int registeredImportsOnce;
     static int no_of_modules;
     /**
      * @brief this variable is set to 1 when code

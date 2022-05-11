@@ -9,7 +9,7 @@
 int WABTAOTCompilerLib::build_type = 0;
 int WABTAOTCompilerLib::no_of_modules = 1;
 int WABTAOTCompilerLib::shouldReEmitELF = 0;
-
+int WABTAOTCompilerLib::registeredImportsOnce = 0;
 void WABTAOTCompilerLib::getCompiledFunction(const char *name, void (**fn)())
 {
   *fn = reinterpret_cast<void(*)()>(getCodeEntry(const_cast<char*>(name)));
@@ -20,6 +20,29 @@ void  WABTAOTCompilerLib::registerModuleNameForAOT(const char* module_filename, 
   std::string module_name(module_filename);
   module->name = module_name.substr(module_name.find_last_of('/')+1,module_name.find_last_of('.')-module_name.find_last_of('/')-1);
 }
+
+int WABTAOTCompilerLib::approximateFirstFunctionInAModule(interp::Environment& env, unsigned int Index)
+  {
+  unsigned int moduleIndex = 0;
+  unsigned int exportsSoFar = -1;
+  int result = 0;
+  /* First part - compute module index */
+  int currentModule =  getModuleIndexByFunctionIndex(env,Index);
+  /* After computing module index, go back and compute stuff*/
+  for (moduleIndex = 0 ; moduleIndex < currentModule; moduleIndex++ )
+    {
+    auto allExports = env.GetModule(moduleIndex)->exports;
+    for (unsigned int i = 0 ; i < allExports.size();i++)
+      {
+      if (allExports.at(i).kind==ExternalKind::Func)
+        {
+        result+=1;
+        }
+      }
+    }
+  return result;
+  }
+
 int WABTAOTCompilerLib::getModuleIndexByFunctionIndex(interp::Environment& env, unsigned int Index){
   unsigned int moduleIndex = 0;
   unsigned int exportsSoFar = -1;
@@ -207,24 +230,8 @@ void WABTAOTCompilerLib::registerMethods(wabt::aot::AOTManager& aotManager,inter
       module->funcs.emplace_back(env.GetFunc(i));
 
     }else{
-      for (int ii = 0 ; ii < env.GetModuleCount();ii++)
-        for (int j = 0 ; j < env.GetModule(ii)->exports.size();j++){
-          if (env.GetModule(ii)->exports[j].kind == wabt::ExternalKind::Func && env.GetModule(ii)->exports[j].index == i){
-            env.GetFunc(i)->dbg_name_= env.GetModule(ii)->exports[j].name;
-            env.AddAOTMetadata( env.GetFunc(i),i);
-          }
-        }
-      aotManager.push_back_import(env.GetFunc(i)->dbg_name_,env.GetFunc(i));
-
-      // for(Index j = 0;j<env.GetModuleCount();j++){
-      //   for(auto exp:env.GetModule(j)->exports){
-      //     if(!exp.name.compare(dynamic_cast<HostFunc*>(env.GetFunc(i))->field_name)){
-      //       aotManager.push_back_import("f" + std::to_string(exp.index) +"m"+env.GetModule(j)->name.substr(0,3),env.GetFunc(i));
-      //       env.GetFunc(i)->dbg_name_ = "f" + std::to_string(exp.index) +"m"+env.GetModule(j)->name.substr(0,3),env.GetFunc(i);
-      //     }
-      //   }
-      // }
-
+      registerAllImports(aotManager,env);
+      //aotManager.push_back_import(env.GetFunc(i)->dbg_name_,env.GetFunc(i));
     }
 
   }
@@ -235,6 +242,49 @@ void WABTAOTCompilerLib::registerMethods(wabt::aot::AOTManager& aotManager,inter
     auto module_func_count = module->funcs.size();
 }
 
+void WABTAOTCompilerLib::registerAllImports(wabt::aot::AOTManager& aotManager,interp::Environment& env)
+  {
+  auto func_count = env.GetFuncCount();
+  if (registeredImportsOnce == 0)
+    {
+    /* By design, it can be called multiple times. Maybe need to change the bad design */
+    for(Index i = 0; i < func_count; ++i)
+      {
+      auto functionInQuestion = env.GetFunc(i);
+      if(!(functionInQuestion->is_compiled == false && functionInQuestion->is_host == false))
+        {
+        for (int ii = 0 ; ii < env.GetModuleCount();ii++)
+          {
+          for (int j = 0 ; j < env.GetModule(ii)->exports.size();j++)
+            {
+            if (env.GetModule(ii)->exports[j].kind == wabt::ExternalKind::Func && env.GetModule(ii)->exports[j].index == i)
+              {
+              env.GetFunc(i)->dbg_name_= env.GetModule(ii)->exports[j].name;
+              // Consider if this call should only be made on the IMPORT CALLBACK in binary-reader interp
+              env.AddAOTMetadata( env.GetFunc(i),i);
+              }
+            }
+          }
+        }
+      }
+    registeredImportsOnce = 1;
+    }
+   /* Consider adding this as many AOT managers might need it
+   else
+   {
+      aotManager.push_back_import(env.GetFunc(i)->dbg_name_,env.GetFunc(i));
+   }
+   */
+      /** This code was before I started working on the code */
+      // for(Index j = 0;j<env.GetModuleCount();j++){
+      //   for(auto exp:env.GetModule(j)->exports){
+      //     if(!exp.name.compare(dynamic_cast<HostFunc*>(env.GetFunc(i))->field_name)){
+      //       aotManager.push_back_import("f" + std::to_string(exp.index) +"m"+env.GetModule(j)->name.substr(0,3),env.GetFunc(i));
+      //       env.GetFunc(i)->dbg_name_ = "f" + std::to_string(exp.index) +"m"+env.GetModule(j)->name.substr(0,3),env.GetFunc(i);
+      //     }
+      //   }
+      // }
+  }
 #ifndef WASM_SHARED_CACHE
 
 void WABTAOTCompilerLib::loadELFToMemory(const char* moduleFilename){

@@ -387,7 +387,6 @@ bool AOTFunctionBuilder::buildIL() {
   AppendBuilder(workItems_[0].builder);
 
   int32_t next_index;
-
   for(;;) {
     if ((next_index = GetNextBytecodeFromWorklist()) != -1) {
       auto& work_item = workItems_[next_index];
@@ -1138,6 +1137,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
 
     case Opcode::Call:
     case Opcode::InterpCallHost: {
+
       auto offset = ReadU32(&pc);
       // Assumption is that the number of import functions per module
       // is always the same
@@ -1147,8 +1147,24 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
       auto meta_it = env_.aot_meta_.find(offset);
 
     if(meta_it != env_.aot_meta_.end()) {
-	auto* fn = meta_it->second.wasm_fn;
-  // printf("sig index within module is %u",fn->sig_index);
+      auto* fn = meta_it->second.wasm_fn;
+      /** TODO will need to iterate among all dependencies and check if they are compiled 
+       * and return false if they are not. Dependencies are also added here  **/
+      if (strcmp(fn->dbg_name_.c_str(),"???") == 0 && fn->is_host == false){
+         int callingFunction = this->aotManager_.getFunctionThatManagerWasCreatedFor();
+         int updatedCallingFunction = callingFunction-env_.aot_meta_.at(0).getNumberOfImports();
+         auto callingAOTMeta = env_.aot_meta_.find(updatedCallingFunction);
+         if(callingAOTMeta != env_.aot_meta_.end())
+           {
+           callingAOTMeta->second.addDependency(offset);
+           return false;
+           }
+         else{
+           /* Cannot find function that started compilation*/
+           assert(false);
+         }
+      }
+    // printf("sig index within module is %u",fn->sig_index);
     // printf("offset is %u\n",reinterpret_cast<DefinedFunc*>(fn)->offset);
     //auto *fn = env_.GetFunc(offset);
 
@@ -1172,12 +1188,13 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
 	    t!=env_.GetFuncSignature(fn->sig_index)->param_types.rend(); t++) {
 	  args[--i] = Pop(b, TypeFieldName(*t));
 	}
-
+ 
  	auto* value = b->Call(fn->dbg_name_.c_str(), size, args);
 	pushReturnValue(fn, b, value);
 	delete args;
 //	aotManager_.addCallToRegistry(fn_name_,builder.fn_name_);
       } else {
+        // return false;
           assert(false);
           throw std::runtime_error("Call: function not found!");
       }
