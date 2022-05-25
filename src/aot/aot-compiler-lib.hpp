@@ -114,7 +114,6 @@ public:
      * and loading
      */
     static int build_type;
-    static int registeredImportsOnce;
     static int no_of_modules;
     /**
      * @brief this variable is set to 1 when code
@@ -122,5 +121,5 @@ public:
      */
     static int shouldReEmitELF;
 #endif
-
+    static int registeredImportsOnce;
 };

@@ -6,9 +6,12 @@
 #include "../cast.h" // cast
 #include <math.h> // for relocating math functions
 
+#ifndef WASM_SHARED_CACHE // This basically is only used in ELF-enabled runtime
 int WABTAOTCompilerLib::build_type = 0;
 int WABTAOTCompilerLib::no_of_modules = 1;
 int WABTAOTCompilerLib::shouldReEmitELF = 0;
+#endif
+
 int WABTAOTCompilerLib::registeredImportsOnce = 0;
 void WABTAOTCompilerLib::getCompiledFunction(const char *name, void (**fn)())
 {
