@@ -175,7 +175,12 @@ WASM::RelocationRecordBranchTable::offset(TR::RelocationTarget *reloTarget)
    {
    return reloTarget->loadRelocationRecordValue(reinterpret_cast<uintptr_t *>( &(reinterpret_cast<RelocationRecordWithOffsetBinaryTemplate *>(_record))->_offset));
    }
-
+/**
+ * @brief Needs to be updated with store relocation record value.
+ * 
+ * @param reloTarget 
+ * @param offset 
+ */
 void WASM::RelocationRecordWithOffset::setOffset(TR::RelocationTarget *reloTarget, UDATA offset) { reloTarget->storePointer(reinterpret_cast<uint8_t *>(offset), reinterpret_cast<uint8_t *>(&reinterpret_cast<WASM::RelocationRecordWithOffsetBinaryTemplate*>(_record)->_offset)); }
 
 
