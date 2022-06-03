@@ -602,13 +602,25 @@ class Environment {
  * @param fn imported_function, offset  to bytecodes is not defined
  * @param index index - signature index, hopefully within environment
  */
-  void AddAOTMetadata(Func* fn, Index index) {
+  void AddAOTMetadataForImportAndIncrementThenubmerOfImports(Func* fn, Index index) {
+    assert(fn->offset != kInvalidIstreamOffset);
+    AOTMeta meta = AOTMeta(index,fn);
+    meta.setIsImportAndIncrementNumberOfImports();
+    this->aot_meta_.insert({ index, meta });
+  }
+
+/**
+ * @brief This function is called when we are adding an import, but not
+ * incrementing the number as it will be accounted with
+ * @param fn imported_function, offset  to bytecodes is not defined
+ * @param index index - signature index, hopefully within environment
+ */
+  void AddAOTMetadataForImport(Func* fn, Index index) {
     assert(fn->offset != kInvalidIstreamOffset);
     AOTMeta meta = AOTMeta(index,fn);
     meta.setIsImport();
     this->aot_meta_.insert({ index, meta });
   }
-
 
   template <typename... Args>
   Global* EmplaceBackGlobal(Args&&... args) {
@@ -728,7 +740,11 @@ class Environment {
         }
         */
     }
-
+    /**
+     * @brief To build a graph, adds a dependency to the calling AOT Meta.
+     *
+     * @param dep - callee
+     */
     void addDependency(unsigned int dep){
       unsigned int thisFunction = getIndexOfAFunctionWithinModule();
       if (dependenciesMaxSize == lastUsedIdxInDependenciesArray){
@@ -752,8 +768,15 @@ class Environment {
           /* realloc(dependencies,(dependenciesMaxSize)*sizeof(unsigned int));*/
         }else{
           /* Unimplemented, more than 20 dependencies */
-          fprintf(stderr,"More than 20 dependencies encountered, need to fix in %s,%d\n",__FILE__,__LINE__);
-          assert(false);
+          dependenciesMaxSize  = dependenciesMaxSize * 2;
+          unsigned int *temp = new unsigned int [dependenciesMaxSize];
+          for (int i = 0 ;  i< lastUsedIdxInDependenciesArray; i++){
+            temp[i] = dependencies[i];
+          }
+          delete [] dependencies;
+          dependencies = temp;
+          // fprintf(stderr,"More than 20 dependencies encountered, need to fix in %s,%d\n",__FILE__,__LINE__);
+          // assert(false);
         }
       }
       dependencies[lastUsedIdxInDependenciesArray]=dep;
@@ -768,6 +791,9 @@ class Environment {
     static unsigned int getNumberOfImports(){
             return numOfImports;
     }
+    static unsigned int getNumberOfDeclaredImports(){
+            return AOTMeta::numOfDeclaredImports;
+    }
     /**
      * @brief Get the Index Of A Function Within Module
      * This function should be used to fetch index of the function within its module, regardless of the environment state
@@ -778,9 +804,14 @@ class Environment {
             return index ; /* This might have been necessary in the case there are actually imports, but for now - no- numOfImports;*/
     }
     int isImport(){ return _isImport;}
-    void setIsImport() {
+    void setIsImportAndIncrementNumberOfImports() {
       _isImport = 1;
       AOTMeta::numOfImports++;
+
+      }
+    void setIsImport() {
+      _isImport = 1;
+      AOTMeta::numOfDeclaredImports++;
       }
     private:
     /**
@@ -815,6 +846,8 @@ class Environment {
      * we want to keep track of the last used index in dependencies array.
      */
     unsigned int lastUsedIdxInDependenciesArray;
+
+    static unsigned int numOfDeclaredImports;
   };
   Result TryJit(Thread* t, DefinedFunc* fn, Index ind);
 

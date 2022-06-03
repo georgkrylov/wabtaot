@@ -1,3 +1,4 @@
+
 #
 # Copyright 2016 WebAssembly Community Group participants
 #
@@ -17,8 +18,8 @@
 cmake_minimum_required(VERSION 2.6)
 project(WABT)
 
-option(BUILD_TESTS "Build GTest-based tests" ON)
-option(BUILD_TOOLS "Build wabt commandline tools" ON)
+option(BUILD_TESTS "Build GTest-based tests" OFF)
+option(BUILD_TOOLS "Build wabt commandline tools" OFF)
 option(USE_ASAN "Use address sanitizer" OFF)
 option(USE_MSAN "Use memory sanitizer" OFF)
 option(USE_LSAN "Use leak sanitizer" OFF)
@@ -27,6 +28,10 @@ option(CODE_COVERAGE "Build with code coverage enabled" OFF)
 option(WITH_EXCEPTIONS "Build with exceptions enabled" ON)
 option(WERROR "Build with warnings as errors" OFF)
 
+list(APPEND CMAKE_MODULE_PATH
+	cmake/Modules
+	${CMAKE_CURRENT_LIST_DIR}/third_party/omr/cmake/modules/
+)
 set(OMR_DDR OFF CACHE BOOL "Enable DDR")
 set(OMR_EXAMPLE OFF CACHE BOOL "")
 set(OMR_COMPILER  ON CACHE BOOL "")
@@ -45,7 +50,7 @@ set(OMR_NOTIFY_POLICY_CONTROL OFF CACHE BOOL "")
 set(OMR_THR_SPIN_WAKE_CONTROL OFF CACHE BOOL "")
 set(OMR_THR_SPIN_CODE_REFACTOR OFF CACHE BOOL "")
 set(OMR_THR_FORK_SUPPORT OFF CACHE BOOL "")
-set(OMR_WARNINGS_AS_ERRORS OFF CACHE BOOL "")
+set(OMR_WARNINGS_AS_ERRORS ON CACHE BOOL "")
 set(OMR_AOT ON CACHE BOOL "")
 
 set(OMR_SHARED_CACHE_MODS ON CACHE BOOL "")
@@ -306,6 +311,7 @@ add_subdirectory(em-interp)
 #target_link_libraries(libwabt PUBLIC wabtjit)
 
 target_link_libraries(wabt PUBLIC wabtjit)
+
 
 if (NOT EMSCRIPTEN)
   if (CODE_COVERAGE)

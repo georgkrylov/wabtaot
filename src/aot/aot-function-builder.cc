@@ -1141,14 +1141,20 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
       auto offset = ReadU32(&pc);
       // Assumption is that the number of import functions per module
       // is always the same
-      offset-=env_.aot_meta_.at(0).getNumberOfImports();
+      if (offset >= env_.aot_meta_.at(0).getNumberOfDeclaredImports())
+        offset-=env_.aot_meta_.at(0).getNumberOfImports();
       // printf("offset to env is %u,",offset);
 
       auto meta_it = env_.aot_meta_.find(offset);
 
     if(meta_it != env_.aot_meta_.end()) {
       auto* fn = meta_it->second.wasm_fn;
-      /** TODO will need to iterate among all dependencies and check if they are compiled 
+      /* If we are calling the function that is host - do NOTHING */
+      if(fn->is_host == true)
+        {
+          return false;
+        }
+     /** TODO will need to iterate among all dependencies and check if they are compiled 
        * and return false if they are not. Dependencies are also added here  **/
       if (strcmp(fn->dbg_name_.c_str(),"???") == 0 && fn->is_host == false){
          int callingFunction = this->aotManager_.getFunctionThatManagerWasCreatedFor();

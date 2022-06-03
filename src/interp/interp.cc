@@ -157,6 +157,7 @@ Environment::~Environment() {
 }
 int Environment::AOTMeta::numOfFunction = 0;
 unsigned int Environment::AOTMeta::numOfImports = 0;
+unsigned int Environment::AOTMeta::numOfDeclaredImports = 0;
 
 Index Environment::FindModuleIndex(string_view name) const {
   auto iter = module_bindings_.find(name.to_string());

@@ -264,7 +264,7 @@ void WABTAOTCompilerLib::registerAllImports(wabt::aot::AOTManager& aotManager,in
               {
               env.GetFunc(i)->dbg_name_= env.GetModule(ii)->exports[j].name;
               // Consider if this call should only be made on the IMPORT CALLBACK in binary-reader interp
-              env.AddAOTMetadata( env.GetFunc(i),i);
+              env.AddAOTMetadataForImportAndIncrementThenubmerOfImports( env.GetFunc(i),i);
               }
             }
           }
