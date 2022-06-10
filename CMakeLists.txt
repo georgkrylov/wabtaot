@@ -277,6 +277,10 @@ function(add_omr)
   add_subdirectory(third_party/omr/example/glue EXCLUDE_FROM_ALL)
   add_subdirectory(third_party/omr EXCLUDE_FROM_ALL)
 endfunction()
+# in response to https://github.com/eclipse/omr/issues/6544
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DTR_TARGET_X86 ")
+# in response to needing to include time.h in cstimer.h in omr
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DLINUX ")
 
 add_omr()
 add_subdirectory(src/jit)
