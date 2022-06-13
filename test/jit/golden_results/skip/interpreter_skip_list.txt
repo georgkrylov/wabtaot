@@ -5,3 +5,4 @@
 ./test/jit/multi_value.txt
 ./test/jit/call_complex.txt
 ./test/jit/callindirect.txt
+./test/jit/truncation.txt

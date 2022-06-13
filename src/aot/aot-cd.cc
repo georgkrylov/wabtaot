@@ -5,7 +5,7 @@
 #include "../cast.h"
 #include "../error-formatter.h"
 #include "../feature.h"
-#include "../interp/interp.h"
+
 #include "../literal.h"
 #include "../option-parser.h"
 #include "../resolve-names.h"
@@ -17,8 +17,9 @@
 #include "aot-type-dictionary.h"
 #include "aot-function-builder.h"
 #include "trap-with.h"
+#include "aot-compiler-lib.hpp"
+#include "aot-manager.h"
 
-#include "JitBuilder.hpp"
 #include <algorithm>
 #include <iostream>
 #include <memory>
@@ -32,8 +33,8 @@
 using namespace wabt;
 using namespace wabt::interp;
 /*
-class WasmInterpHostImportDelegate : public HostImportDelegate {
  public:
+class WasmInterpHostImportDelegate : public HostImportDelegate {
   wabt::Result ImportFunc(interp::FuncImport* import,
                           interp::Func* func,
                           interp::FuncSignature* func_sig,
@@ -42,7 +43,7 @@ class WasmInterpHostImportDelegate : public HostImportDelegate {
       cast<HostFunc>(func)->callback = PrintCallback;
       return wabt::Result::Ok;
     } else {
-      
+
       return wabt::Result::Error;
     }
   }
@@ -81,7 +82,7 @@ class WasmInterpHostImportDelegate : public HostImportDelegate {
     TypedValues vec_results(out_results, out_results + num_results);
 
     printf("called host ");
-    
+
     return interp::Result::Ok;
   }
 
@@ -91,7 +92,7 @@ class WasmInterpHostImportDelegate : public HostImportDelegate {
   }
 };*/
 
-static Environment *envPointer;
+
 
 extern int32_t internal_compileMethodBuilder(TR::MethodBuilder * methodBuilder, void ** entryPoint);
 
@@ -132,7 +133,7 @@ static wabt::Result ReadModule(const char* module_filename,
     }
 
     return kInvalidIndex;
-    
+
   };
 
   HostModule *wasi = env->AppendHostModule("wasi_unstable");
@@ -147,7 +148,7 @@ static wabt::Result ReadModule(const char* module_filename,
     }
 
     return kInvalidIndex;
-    
+
    };
 
   HostModule *envi = env->AppendHostModule("env");
@@ -162,14 +163,14 @@ static wabt::Result ReadModule(const char* module_filename,
     }
 
     return kInvalidIndex;
-    
+
   };
 
   envi->on_unknown_export =
       [](Environment* env, HostModule* module, string_view name, ExternalKind kind)
          -> Index {
     if (name != "") {
-      
+
       switch(kind) {
           case ExternalKind::Memory: {
               auto pair = module->AppendMemoryExport(name, Limits(256, 256));
@@ -183,7 +184,7 @@ static wabt::Result ReadModule(const char* module_filename,
     }
 
     return kInvalidIndex;
-    
+
   };
 
   // *out_module = nullptr;
@@ -209,101 +210,17 @@ static wabt::Result ReadModule(const char* module_filename,
   return result;
 }
 
-void getCompiledFunction(const char *name, void (**fn)())
-{
-  *fn = reinterpret_cast<void(*)()>(getCodeEntry(const_cast<char*>(name)));
-}
 
-wabt::interp::Environment *getEnvironment()
-{
-  return envPointer;
-}
 
-char* getSOFilename(char * filename)
-{
-  size_t last_dot = 0, last_dot_flag = 0, last_path = 0, last_path_flag = 0;
-  for (int i = strlen(filename); i >= 0; i--)
-        {
-            if (filename[i] == '.' && last_dot_flag == 0)
-            {
-              last_dot = i;
-              last_dot_flag++;
-            }
-             if (filename[i] == '/' && last_path_flag == 0)
-            {
-              last_path = i;
-              last_path_flag++;
-            }
-            if(last_dot_flag == 1 && last_path_flag == 1)
-              break;
-         }
-         size_t lenFilename = last_dot - last_path;
-  
-        char *substr = (char *)malloc(lenFilename);
-        strncpy(substr, filename + last_path + 1, lenFilename - 1);
-        substr[lenFilename - 1] = '\0';
-        char *so = ".so";
-        char *soFilename = (char *) malloc(1 + strlen(substr)+ strlen(so));  
-        strcpy(soFilename, substr);
-        strcat(soFilename, so); 
-
-        return soFilename;
-}
-
-wabt::Result compileAOT(interp::Environment& env, DefinedModule* module, char * filename)
-{
+int compileAOT(interp::Environment& env, DefinedModule* module, char * filename){
   using namespace wabt::aot;
-
-  interp::Thread thread(&env);
-  
-  auto func_count = env.GetFuncCount();
   AOTManager aotManager;
-  env.FillMemories();
-  Index j = 0;
-  for(Index i = 0; i < func_count; ++i) {
-    if(!env.GetFunc(i)->is_compiled) {
-      auto* fn = cast<wabt::interp::DefinedFunc>(env.GetFunc(i));
-      std::unique_ptr<AOTTypeDictionary> types(new (PERSISTENT_NEW) AOTTypeDictionary());
-      //static AOTTypeDictionary types;
-      std::string name = "f" + std::to_string(j) +"m" +module->name.substr(0,3);
-      
-      AOTFunctionBuilder* builder = new (PERSISTENT_NEW) AOTFunctionBuilder(&thread, fn,
-							   std::move(name),
-							   types.get(),
-							   env, aotManager);
-
-      std::unique_ptr<AOTFunctionBuilder> builder_ptr(builder);
-
-      aotManager.push_back_FB(fn->offset, std::move(builder_ptr), std::move(types));
-      
-      env.GetFunc(i)->dbg_name_ = "f" + std::to_string(j) +"m"+module->name.substr(0,3);
-      j++;
-      module->funcs.emplace_back(env.GetFunc(i));
-      
-    }else{
-      aotManager.push_back_import(env.GetFunc(i)->dbg_name_,env.GetFunc(i));
-        
-      // for(Index j = 0;j<env.GetModuleCount();j++){
-      //   for(auto exp:env.GetModule(j)->exports){
-      //     if(!exp.name.compare(dynamic_cast<HostFunc*>(env.GetFunc(i))->field_name)){
-      //       aotManager.push_back_import("f" + std::to_string(exp.index) +"m"+env.GetModule(j)->name.substr(0,3),env.GetFunc(i));
-      //       env.GetFunc(i)->dbg_name_ = "f" + std::to_string(exp.index) +"m"+env.GetModule(j)->name.substr(0,3),env.GetFunc(i);
-      //     }
-      //   }
-      // }
-      
-    }
-    
-  }
-
-    aotManager.broadcastNames();
-    aotManager.broadcastImports();
-    module->compiled_functions.reserve(func_count);
-    auto module_func_count = module->funcs.size();
-
+   interp::Thread thread(&env);
+  WABTAOTCompilerLib::registerMethods(aotManager,env,module,filename,thread);
+  auto func_count = env.GetFuncCount();
   int flag = 0;
   for(Index i = 0; i < func_count; ++i) {
-    
+
     if(!env.GetFunc(i)->is_compiled) {
       auto* fn = cast<wabt::interp::DefinedFunc>(env.GetFunc(i));
       auto& builder = aotManager.getFB(fn->offset);
@@ -314,22 +231,23 @@ wabt::Result compileAOT(interp::Environment& env, DefinedModule* module, char * 
         internal_compileMethodBuilder(&builder, &function);
         storeCodeEntry((char *)fn->dbg_name_.c_str());
 	      function = getCodeEntry(const_cast<char*>(fn->dbg_name_.c_str()));
+        assert(function!=NULL);
       }
-      module->compiled_functions.push_back(function);
+      module->aot_compiled_functions.push_back(function);
       env.GetFunc(i)->is_compiled = true;
 
     }
 
   }
   if(flag == 1){
-    return wabt::Result::Emit;
+    return 2;
   } else
   {
-    return wabt::Result::Ok;
+    return 0;
   }
 }
 
-uint32_t printaa(int32_t a,int32_t b,int32_t c,int32_t d) { 
+uint32_t printaa(int32_t a,int32_t b,int32_t c,int32_t d) {
   uint32_t bufferLoc = *(uint32_t*)(envPointer->GetMems()[0]+b);
   char *buffer = envPointer->GetMems()[0]+bufferLoc;
   uint32_t buffsize = *(uint32_t*)(envPointer->GetMems()[0]+b+4);
@@ -394,8 +312,10 @@ void relocateAOT(interp::Environment& env,DefinedModule *module)
   setCodeEntry("copysign",reinterpret_cast<void*>(cpsign));
   setCodeEntry("sqrtf",reinterpret_cast<void*>(sqrtf));
   setCodeEntry("copysignf",reinterpret_cast<void*>(copysignf));
-  setCodeEntry("CallIndi",reinterpret_cast<void*>(wabt::aot::AOTFunctionBuilder::CallIndirectHelper));
+  setCodeEntry("CallIndi",reinterpret_cast<void*>(wabt::aot::AOTFunctionBuilder::AOTCallIndirectHelper));
   setCodeEntry("GrowMem",reinterpret_cast<void*>(wabt::aot::AOTFunctionBuilder::GrowMemory));
+  setCodeEntry("MemSize",reinterpret_cast<void*>(wabt::aot::AOTFunctionBuilder::CalculateMemorySize));
+  setCodeEntry("PrintSt",reinterpret_cast<void*>(wabt::aot::AOTFunctionBuilder::PrintSomething));
   setCodeEntry("fd_write",reinterpret_cast<void*>(printaa));
   setCodeEntry("__lock",reinterpret_cast<void*>(1));
   setCodeEntry("__unlock",reinterpret_cast<void*>(1));
@@ -451,16 +371,16 @@ void relocateAOT(interp::Environment& env,DefinedModule *module)
   env.FillMemories();
   char memory_name[6];
   for(int i=0;i<env.GetMemoryCount();i++) {
-    
+
     sprintf(memory_name,"m%d",i);
     //global_names.emplace_back(global_name);
     setCodeEntry(const_cast<char*>(memory_name),reinterpret_cast<void*>(env.GetMems()+i));
   }
   setCodeEntry(const_cast<char*>("Params"), reinterpret_cast<void*>(&env.indirectCallParams));
   // uint16_t compiled_function_index = 0;
-  for(Index i = 0; i < module->compiled_functions.size(); ++i) {
+  for(Index i = 0; i < module->aot_compiled_functions.size(); ++i) {
     // if(!env.GetFunc(i)->is_host) {
-    if(module->compiled_functions[i]){
+    if(module->aot_compiled_functions[i]){
       auto* fn = static_cast<DefinedFunc*>(module->funcs[i]);
       relocateCodeEntry(const_cast<char *>(fn->dbg_name_.c_str()));
       // compiled_function_index++;
@@ -476,14 +396,19 @@ void runExports(interp::Environment& env,DefinedModule *module, int run_all_expo
   for(auto exported:module->exports){
     if(exported.kind != ExternalKind::Func) { continue;}
     std::string index = std::to_string(exported.index);
-    std::string funcname = env.GetFunc(exported.index)->dbg_name_;
+    std::string funcname = reinterpret_cast<DefinedFunc*>(env.GetFunc(exported.index))->dbg_name_;
+    // std::cout<<"Funcname is:"<<funcname<<std::endl;
     void *fn = nullptr;
     if (run_all_exports != 1)
        if(exported.name != "_start") continue;
 
     for(uint32_t i = 0;i<module->funcs.size();i++){
       if(!funcname.compare(module->funcs[i]->dbg_name_)){
-        fn = module->compiled_functions[i];
+        fn = module->aot_compiled_functions[i];
+        break;
+      }
+      if(!funcname.compare(reinterpret_cast<DefinedFunc*>(module->funcs[i])->dbg_name_)){
+        fn = module->aot_compiled_functions[i];
         break;
       }
     }
@@ -499,7 +424,7 @@ void runExports(interp::Environment& env,DefinedModule *module, int run_all_expo
         double a = reinterpret_cast<double(*)()>(fn)();
         std::cout<<exported.name<<"() => f64:"<<a<<"\n";
         }
-      else if(env.GetFuncSignature(env.GetFunc(exported.index)->sig_index)->result_types.front() == Type::I32)  {	
+      else if(env.GetFuncSignature(env.GetFunc(exported.index)->sig_index)->result_types.front() == Type::I32)  {
       uint32_t a = reinterpret_cast<uint64_t(*)()>(fn)();
       std::cout<<exported.name<<"() => i32:"<<a<<"\n";
       }else
@@ -530,7 +455,7 @@ int main(int argc, char** argv) {
   }
   //TODO rewrite using the infrastructure
   int run_all_exports = 0;
-  int no_of_modules = 0;
+  uint32_t no_of_modules = 0;
 
   if (argc >= 2) {
     for (int i = 0 ; i < argc; i++){
@@ -545,47 +470,38 @@ int main(int argc, char** argv) {
   }
   numOfArgs = argc-1;
   args_arr = argv;
-  
+
   Environment env;
   s_stdout_stream = FileStream::CreateStdout();
-  s_log_stream = FileStream::CreateStderr();
+  s_log_stream = nullptr;
   wabt::Result compile_result;
   for(uint32_t i = 1;i<=no_of_modules;i++) {
     registerModules(argv[i],&env);
   }
   envPointer = &env;
+  WABTAOTCompilerLib compilerLib = WABTAOTCompilerLib();
   char* src_filename;
 
-  
+
  uint32_t build_type=0;
 #ifndef WASM_SHARED_CACHE
 if(no_of_modules > 1){
-    
+
     char* soFilename = "./wasmaot.so";
-    if( access( (const char *)soFilename, F_OK ) == 0 ) {
+    if( access( static_cast<const char *>(soFilename), F_OK ) == 0 ) {
       loadFileInMemory(soFilename);
       build_type = 1;
     }
-   
+
 }
  #endif
   for(uint32_t i = 1;i<=no_of_modules;i++) {
     src_filename = argv[i];
 #ifndef WASM_SHARED_CACHE
   if(no_of_modules == 1){
-    
-    char* soFilename = getSOFilename(src_filename);
-    char *pre = "./";
-    char *slashFilename = (char *) malloc(1 + strlen(soFilename)+ strlen(pre));  
-    strcpy(slashFilename, pre);
-    strcat(slashFilename, soFilename);
-    if( access( (const char *)slashFilename, F_OK ) == 0 ) {
-      loadFileInMemory(slashFilename);
-      build_type = 1;
-    } 
-    
+    WABTAOTCompilerLib::getSOFilename(src_filename);
     }
-  #endif
+#endif
 
     DefinedModule* module = nullptr; //new DefinedModule();
     //ErrorHandlerFile error_handler(Location::Type::Binary);
@@ -594,30 +510,23 @@ if(no_of_modules > 1){
     wabt::Result result = ReadModule(src_filename, &env, &errors, &module);
 
     if(Succeeded(result)) {
-      compile_result = compileAOT(env, module, src_filename);
+      wabt::aot::AOTManager aotManager;
+      interp::Thread thread(&env);
+      WABTAOTCompilerLib::registerMethods(aotManager,env,module,const_cast<char*>(src_filename),thread);
+      WABTAOTCompilerLib::compileEverything(env,aotManager,module);
     }else{
       std::cout<<"read failure\n";
     }
   }
 
   for(uint32_t i = 1;i<=no_of_modules;i++) {
-    relocateAOT(env, dynamic_cast<DefinedModule*>(env.GetModule(i-1)));
+    WABTAOTCompilerLib::relocateAOT(env, dynamic_cast<DefinedModule*>(env.GetModule(i-1)));
   }
   for(uint32_t i = 1;i<=no_of_modules;i++) {
     runExports(env,dynamic_cast<DefinedModule*>(env.GetModule(i-1)),run_all_exports);
   }
 
 #ifndef WASM_SHARED_CACHE
-    if(build_type != 1 || compile_result == 2)
-    {
-      if(no_of_modules == 1){
-        char* soFilename = getSOFilename(src_filename);
-        storeCodeEntries(soFilename);
-      }
-      else{
-        char* soFilename = "wasmaot.so";
-        storeCodeEntries(soFilename);
-      }
-    }
-#endif  
+  WABTAOTCompilerLib::createELFFile(src_filename);
+#endif
 }

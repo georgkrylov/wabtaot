@@ -1,5 +1,8 @@
 /bin
+/reference-bin
+/build-em
 /build
+/build_interp
 /out
 /fuzz-out
 /emscripten
@@ -10,6 +13,6 @@
 /cmake-build-debug/
 /test_results
 tempmod.o
-/wabtaot-private-additions
-/polybench
+/leo-bin
+/leo-main-exe
 

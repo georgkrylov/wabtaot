@@ -17,10 +17,21 @@
 #ifndef JIT_ENVIRONMENT_HPP
 #define JIT_ENVIRONMENT_HPP
 
+// TODO Georgiy: look at this, it was needed for jit.
+#include "src/common.h"
+#include <cstdint>
+
 #include <vector>
 
 namespace wabt {
 namespace jit {
+
+// TODO Georgiy: look at this, it was needed for jit.
+struct ThreadInfo;
+
+using Result_t = int32_t;
+using JITedFunction = Result_t (*)(ThreadInfo*, Index);
+
 
 class JitEnvironment {
 public:

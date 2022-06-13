@@ -57,7 +57,10 @@ inline uint32_t ReadU32At(const uint8_t* pc) {
 }
 
 inline uint32_t ReadU32(const uint8_t** pc) {
-  return ReadUx<uint32_t>(pc);
+  uint32_t temp =ReadUx<uint32_t>(pc);
+  // printf("\tvalue read %u",temp);
+  fflush(stdout);
+  return temp;
 }
 
 inline uint64_t ReadU64At(const uint8_t* pc) {

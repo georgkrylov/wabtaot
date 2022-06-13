@@ -21,7 +21,7 @@
 #include <cstdarg>
 #include <cstdio>
 #include <vector>
-
+#include <iostream>
 #include "src/binary-reader-nop.h"
 #include "src/cast.h"
 #include "src/feature.h"
@@ -422,6 +422,7 @@ FuncSignature* BinaryReaderInterp::GetSignatureByModuleIndex(Index sig_index) {
 
 Index BinaryReaderInterp::TranslateFuncIndexToEnv(Index func_index) {
   assert(func_index < func_index_mapping_.size());
+  // std::cout << "Function index accessed is" << func_index<<", and stuff returned is:"<< func_index_mapping_[func_index]<<std::flush<<std::endl;
   return func_index_mapping_[func_index];
 }
 
@@ -602,12 +603,27 @@ wabt::Result BinaryReaderInterp::EmitFuncOffset(DefinedFunc* func,
     Index defined_index = TranslateModuleFuncIndexToDefined(func_index);
     CHECK_RESULT(AppendFixup(&func_fixups_, defined_index));
   }
+#if not defined(unneeded)
+// problematic
+  CHECK_RESULT(EmitI32(func->offset));
+#else
+  /**
+   * @brief It seems in interpreted setting, the number of function imports are offset by the em-interp,
+   * while wataot needs to bump them artificially in binary-reader-interp:emitFuncOffset
+   *
+   */
 
   if(!func->is_host && func->offset == 0)
+  {
+    std::cout << "EmitFuncOffset, for importedFunction: Function offset is" << func->offset + num_func_imports_ << std::endl<<std::flush;
     CHECK_RESULT(EmitI32(func->offset + num_func_imports_));
+  }
   else
+  {
+    std::cout << "EmitFuncOffset: Function index is" << func->offset << std::endl<<std::flush;
     CHECK_RESULT(EmitI32(func->offset));
-
+  }
+#endif
   return wabt::Result::Ok;
 }
 
@@ -812,8 +828,8 @@ wabt::Result BinaryReaderInterp::OnImportFunc(Index import_index,
     // imports.
     CHECK_RESULT(GetModuleExport(import_module, import->field_name, &export_));
   }
-
-
+  // Import into one module are exports from the other module
+  // memories can be exports and functions can also be exported
   CHECK_RESULT(CheckImportKind(import, export_->kind));
 
   Func* func = env_->GetFunc(export_->index);
@@ -821,12 +837,15 @@ wabt::Result BinaryReaderInterp::OnImportFunc(Index import_index,
     PrintError("import signature mismatch");
     return wabt::Result::Error;
   }
+  // for wabtaot, record the index within other module
   func->offset = func_index;
+  // for wabtaot, record the index within other module
   func->dbg_name_.assign(field_name.to_string());
-  env_->AddJitMetadata(func);
+  // Either this or the  aot-compiler-lib.cc is unnecessary
+  env_->AddAOTMetadataForImport(func,func_index);
   func_env_index = export_->index;
-  //}
-  func_index_mapping_.push_back(func_env_index);
+  func_index_mapping_.push_back(export_->index);
+
   num_func_imports_++;
   return wabt::Result::Ok;
 }
@@ -849,11 +868,16 @@ wabt::Result BinaryReaderInterp::OnImportTable(Index import_index,
   CHECK_RESULT(FindRegisteredModule(import->module_name, &import_module));
 
   Export* export_;
+// #if defined(EMSCRIPTEN_INTERPRETER_BUILD)
+//problematic
+  CHECK_RESULT(GetModuleExport(import_module, import->field_name, &export_));
+// #else
   if(import_module->is_host) {
       CHECK_RESULT(GetModuleExport(import_module, import->field_name, import->kind, &export_));
   } else {
       CHECK_RESULT(GetModuleExport(import_module, import->field_name, &export_));
   }
+// #endif
   CHECK_RESULT(CheckImportKind(import, export_->kind));
 
   Table* table = env_->GetTable(export_->index);
@@ -881,11 +905,16 @@ wabt::Result BinaryReaderInterp::OnImportMemory(Index import_index,
   CHECK_RESULT(FindRegisteredModule(import->module_name, &import_module));
 
   Export* export_;
+#if defined(unneeded)
+//problematic
+  CHECK_RESULT(GetModuleExport(import_module, import->field_name, &export_));
+#else
   if(import_module->is_host) {
       CHECK_RESULT(GetModuleExport(import_module, import->field_name, import->kind, &export_));
   } else {
       CHECK_RESULT(GetModuleExport(import_module, import->field_name, &export_));
   }
+#endif
   CHECK_RESULT(CheckImportKind(import, export_->kind));
 
   Memory* memory = env_->GetMemory(export_->index);
@@ -1257,7 +1286,8 @@ void BinaryReaderInterp::PopLabel() {
 wabt::Result BinaryReaderInterp::BeginFunctionBody(Index index, Offset size) {
   auto* func = cast<DefinedFunc>(GetFuncByModuleIndex(index));
   FuncSignature* sig = env_->GetFuncSignature(func->sig_index);
-
+  /** Offset was previously swapped to point to index of the function in the environment instead 
+   * of the offset in the bytes stream??*/
   func->offset = GetIstreamOffset();
   bool offset_zero = false;
   // needed to differentiate first function and first import
@@ -1265,11 +1295,12 @@ wabt::Result BinaryReaderInterp::BeginFunctionBody(Index index, Offset size) {
       func->offset += num_func_imports_;
       offset_zero = true;
   }
+  // printf("Within BeginFunctionBody, func offset is set to %u, offset zero is %i\n",func->offset,offset_zero);
   func->local_decl_count = 0;
   func->local_count = 0;
 
   /* wasmjit-omr: emit JIT metadata now that func->offset is known */
-  env_->AddJitMetadata(func);
+  env_->AddAOTMetadata(func,index);
   if (offset_zero)
       func->offset = 0;
 
@@ -1554,13 +1585,24 @@ wabt::Result BinaryReaderInterp::OnCallExpr(Index func_index) {
   FuncSignature* sig = env_->GetFuncSignature(func->sig_index);
   CHECK_RESULT(typechecker_.OnCall(sig->param_types, sig->result_types));
 
-  // if (func->is_host) {
-  //   CHECK_RESULT(EmitOpcode(Opcode::InterpCallHost));
-  //   CHECK_RESULT(EmitI32(TranslateFuncIndexToEnv(func_index)));
-  // } else {
+// An experiment to allow different behavior based on the build flags.
+// Em-interp will work, regular interp will not, will need to think about it
+#if not defined(unneeded)
+// problematic
+   // std::cout << "Interpreting"<<std::endl;
+  if (func->is_host) {
+    CHECK_RESULT(EmitOpcode(Opcode::InterpCallHost));
+    // CHECK_RESULT(EmitI32(TranslateFuncIndexToEnv(func_index)));
+  } else {
     CHECK_RESULT(EmitOpcode(Opcode::Call));
-    CHECK_RESULT(EmitFuncOffset(cast<DefinedFunc>(func), func_index));
-  // }
+    // CHECK_RESULT(EmitFuncOffset(cast<DefinedFunc>(func), func_index));
+  }
+  CHECK_RESULT(EmitI32(TranslateFuncIndexToEnv(func_index)));
+#else
+  // std::cout << "Full AOT"<<std::endl;
+  CHECK_RESULT(EmitOpcode(Opcode::Call));
+  CHECK_RESULT(EmitFuncOffset(cast<DefinedFunc>(func), func_index));
+#endif
 
   return wabt::Result::Ok;
 }
@@ -1598,7 +1640,11 @@ wabt::Result BinaryReaderInterp::OnReturnCallExpr(Index func_index) {
     CHECK_RESULT(EmitOpcode(Opcode::Return));
   } else {
     CHECK_RESULT(EmitOpcode(Opcode::ReturnCall));
+#if defined(unneeded)
+    CHECK_RESULT(EmitI32(TranslateFuncIndexToEnv(func_index)));
+#else
     CHECK_RESULT(EmitFuncOffset(cast<DefinedFunc>(func), func_index));
+#endif
   }
 
   return wabt::Result::Ok;
@@ -1972,12 +2018,22 @@ wabt::Result ReadBinaryInterp(Environment* env,
 
   std::unique_ptr<OutputBuffer> istream = env->ReleaseIstream();
   IstreamOffset istream_offset = istream->size();
-  //DefinedModule* module = new DefinedModule();
-
+  // If module is interpreted, it will reach here as a null pointer
+  // otherwise, it will already be instantiated in aot-cd.cc
+  // The boolean interpreted flag is to be removed once (if) the 
+  // interpreter will be equipped with aot compiler
+  bool interpreted = false;
+  
+  if (*module == nullptr){
+    *module = new DefinedModule();
+    interpreted = true;
+  }
 
   BinaryReaderInterp reader(env, module, std::move(istream), errors,
                             options.features);
-  //env->EmplaceBackModule(module);
+  if (interpreted){   
+  env->EmplaceBackModule(*module);
+  }
 
   wabt::Result result = ReadBinary(data, size, &reader, options);
   env->SetIstream(reader.ReleaseOutputBuffer());

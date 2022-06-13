@@ -7,7 +7,7 @@
 //#include "/home/petar/wasmjit-omr/third_party/omr/compiler/ilgen/VirtualMachineOperandStack.hpp"
 //#include "infra/Assert.hpp"
 #include "ilgen/VirtualMachineState.hpp"
-
+#include "aot-compiler-lib.hpp"
 #include <cmath>
 #include <limits>
 #include <type_traits>
@@ -84,7 +84,7 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFu
 		 Int32);
 
   DefineFunction("CallIndi", __FILE__, "0",
-		 reinterpret_cast<void*>(CallIndirectHelper),
+		 reinterpret_cast<void*>(AOTCallIndirectHelper),
 		 Int64,
 		 3,
 		 Int64, Int64, Int64);
@@ -98,18 +98,28 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFu
 		 Int64,
 		 1,
 		 Int32);
-  DefineFunction("GrowMem", __FILE__, "0",
+  DefineFunction("GrowMem", __FILE__, "34",
 		 reinterpret_cast<void*>(GrowMemory),
 		 Int32,
-		 1,
+		 2,
 		 Int32,
+		 Int32);
+  DefineFunction("PrintSt", __FILE__, "34",
+		 reinterpret_cast<void*>(PrintSomething),
+		 Int32,
+		 1,
+		 Int32);
+  DefineFunction("MemSize", __FILE__, "17",
+		 reinterpret_cast<void*>(CalculateMemorySize),
+		 Int32,
+		 1,
 		 Int32);
   DefineFunction("funpr", __FILE__, "0",
 		 reinterpret_cast<void*>(sqrt),
 		 NoType,
 		 1,
 		 Int64);
-  
+
   envPointer = &env_;
   returnType_ = functionReturnType(fn_);
 
@@ -136,7 +146,7 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFu
     DefineParameter(param_names_.back().data(), tt);
     param_types_.push_back(tt);
   }
-  
+
   arg = 0;
   global_names_.reserve(globals_size);
   for(const auto& g: env_.globals_) {
@@ -169,11 +179,11 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread* thread, interp::DefinedFu
 }
 
 void AOTFunctionBuilder::pushParams() {
-  
+
   auto memories_size = env_.GetMemoryCount();
   auto globals_size = env_.GetGlobalCount();
   int arg = 0;
-  
+
   for(const auto& t: env_.GetFuncSignature(fn_->sig_index)->param_types) {
     Push(this, TypeFieldName(t), Load(param_names_[arg++].data()));
   }
@@ -182,7 +192,6 @@ void AOTFunctionBuilder::pushParams() {
 /*
  Build a struct containing the return types of the function, as its fields.
  */
-
 TR::IlType* AOTFunctionBuilder::functionReturnType(interp::Func* fn)
 {
     const auto& result_types = env_.GetFuncSignature(fn->sig_index)->result_types;
@@ -196,11 +205,24 @@ TR::IlType* AOTFunctionBuilder::functionReturnType(interp::Func* fn)
 
 void AOTFunctionBuilder::defineFunction(const std::string& name, interp::DefinedFunc* fn)
 {
+  /** Presumably, if the function we are trying to define in JitBuilder is the function
+   * this AOTMethodBuilder describes, do nothing
+   */
   if(fn == fn_) return;
-
+  /** If the function is the function this AOTMethodBuilder describes somehow (not sure
+   *  it can possibly evaluate to true, but I will leave it be), then the return type
+   *  needs to be the return type of the function, otherwise we use the method
+   *  functionrReturnType to fetch the method return type
+   */
   TR::IlType* result_type = fn == fn_ ? returnType_ : functionReturnType(fn);
+  /**
+   * @brief we fetch the function builder at offset. the offset is set somewhere in
+   * binary reader interp
+   */
   auto& builder_fn = aotManager_.getFB(fn->offset);
 
+  /** So the JitBuilder knows about the function now
+   */
   DefineFunction(name.c_str(), __FILE__, "0",
 		 reinterpret_cast<void*>(18), // this is a magic number that makes trampoline lookup work.
 		 result_type,
@@ -214,7 +236,7 @@ void AOTFunctionBuilder::defineImportFunction(const std::string& name, FunctionI
   TR::IlType* result_type = functionReturnType(import.fn_);
   if(import.param_types_.size() != env_.GetFuncSignature(import.fn_->sig_index)->param_types.size()){
     for(const auto& t: env_.GetFuncSignature(import.fn_->sig_index)->param_types) {
-    
+
       TR::IlType* tt = TypeFieldType(t,this);
 
       import.param_types_.push_back(tt);
@@ -228,10 +250,10 @@ void AOTFunctionBuilder::defineImportFunction(const std::string& name, FunctionI
 }
 
 
-uint64_t AOTFunctionBuilder::CallIndirectHelper(Index table_index, Index sig_index, Index entry_index) {
+uint64_t AOTFunctionBuilder::AOTCallIndirectHelper(Index table_index, Index sig_index, Index entry_index) {
   using namespace wabt::interp;
-  
-  Environment *env = ::getEnvironment();
+
+  Environment *env = envPointer;
 
 //  Index table_index = reinterpret_cast<Index>(params[0]);
   Table* table = &env->tables_[table_index];
@@ -245,7 +267,7 @@ uint64_t AOTFunctionBuilder::CallIndirectHelper(Index table_index, Index sig_ind
               IndirectCallSignatureMismatch);
 //  assert(env->GetFuncSignature(sig_index)->param_types.size() == count-3);
 //  count-=3;
-  auto count = env->GetFuncSignature(sig_index)->param_types.size();  
+  auto count = env->GetFuncSignature(sig_index)->param_types.size();
  // printf("FI:%d\n",func_index);
  // for (auto aa:env->GetFuncSignature(sig_index)->param_types) {
   //  printf("%d\n",aa);
@@ -257,7 +279,7 @@ uint64_t AOTFunctionBuilder::CallIndirectHelper(Index table_index, Index sig_ind
       //return result;
   } else {
     uint64_t (*fn)();
-    ::getCompiledFunction(func->dbg_name_.c_str(),reinterpret_cast<void(**)()>(&fn));
+    WABTAOTCompilerLib::getCompiledFunction(func->dbg_name_.c_str(),reinterpret_cast<void(**)()>(&fn));
 
     //since calls are made regularly, every possible number and type of parameters requires a case
     switch(count) {
@@ -319,14 +341,31 @@ uint64_t AOTFunctionBuilder::CallIndirectHelper(Index table_index, Index sig_ind
   return static_cast<Result_t>(interp::Result::Ok);
 }
 
+uint32_t AOTFunctionBuilder::CalculateMemorySize(uint32_t index) {
+  // printf("Grow by: %ud",grow_pages);
+  Memory *memory = envPointer->GetMemory(index);
+  uint32_t old_page_size = memory->page_limits.initial;
+  return old_page_size;
+}
+
+uint32_t AOTFunctionBuilder::PrintSomething(uint32_t index) {
+  //printf("Grow by: %ud",grow_pages);
+  Memory *memory = envPointer->GetMemory(index);
+  uint32_t old_page_size = memory->page_limits.initial;
+  // printf("Hello from index %u, pageSize of memory[0] is%u\n",index,old_page_size);
+  return old_page_size;
+}
 //Currently the memory is not actually resized, only the data on the number of pages
 uint32_t AOTFunctionBuilder::GrowMemory(uint32_t mem, uint32_t grow_pages) {
   //printf("Grow by: %ud",grow_pages);
   Memory *memory = envPointer->GetMemory(mem);
+
   uint32_t old_page_size = memory->page_limits.initial;
   uint32_t new_page_size = old_page_size + grow_pages;
-  //memory->data.resize(new_page_size * WABT_PAGE_SIZE);
+  // printf("Hello from GrowMemory, memory index is %u, old_page_size is %u, old data size is %u, new page size is %u\n",mem,old_page_size,memory->data.size(),  new_page_size);
+  memory->data.resize(new_page_size * WABT_PAGE_SIZE);
   memory->page_limits.initial = new_page_size;
+  // printf("Hello from GrowMemory second time, memory->data.size is %u memory->page_limits.initial are %u\n",memory->data.size(),memory->page_limits.initial);
   return old_page_size;
 }
 
@@ -348,7 +387,6 @@ bool AOTFunctionBuilder::buildIL() {
   AppendBuilder(workItems_[0].builder);
 
   int32_t next_index;
-
   for(;;) {
     if ((next_index = GetNextBytecodeFromWorklist()) != -1) {
       auto& work_item = workItems_[next_index];
@@ -398,7 +436,7 @@ void AOTFunctionBuilder::Push(TR::IlBuilder* b, const char* type, TR::IlValue* v
     value_wrapper = strcmp(type, "i64") ? b->ConvertTo(valueType_, value) : value;
 */
   //Bitcast seems to provide the best conversions for this compiler, currently
-  
+
   TR::IlValue* value_wrapper = strcmp(type, "i64") ? b->BitcastTo(valueType_, value) : value;
   stackCount_++;
   stack_->Push(b, value_wrapper);
@@ -968,7 +1006,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
           uint32_t keep_count;
           ReadTableEntryAt(entry, &new_pc, &drop_count, &keep_count);
 	  int32_t next_index = static_cast<int32_t>(workItems_.size());
-	  
+
           workItems_.emplace_back(OrphanBytecodeBuilder(next_index,
                                                       const_cast<char*>(ReadOpcodeAt(reinterpret_cast<uint8_t*>(&new_pc)).GetName())),
                                   &istream[new_pc],new TR::VirtualMachineOperandStack(stack_),stackCount_);
@@ -1052,7 +1090,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
     }
 
     case Opcode::GlobalSet: {
-      //auto* address = calculateGlobalIndex(b, &pc); 
+      //auto* address = calculateGlobalIndex(b, &pc);
       //TODO FIX ONLY TYPE, SHOULD BE MORE TYPES
       auto index = ReadU32(&pc);
       auto* value = Pop(b, TypeFieldName(env_.globals_[index].typed_value.type));
@@ -1078,7 +1116,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
       // just copy a field that's the size of the entire union
       auto* local_addr = Pick(ReadU32(&pc));
       Push(b, "i64", local_addr); //b->LoadIndirect("Value", "i64", local_addr));
-      
+
       break;
     }
 
@@ -1097,16 +1135,47 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
       break;
     }
 
-    case Opcode::InterpCallHost:
-    case Opcode::Call: {
+    case Opcode::Call:
+    case Opcode::InterpCallHost: {
+
       auto offset = ReadU32(&pc);
-      auto meta_it = env_.jit_meta_.find(offset);
+      // Assumption is that the number of import functions per module
+      // is always the same
+      if (offset >= env_.aot_meta_.at(0).getNumberOfDeclaredImports())
+        offset-=env_.aot_meta_.at(0).getNumberOfImports();
+      // printf("offset to env is %u,",offset);
 
-    if(meta_it != env_.jit_meta_.end()) {
-	auto* fn = meta_it->second.wasm_fn;
+      auto meta_it = env_.aot_meta_.find(offset);
+
+    if(meta_it != env_.aot_meta_.end()) {
+      auto* fn = meta_it->second.wasm_fn;
+      /* If we are calling the function that is host - do NOTHING */
+      if(fn->is_host == true)
+        {
+          return false;
+        }
+     /** TODO will need to iterate among all dependencies and check if they are compiled 
+       * and return false if they are not. Dependencies are also added here  **/
+      if (strcmp(fn->dbg_name_.c_str(),"???") == 0 && fn->is_host == false){
+         int callingFunction = this->aotManager_.getFunctionThatManagerWasCreatedFor();
+         int updatedCallingFunction = callingFunction-env_.aot_meta_.at(0).getNumberOfImports();
+         auto callingAOTMeta = env_.aot_meta_.find(updatedCallingFunction);
+         if(callingAOTMeta != env_.aot_meta_.end())
+           {
+           callingAOTMeta->second.addDependency(offset);
+           return false;
+           }
+         else{
+           /* Cannot find function that started compilation*/
+           assert(false);
+         }
+      }
+    // printf("sig index within module is %u",fn->sig_index);
+    // printf("offset is %u\n",reinterpret_cast<DefinedFunc*>(fn)->offset);
     //auto *fn = env_.GetFunc(offset);
-	auto& builder = aotManager_.getFB(fn->offset);
 
+    // This line retrieves the function we want to call.
+	auto& builder = aotManager_.getFB(fn->offset);
 	//std::vector<TR::IlValue*> args;
 	int size = env_.GetFuncSignature(fn->sig_index)->param_types.size();
 	//TR::IlValue **args1 = new TR::IlValue*[size]();
@@ -1125,32 +1194,34 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
 	    t!=env_.GetFuncSignature(fn->sig_index)->param_types.rend(); t++) {
 	  args[--i] = Pop(b, TypeFieldName(*t));
 	}
-
+ 
  	auto* value = b->Call(fn->dbg_name_.c_str(), size, args);
 	pushReturnValue(fn, b, value);
 	delete args;
 //	aotManager_.addCallToRegistry(fn_name_,builder.fn_name_);
       } else {
-	throw std::runtime_error("Call: function not found!");
+        // return false;
+          assert(false);
+          throw std::runtime_error("Call: function not found!");
       }
-      
+
       break;
     }
 
   case Opcode::CallIndirect: {
-    
+
 //    auto th_addr = b->ConstAddress(thread_);
     auto table_index = b->ConstInt64(ReadU32(&pc));
     auto sig = ReadU32(&pc);
     auto sig_index = b->ConstInt64(sig);
     auto entry_index = Pop(b, "i64");
 //    auto current_pc = b->Const(pc);
-      
+
     int size = env_.GetFuncSignature(sig)->param_types.size();
 	TR::IlValue **args = new TR::IlValue*[3]();
-    
+
     int i = 0;
-    
+
     auto *array = b->Load("Params");
     for(auto t = env_.GetFuncSignature(sig)->param_types.begin();
 	    t!=env_.GetFuncSignature(sig)->param_types.end(); t++) {
@@ -1164,7 +1235,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
 
     auto *value = b->Call("CallIndi", 3, args);
     pushReturnValue(sig, b, value);
-      
+
     break;
     }
 
@@ -1185,7 +1256,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
     //   break;
     // }
 
-    case Opcode::I32Load8S: 
+    case Opcode::I32Load8S:
 
     case Opcode::I32Load8U: {
       auto index = ReadU32(&pc);
@@ -1197,14 +1268,14 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
 	//	 b->Sub(b->Sub(memsize,offset),b->ConstInt64(4))),
 	  //   interp::Result::TrapMemoryAccessOutOfBounds);//pValueType is always 64-bit...
       auto address = b->Add(dynamicAddr, offset);
-      
+
       auto location = b->IndexAt(types_->PointerTo(Int8), mem, address);
       TR::IlValue *value = b->LoadAt(types_->PointerTo(Int8), location);
       Push(b, "i32", b->ConvertTo(Int32, value));
       break;
     }
 
-    case Opcode::I32Load16S: 
+    case Opcode::I32Load16S:
 
     case Opcode::I32Load16U: {
       auto index = ReadU32(&pc);
@@ -1216,7 +1287,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
 	//	 b->Sub(b->Sub(memsize,offset),b->ConstInt64(4))),
 	  //   interp::Result::TrapMemoryAccessOutOfBounds);//pValueType is always 64-bit...
       auto address = b->Add(dynamicAddr, offset);
-      
+
       auto location = b->IndexAt(types_->PointerTo(Int8), mem, address);
       TR::IlValue *value = b->LoadAt(types_->PointerTo(Int16), location);
       Push(b, "i32", b->ConvertTo(Int32, value));
@@ -1234,14 +1305,14 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
 	//	 b->Sub(b->Sub(memsize,offset),b->ConstInt64(4))),
 	  //   interp::Result::TrapMemoryAccessOutOfBounds);//pValueType is always 64-bit...
       auto address = b->Add(dynamicAddr, offset);
-      
+
       auto location = b->IndexAt(types_->PointerTo(Int8), mem, address);
       TR::IlValue *value = b->LoadAt(types_->PointerTo(Int32), location);
       Push(b, "i32", value);
       break;
     }
 
-    case Opcode::I64Load8S: 
+    case Opcode::I64Load8S:
 
     case Opcode::I64Load8U: {
       auto index = ReadU32(&pc);
@@ -1253,14 +1324,14 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
 	//	 b->Sub(b->Sub(memsize,offset),b->ConstInt64(4))),
 	  //   interp::Result::TrapMemoryAccessOutOfBounds);//pValueType is always 64-bit...
       auto address = b->Add(dynamicAddr, offset);
-      
+
       auto location = b->IndexAt(types_->PointerTo(Int8), mem, address);
       TR::IlValue *value = b->LoadAt(types_->PointerTo(Int8), location);
       Push(b, "i64", b->ConvertTo(Int64, value));
       break;
     }
 
-    case Opcode::I64Load16S: 
+    case Opcode::I64Load16S:
 
     case Opcode::I64Load16U: {
       auto index = ReadU32(&pc);
@@ -1272,14 +1343,14 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
 	//	 b->Sub(b->Sub(memsize,offset),b->ConstInt64(4))),
 	  //   interp::Result::TrapMemoryAccessOutOfBounds);//pValueType is always 64-bit...
       auto address = b->Add(dynamicAddr, offset);
-      
+
       auto location = b->IndexAt(types_->PointerTo(Int8), mem, address);
       TR::IlValue *value = b->LoadAt(types_->PointerTo(Int16), location);
       Push(b, "i64", b->ConvertTo(Int64, value));
       break;
     }
 
-    case Opcode::I64Load32S: 
+    case Opcode::I64Load32S:
 
     case Opcode::I64Load32U:{
       auto index = ReadU32(&pc);
@@ -1291,7 +1362,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
 	//	 b->Sub(b->Sub(memsize,offset),b->ConstInt64(4))),
 	  //   interp::Result::TrapMemoryAccessOutOfBounds);//pValueType is always 64-bit...
       auto address = b->Add(dynamicAddr, offset);
-      
+
       auto location = b->IndexAt(types_->PointerTo(Int8), mem, address);
       TR::IlValue *value = b->LoadAt(types_->PointerTo(Int32), location);
       Push(b, "i64", b->ConvertTo(Int64, value));
@@ -1313,10 +1384,10 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
       break;
     }
 
-    case Opcode::I32Store8: 
+    case Opcode::I32Store8:
     case Opcode::I64Store8: {
       auto index = ReadU32(&pc);
-      auto *value = Pop(b,"i64"); 
+      auto *value = Pop(b,"i64");
       auto *mem = b->Load(mem_names_[index].data());
       auto offset = b->ConstInt64(static_cast<uint64_t>(ReadU32(&pc)));
       auto address = b->Add(Pop(b, "i64"), offset);
@@ -1328,10 +1399,10 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
       break;
     }
 
-    case Opcode::I32Store16:  
+    case Opcode::I32Store16:
     case Opcode::I64Store16: {
       auto index = ReadU32(&pc);
-      auto *value = Pop(b,"i64"); 
+      auto *value = Pop(b,"i64");
       auto *mem = b->Load(mem_names_[index].data());
       auto offset = b->ConstInt64(static_cast<uint64_t>(ReadU32(&pc)));
       auto address = b->Add(Pop(b, "i64"), offset);
@@ -1345,7 +1416,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
 
     case Opcode::I64Store32: {
       auto index = ReadU32(&pc);
-      auto *value = Pop(b,"i64"); 
+      auto *value = Pop(b,"i64");
       auto *mem = b->Load(mem_names_[index].data());
       auto offset = b->ConstInt64(static_cast<uint64_t>(ReadU32(&pc)));
       auto address = b->Add(Pop(b, "i64"), offset);
@@ -1360,7 +1431,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
     case Opcode::I32Store:
     case Opcode::F32Store:{
       auto index = ReadU32(&pc);
-      auto *value = Pop(b,"i64"); 
+      auto *value = Pop(b,"i64");
       auto *mem = b->Load(mem_names_[index].data());
       auto offset = b->ConstInt64(static_cast<uint64_t>(ReadU32(&pc)));
       auto address = b->Add(Pop(b, "i64"), offset);
@@ -1377,7 +1448,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
 //      auto* value = Pop(b, "i64");
 //      b->StoreAt(calculateMemoryIndex(b, &pc), value);
       auto index = ReadU32(&pc);
-      auto *value = Pop(b,"i64"); 
+      auto *value = Pop(b,"i64");
       auto *mem = b->Load(mem_names_[index].data());
       auto offset = b->ConstInt64(static_cast<uint64_t>(ReadU32(&pc)));
       auto address = b->Add(Pop(b, "i64"), offset);
@@ -1559,12 +1630,12 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
         return b->Mul(lhs, rhs);
       });
       break;
-     
+
     case Opcode::I64DivU:
       EmitUnsignedIntDivide<int64_t>(b);
       break;
 
-      
+
     case Opcode::I64DivS: // RETURN
       EmitIntDivide<int64_t>(b); //, pc);
       break;
@@ -1925,8 +1996,8 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
     case Opcode::F32DemoteF64: {
       auto* value = Pop(b, "f64");
       Push(b, "f32",
-      b->  ConvertTo(Float, value));
-	   //     pc);
+           b->  ConvertTo(Float, value));
+          //     pc);
       break;
     }
 
@@ -2064,10 +2135,10 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
       EmitTruncation<int64_t, float>(b);//pc);
       break;
 
-//    UNSIGNED TYPE NOT HANDLED
-//    case Opcode::I64TruncUF32:
-//      EmitTruncation<uint64_t, float>(b, pc);
-//      break;
+  //  UNSIGNED TYPE NOT HANDLED
+  //  case Opcode::I64TruncUF32:
+  //    EmitTruncation<uint64_t, float>(b, pc);
+  //    break;
 
     case Opcode::I64TruncF64S:
       EmitTruncation<int64_t, double>(b);//pc);
@@ -2078,13 +2149,21 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
 //      EmitTruncation<uint64_t, double>(b, pc);
 //      break;
 
-    case Opcode::MemorySize:
-        Push(b, "i64", b->ConstInt64(64*1024));
+    case Opcode::MemorySize:{
+        // CHECK_TRAP(Push<uint32_t>(ReadMemory(&pc)->page_limits.initial));
+       TR::IlValue **args = new TR::IlValue*[1]();
+       uint32_t tsk = ReadU32(&pc);
+      //  printf("Stuff read when compiled MemorySize%u\n", tsk);
+      args[0] = b->ConstInt32(tsk);
+      auto* value = b->Call("MemSize",1,args);
+      Push(b,"i32",value);
         break;
-
+    }
     case Opcode::MemoryGrow: {
       TR::IlValue **args = new TR::IlValue*[2]();
-      args[0] = ConstInt32(ReadU32(&pc));
+      uint32_t tsk = ReadU32(&pc);
+      //  printf("Stuff read when compiled MemoryGrow%u\n", tsk);
+      args[0] =b-> ConstInt32(tsk);
       args[1] = Pop(b,"i32");
       auto* value = b->Call("GrowMem",2,args);
       Push(b,"i64",value);
@@ -2103,14 +2182,14 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder* b,
     }
 
    case Opcode::I64Popcnt:{
-     
+
       TR::IlValue **args = new TR::IlValue*[1]{Pop(b,"i64")};
       auto* value = b->Call("Popcountll", 1, args);
       Push(b,"i64",value);
       delete args;
       break;
    }
-    
+
     case Opcode::I32Popcnt: {
 
       TR::IlValue **args = new TR::IlValue*[1]{Pop(b,"i32")};

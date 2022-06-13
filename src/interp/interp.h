@@ -30,6 +30,9 @@
 #include <sys/mman.h>
 
 #include "src/jit/environment.h"
+#include "src/jit/thread.h"
+#include "src/jit/thunk.h"
+
 #include "src/binding-hash.h"
 #include "src/common.h"
 #include "src/opcode.h"
@@ -42,78 +45,11 @@ class FunctionBuilder;
 }
 
 namespace aot {
-class AOTFunctionBuilder;  
+class AOTFunctionBuilder;
+class AOTManager;
 }
 
 namespace interp {
-  
-class ELFLoader
-{
-public:
-  ELFLoader(char *elfFileName);
-
-  ~ELFLoader();
-  void *getTextSection();
-  Elf64_Sym *getSymbolTable();
-  unsigned int *getCustomSection();
-  void printHeader();
-  void printSymbolTable();
-  
-protected:
-  typedef Elf64_Ehdr ELFEHeader;
-  typedef Elf64_Shdr ELFSectionHeader;
-  typedef Elf64_Phdr ELFProgramHeader;
-  typedef Elf64_Addr ELFAddress;
-  typedef Elf64_Sym  ELFSymbol;
-  typedef Elf64_Rela ELFRela;
-  typedef Elf64_Off  ELFOffset;
-#define ELF_ST_INFO(bind, type) ELF64_ST_INFO(bind,type)
-#define ELF_ST_VISIBILITY(visibility) ELF64_ST_VISIBILITY(visibility)
-#define ELF_R_INFO(bind, type) ELF64_R_INFO(bind, type)
-#define ELFClass ELFCLASS64;
-#define BIT(x,n) (((x)>>(n))&1)
-
-  char       *_elfFileName;
-  FILE       *_elfFile;
-  ELFEHeader *_header;
-  
-  ELFSectionHeader *_zeroSection;
-  char              _zeroSectionName[1];
-  ELFSectionHeader *_textSection;
-  char              _textSectionName[6];
-  ELFSectionHeader *_relaSection;
-  char              _relaSectionName[11];
-  ELFSectionHeader *_dynSymSection;
-  char              _dynSymSectionName[8];
-  ELFSectionHeader *_shStrTabSection;
-  char              _shStrTabSectionName[10];
-  ELFSectionHeader *_dynStrSection;
-  char              _dynStrSectionName[8];
-  ELFSectionHeader *_customSection;
-  char              _customSectionName[8];
-
-  void *_text;
-  Elf64_Sym *_symtab;
-  char *_dynstr;
-  Elf64_Rela *_rela;
-  unsigned int *_custom;
-
-  void initialize();
-  void loadTextSection();
-  void loadSymTab();
-  void loadDynStr();
-  void loadRela();
-  void loadCustom();
-  char *typeString(ELFSectionHeader *);
-  char *flagString(ELFSectionHeader *);
-  char *symTypeString(Elf64_Sym);
-  char *symBindString(Elf64_Sym);
-  char *symVisString(Elf64_Sym);
-  char *symNdxString(Elf64_Sym);
-  char *symNameString(Elf64_Sym);
-  
-}; //class ELFLoader
-
 
 #define FOREACH_INTERP_RESULT(V)                                            \
   V(Ok, "ok")                                                               \
@@ -201,15 +137,24 @@ struct Table {
 struct Memory {
   Memory() = default;
   explicit Memory(const Limits& limits)
-    : page_limits(limits){
-	madvise(data.data(), 2368709120*sizeof(char), MADV_SEQUENTIAL);
-	madvise(data.data(), 2368709120*sizeof(char), MADV_HUGEPAGE);  
-	madvise(data.data(), 2368709120*sizeof(char), MADV_WILLNEED);
-	
-      }
+      : page_limits(limits)
+// #if defined(EMSCRIPTEN_INTERPRETER_BUILD)
+, data(limits.initial * WABT_PAGE_SIZE) {}
+// #else
+//   {
+// 	madvise(data.data(), 2368709120*sizeof(char), MADV_SEQUENTIAL);
+// 	madvise(data.data(), 2368709120*sizeof(char), MADV_HUGEPAGE);
+// 	madvise(data.data(), 2368709120*sizeof(char), MADV_WILLNEED);
+//   }
+// #endif
 
   Limits page_limits;
-  alignas(4096) std::array<char,2368709120> data;
+// #if defined(EMSCRIPTEN_INTERPRETER_BUILD)
+  std::vector<char> data;
+// #else
+  // alignas(4096) std::array<char,2368709120> data;
+// #endif
+
 };
 
 struct DataSegment {
@@ -346,7 +291,14 @@ struct Func;
 struct Func {
   WABT_DISALLOW_COPY_AND_ASSIGN(Func);
   Func(Index sig_index, bool is_host)
-      : sig_index(sig_index), is_host(is_host),offset(kInvalidIstreamOffset) {}
+      : sig_index(sig_index), is_host(is_host)
+#if not defined(unneeded)
+// problematic
+{}
+#else
+,offset(kInvalidIstreamOffset) {}
+#endif
+
   virtual ~Func() {}
 
   Index sig_index;
@@ -359,21 +311,42 @@ struct Func {
 struct DefinedFunc : Func {
   DefinedFunc(Index sig_index)
       : Func(sig_index, false),
-        
+#if not defined(unneeded)
+//problematic
+        offset(kInvalidIstreamOffset),
+#endif
         local_decl_count(0),
         local_count(0) {}
 
-  static bool classof(const Func* func) { //return !func->is_host; 
+  static bool classof(const Func* func) {
+#if not defined(unneeded)
+//Problematic
+   return !func->is_host;
+#else
     return true;
+#endif
   }
 
-  
+#if not defined(unneeded)
+// problematic
+  std::string dbg_name_ = "???";
+#endif
   bool has_dbg_name_ = false;
 
-  
+
+  uint32_t num_calls_ = 0;
+  bool tried_jit_ = false;
+  jit::JITedFunction jit_fn_ = nullptr;
+#if not defined(unneeded)
+  /**
+   * @brief  Offset in defined function is to the bytes stream
+   * potentially problematic if uncommented
+   */
+  IstreamOffset offset;
+#endif
   Index local_decl_count;
   Index local_count;
-  
+
   // first the parameter types, and then the local types.
   // the number of local types is given by local_count.
   std::vector<Type> param_and_local_types;
@@ -392,11 +365,13 @@ struct HostFunc : Func {
       : Func(sig_index, true),
         module_name(module_name.to_string()),
         field_name(field_name.to_string()),
-      // {
-  //  }
-      
-        callback(callback) { is_compiled = true; }
-
+        callback(callback)
+#if not defined(unneeded)
+// potentially problematic
+        {}
+#else
+        {is_compiled = true; }
+#endif
   static bool classof(const Func* func) { return func->is_host; }
 
   std::string module_name;
@@ -456,7 +431,7 @@ struct DefinedModule : Module {
   Index start_func_index; /* kInvalidIndex if not defined */
   IstreamOffset istream_start;
   IstreamOffset istream_end;
-  std::vector<void*> compiled_functions;
+  std::vector<void*> aot_compiled_functions;
   std::vector<Func*> funcs;
 };
 
@@ -539,7 +514,6 @@ class Environment {
   void SetIstream(std::unique_ptr<OutputBuffer> istream) {
     istream_ = std::move(istream);
   }
-  
   std::unique_ptr<OutputBuffer> ReleaseIstream() { return std::move(istream_); }
 
   Index GetFuncSignatureCount() const { return sigs_.size(); }
@@ -601,12 +575,51 @@ class Environment {
   template <typename... Args>
   Func* EmplaceBackFunc(Args&&... args) {
     funcs_.emplace_back(std::forward<Args>(args)...);
-    return funcs_.back().get();
+    // This was commented out for wabtaot
+    jit_funcs_.emplace_back(funcs_.back()->is_host ? jit::HostCallThunk : jit::InterpThunk);
+    Func* f = funcs_.back().get();
+
+    return f;
+
   }
 
-  void AddJitMetadata(Func* fn) {
+
+/**
+ * @brief  This function is called when we have offset to the memory
+ * containing bytecode
+ *
+ * @param fn Function with offset into memory within this module
+ * @param index - signature index, hopefully within environment
+ */
+  void AddAOTMetadata(DefinedFunc* fn, Index index) {
     assert(fn->offset != kInvalidIstreamOffset);
-    this->jit_meta_.insert({ fn->offset, JitMeta(fn) });
+    this->aot_meta_.insert({ index, AOTMeta(index,fn) });
+  }
+
+/**
+ * @brief This function is called when we are adding an import
+ * 
+ * @param fn imported_function, offset  to bytecodes is not defined
+ * @param index index - signature index, hopefully within environment
+ */
+  void AddAOTMetadataForImportAndIncrementThenubmerOfImports(Func* fn, Index index) {
+    assert(fn->offset != kInvalidIstreamOffset);
+    AOTMeta meta = AOTMeta(index,fn);
+    meta.setIsImportAndIncrementNumberOfImports();
+    this->aot_meta_.insert({ index, meta });
+  }
+
+/**
+ * @brief This function is called when we are adding an import, but not
+ * incrementing the number as it will be accounted with
+ * @param fn imported_function, offset  to bytecodes is not defined
+ * @param index index - signature index, hopefully within environment
+ */
+  void AddAOTMetadataForImport(Func* fn, Index index) {
+    assert(fn->offset != kInvalidIstreamOffset);
+    AOTMeta meta = AOTMeta(index,fn);
+    meta.setIsImport();
+    this->aot_meta_.insert({ index, meta });
   }
 
   template <typename... Args>
@@ -656,6 +669,11 @@ class Environment {
   }
 
   uint64_t memoriesLoc(){ return reinterpret_cast<uint64_t>(memories_[0].data.data()); }
+  /**
+   * @brief Get the Mems object
+   *
+   * @return char** AOT memories pointer
+   */
   char **GetMems() {return mems;}
 
   HostModule* AppendHostModule(string_view name);
@@ -668,7 +686,10 @@ class Environment {
 
   void Disassemble(Stream* stream, IstreamOffset from, IstreamOffset to);
   void DisassembleModule(Stream* stream, Module*);
-  void LoadDLib(char *filename);
+  /**
+   * @brief This fucntion is responsible for memory allocation
+   * for memories
+   */
   void FillMemories();
   void FillTables();
   uint64_t *indirectCallParams = new uint64_t[8]();
@@ -676,29 +697,164 @@ class Environment {
  private:
   friend class Thread;
   friend class wabt::jit::FunctionBuilder;
+  friend jit::Result_t jit::InterpThunk(jit::ThreadInfo*, Index);
+  friend jit::Result_t jit::HostCallThunk(jit::ThreadInfo*, Index);
   friend class wabt::aot::AOTFunctionBuilder;
-  using JITedFunction = wabt::interp::Result (*)();
-  using AOTedFunction = uint64_t (*)();
 
-  struct JitMeta {
+
+  using AOTedFunction = interp::DefinedFunc*;
+
+  struct AOTMeta {
     Func* wasm_fn;
     uint32_t num_calls = 0;
 
     bool tried_jit = false;
-    JITedFunction jit_fn = nullptr;
+    AOTedFunction jit_fn = nullptr;
 
-    JitMeta(Func* wasm_fn) : wasm_fn(wasm_fn) {
+    AOTMeta(unsigned int ind, Func* wasm_fn) : wasm_fn(wasm_fn) {
       //wasm_fn->dbg_name_= "func_" + std::to_string(numOfFunction);
       // wasm_fn->dbg_name_= "f" + wasm_fn-> +"m"+modules_[0]->name.substr(0,3);
+      dependencies = NULL;
+      index = ind;
       numOfFunction++;
+      dependenciesMaxSize = 0;
+      lastUsedIdxInDependenciesArray = 0;
     }
+      /**
+       * @brief Destroy the AOTMeta object
+       * To avoid memory leaks, freeing the dependencies object, if it is not NULL.
+       */
+    ~AOTMeta(){
+      //wasm_fn->dbg_name_= "func_" + std::to_string(numOfFunction);
+      // wasm_fn->dbg_name_= "f" + wasm_fn-> +"m"+modules_[0]->name.substr(0,3);
+
+      /** Ideally, this dynamically allocated memory should be free
+       * but it generates a segfault, so I will let it leak hoping destructors
+       * will pick it up themselves?
+      if (dependencies != NULL &&  dependenciesMaxSize!= 0)
+        {
+        delete [] dependencies;
+        dependencies = NULL;
+        dependenciesMaxSize = 0;
+        lastUsedIdxInDependenciesArray = 0;
+        }
+        */
+    }
+    /**
+     * @brief To build a graph, adds a dependency to the calling AOT Meta.
+     *
+     * @param dep - callee
+     */
+    void addDependency(unsigned int dep){
+      unsigned int thisFunction = getIndexOfAFunctionWithinModule();
+      if (dependenciesMaxSize == lastUsedIdxInDependenciesArray){
+        /* We have used up all the space in our dependencies array*/
+        if (dependenciesMaxSize  == 0){
+          /* Very first entry, will allocate space for 5 */
+          dependenciesMaxSize = 5;
+          dependencies = new unsigned int [dependenciesMaxSize];
+        }else if (lastUsedIdxInDependenciesArray <= 20)
+        {
+          /* we assume that if there aren't that many dependencies we can
+          increment array size by 5, otherwise we will grow it by doubling.*/
+          dependenciesMaxSize  = dependenciesMaxSize + 5;
+          unsigned int *temp = new unsigned int [dependenciesMaxSize];
+          for (int i = 0 ;  i< lastUsedIdxInDependenciesArray; i++){
+            temp[i] = dependencies[i];
+          }
+          delete [] dependencies;
+          dependencies = temp;
+          /*Does realloc automatically copy?*/
+          /* realloc(dependencies,(dependenciesMaxSize)*sizeof(unsigned int));*/
+        }else{
+          /* Unimplemented, more than 20 dependencies */
+          dependenciesMaxSize  = dependenciesMaxSize * 2;
+          unsigned int *temp = new unsigned int [dependenciesMaxSize];
+          for (int i = 0 ;  i< lastUsedIdxInDependenciesArray; i++){
+            temp[i] = dependencies[i];
+          }
+          delete [] dependencies;
+          dependencies = temp;
+          // fprintf(stderr,"More than 20 dependencies encountered, need to fix in %s,%d\n",__FILE__,__LINE__);
+          // assert(false);
+        }
+      }
+      dependencies[lastUsedIdxInDependenciesArray]=dep;
+      lastUsedIdxInDependenciesArray++;
+    }
+    /**
+     * @brief Get the Number Of Imports object
+     * Is used as a main source of offset computation for opcode::Call compilation,
+     * can be used in conjunction with WABTAOTCompilerLib::approximateFirstFunctionInAModule?
+     * @return unsigned int 
+     */
+    static unsigned int getNumberOfImports(){
+            return numOfImports;
+    }
+    static unsigned int getNumberOfDeclaredImports(){
+            return AOTMeta::numOfDeclaredImports;
+    }
+    /**
+     * @brief Get the Index Of A Function Within Module
+     * This function should be used to fetch index of the function within its module, regardless of the environment state
+     * Was not tested for the case of multiple active modules.
+     * @return unsigned int - an index updated by the number of already loaded functions (from the previous modules)
+     */
+    unsigned int getIndexOfAFunctionWithinModule(){
+            return index ; /* This might have been necessary in the case there are actually imports, but for now - no- numOfImports;*/
+    }
+    int isImport(){ return _isImport;}
+    void setIsImportAndIncrementNumberOfImports() {
+      _isImport = 1;
+      AOTMeta::numOfImports++;
+
+      }
+    void setIsImport() {
+      _isImport = 1;
+      AOTMeta::numOfDeclaredImports++;
+      }
     private:
+    /**
+     * @brief if _isImport = 1 then it is import
+     */
+    int _isImport = 0;
     static int numOfFunction;
+    /**
+     * @brief This variable is to track the number of imports. Can only work if the number
+     * of imports per module is the same, or if the number of imports is  uniquely
+     * registered per module. The variable is incremented per setImport
+     */
+    static unsigned int numOfImports;
+    /**
+     * @brief an array for tracking dependencies. Allocated dynamically.
+     * Will be incremented as a call to an unknown function is encountered.
+     */
+    unsigned int * dependencies = NULL;
+    /**
+     * @brief As we are going to serialize and deserialize the dependencies array,
+     * we want to keep track of the maximum size of the array.
+     */
+    unsigned int dependenciesMaxSize;
+    /**
+     * @brief Index of a function the AOT meta is created for. At the moment of initialization is off by some value
+     * (depending on the number of modules are read and their exports (which are imports to other modules?)).
+     * The proper value (for now) can be computed by subtracting AOTMeta::numberOfImports
+     */
+    unsigned int index;
+    /**
+     * @brief As we are going to serialize and deserialize the dependencies array,
+     * we want to keep track of the last used index in dependencies array.
+     */
+    unsigned int lastUsedIdxInDependenciesArray;
+
+    static unsigned int numOfDeclaredImports;
   };
+  Result TryJit(Thread* t, DefinedFunc* fn, Index ind);
 
-  bool TryJit(Thread* t, IstreamOffset offset, JITedFunction* fn);
-  bool TryJit(Thread* t, IstreamOffset offset, JITedFunction* fn,DefinedFunc *&);
-
+  bool TryAOT(Thread* t, IstreamOffset offset, DefinedFunc* fn);
+#if defined (unnecessary)
+  bool TryAOT(Thread* t, IstreamOffset offset, AOTedFunction* fn,DefinedFunc *&);
+#endif 
   std::vector<std::unique_ptr<Module>> modules_;
   std::vector<FuncSignature> sigs_;
   std::vector<std::unique_ptr<Func>> funcs_;
@@ -710,25 +866,34 @@ class Environment {
   std::unique_ptr<OutputBuffer> istream_;
   BindingHash module_bindings_;
   BindingHash registered_module_bindings_;
-
+  aot::AOTManager* aotManager = NULL;
+  std::vector<jit::JITedFunction> jit_funcs_;
   jit::JitEnvironment jit_env_;
-  std::unordered_map<IstreamOffset, JitMeta> jit_meta_;
-  ELFLoader *elfLoader = nullptr;
+  std::unordered_map<IstreamOffset, AOTMeta> aot_meta_;
+  /**
+   * @brief memories for AOT compiler, set in env.FillMemories()
+   *
+   */
   char **mems = nullptr;
+  /**
+   * @brief Tables for AOT compiler
+   *
+   */
   Func **tabs = nullptr;
+
 };
 
-
 struct ThreadOffset;
- 
+
 struct CallFrame {
   CallFrame() : pc(0), is_jit(false), is_jit_compiling(false) {}
   CallFrame(IstreamOffset pc, bool is_jit, bool is_jit_compiling = false)
     : pc(pc), is_jit(is_jit), is_jit_compiling(is_jit_compiling) {}
 
   IstreamOffset pc;
-  bool is_jit;
-  bool is_jit_compiling;
+
+  int8_t is_jit;
+  int8_t is_jit_compiling;
 };
 
 class Thread {
@@ -759,15 +924,17 @@ class Thread {
 
   void Trace(Stream*);
   Result Run(int num_instructions = 1);
-  Result CallThunk(Environment::JITedFunction,Func*);
+#if defined (unneeded)
+  Result CallThunk(Environment::AOTedFunction,Func*);
+#endif
   Result CallHost(HostFunc*);
 
  private:
-  friend class wabt::jit::FunctionBuilder;
+  friend class jit::FunctionBuilder;
+  friend jit::Result_t jit::InterpThunk(jit::ThreadInfo*, Index);
   friend class wabt::aot::AOTFunctionBuilder;
   friend class ThreadOffset;
   friend class Executor;
-  
   const uint8_t* GetIstream() const { return env_->istream_->data.data(); }
 
   Memory* ReadMemory(const uint8_t** pc);
@@ -857,12 +1024,13 @@ class Thread {
   Value *vs_array_;
   Value *vs_top_;
   std::vector<CallFrame> call_stack_;
-
   uint32_t value_stack_top_ = 0;
   uint32_t call_stack_top_ = 0;
   uint32_t last_jit_frame_ = 0;
   IstreamOffset pc_ = 0;
   bool in_jit_ = false;
+
+  std::unique_ptr<jit::ThreadInfo> jit_th_;
 };
 
 struct ThreadOffset {

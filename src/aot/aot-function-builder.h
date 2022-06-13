@@ -14,10 +14,11 @@
  * limitations under the License.
  */
 
-#ifndef FUNCTIONBUILDER_HPP
-#define FUNCTIONBUILDER_HPP
+#ifndef AOT_FUNCTIONBUILDER_HPP
+#define AOT_FUNCTIONBUILDER_HPP
 
 #include "aot-type-dictionary.h"
+#include "aot-manager.h"
 #include "ilgen/BytecodeBuilder.hpp"
 #include "ilgen/MethodBuilder.hpp"
 #include "ilgen/VirtualMachineOperandStack.hpp"
@@ -30,30 +31,33 @@
 
 
 extern void getCompiledFunction(const char *,void (**)());
-extern wabt::interp::Environment *getEnvironment();
 
+static  wabt::interp::Environment *envPointer;
 namespace wabt {
 namespace aot {
 
 using namespace wabt::interp;
-  
+
 class AOTManager;
 class FunctionImport;
-
+/**
+ * @brief This class is an extension of TR::MethodBuilder
+ * it has to be created per method
+ */
 class AOTFunctionBuilder : public TR::MethodBuilder {
  public:
   AOTFunctionBuilder(interp::Thread*, interp::DefinedFunc*, std::string&&,
 		     AOTTypeDictionary*, Environment&, AOTManager&);
-  
+
   bool buildIL() override;
 
   TR::IlValue* popReturnValue(TR::IlBuilder*);
   void pushReturnValue(interp::Func*, TR::IlBuilder*, TR::IlValue*);
   void pushReturnValue(Index, TR::IlBuilder*, TR::IlValue*);
   void pushParams();
-  
+
   virtual ~AOTFunctionBuilder() {}
-  
+
   /**
    * @brief Generate push to the VM operand stack
    * @param b is the builder object used to generate the code
@@ -92,21 +96,54 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
    */
   TR::IlValue* Pick(Index depth);
   uint32_t pickLocalOffset();
-  
-  void defineFunction(const std::string&, interp::DefinedFunc*);
+  /**
+   * @brief This function calls the DefineFunction from JitBuilder API
+   * using the known offsets and known return types
+   *
+   * @param name - Function name to be propagated to JitBuilder
+   * @param fn - DefinedFunc - a kind of a WebAssembly function that has the relevant
+   * information about the import types and the offset in the memory representation of
+   * the bytecodes
+   */
+  void defineFunction(const std::string& name, interp::DefinedFunc* fn);
+  /**
+   * @brief This function calls the DefineFunction from JitBuilder API
+   * when the offsets and the function types are unknown
+   *
+   * @param name - Name to be propagated to JitBuilder
+   * @param import - an object describing a function, probably from other module.
+   * Essentially, contains all the information about types, but is not part of this
+   * MethodBuilder
+   */
   void defineImportFunction(const std::string& name, FunctionImport &import);
 
+  /**
+   * @brief Get the Fn object that this MethodBuilder describes
+   *
+   * @return interp::DefinedFunc* - the function has the offsets to the bytecodes
+   */
   interp::DefinedFunc* getFn() {
     return fn_;
   }
-  
+  /**
+   * @brief Get the function name that this MethodBuilder describes
+   *
+   * @return std::string& * - the function name
+   */
   const std::string& getName() const {
     return fn_name_;
   }
 
-  static uint64_t CallIndirectHelper(Index table_index, Index sig_index, Index entry_index);
+  static uint64_t AOTCallIndirectHelper(Index table_index, Index sig_index, Index entry_index);
   static uint32_t GrowMemory(uint32_t,uint32_t);
-
+  /**
+   * @brief This funciton should return the size of the memory provided by index
+   * @param index of memory queried for size
+   *
+   * @return uint32_t size of the memory
+   */
+  static uint32_t CalculateMemorySize(uint32_t);
+  static uint32_t PrintSomething(uint32_t);
  private:
   struct BytecodeWorkItem {
     TR::BytecodeBuilder* builder;
@@ -114,14 +151,14 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
     TR::VirtualMachineOperandStack* stack_;
     uint32_t stackCount_;
 
-    BytecodeWorkItem(TR::BytecodeBuilder* builder, const uint8_t* pc, 
+    BytecodeWorkItem(TR::BytecodeBuilder* builder, const uint8_t* pc,
 		     TR::VirtualMachineOperandStack* stack,  uint32_t stackCount)
     : builder(builder), pc(pc), stack_(stack), stackCount_(stackCount)
     {}
   };
 
   TR::IlType* functionReturnType(interp::Func*);
-  
+
   template <typename T>
   const char* TypeFieldName() const;
 
@@ -151,7 +188,7 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
   TR::IlValue* EmitMemoryPreAccess(TR::IlBuilder* b);
 
   void returnWithError(TR::IlBuilder*);
-  
+
   void EmitTrap(TR::IlBuilder* b, interp::Result);
   // void EmitCheckTrap(TR::IlBuilder* b, TR::IlValue* result);
   void EmitTrapIf(TR::IlBuilder* b, TR::IlValue* condition, interp::Result);
@@ -166,34 +203,35 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
 
   TR::IlValue* calculateGlobalIndex(TR::IlBuilder* b, const uint8_t**);
   TR::IlValue* calculateMemoryIndex(TR::IlBuilder* b, const uint8_t**);
-  
+
   template <typename>
   TR::IlValue* CalculateShiftAmount(TR::IlBuilder* b, TR::IlValue* amount);
 
+
   using Result_t = std::underlying_type<wabt::interp::Result>::type;
 
-//  static Result_t CallHelper(wabt::interp::Thread* th, wabt::interp::IstreamOffset offset, uint8_t* current_pc);
-
-  
+  static Result_t CallHelper(wabt::interp::Thread* th, wabt::interp::IstreamOffset offset, uint8_t* current_pc);
 
 
-  //static Result_t CallHostHelper(wabt::interp::Thread* th, Index func_index);
 
-  //  static void* MemoryTranslationHelper(interp::Thread* th, uint32_t memory_id, uint64_t address, uint32_t size);
+
+  static Result_t CallHostHelper(wabt::interp::Thread* th, Index func_index);
+
+  static void* MemoryTranslationHelper(interp::Thread* th, uint32_t memory_id, uint64_t address, uint32_t size);
 
   std::vector<BytecodeWorkItem> workItems_;
 
   AOTTypeDictionary* types_;
-  
+
   interp::Thread* thread_;
   interp::DefinedFunc* fn_;
-  
+
   std::string fn_name_;
-  
+
   Environment& env_;
   static Environment* envPointer;
   AOTManager& aotManager_;
-  
+
   TR::IlType* const valueType_;
   TR::IlType* const pValueType_;
   TR::IlType* const ppValueType_;
@@ -201,9 +239,9 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
   TR::VirtualMachineOperandStack* stack_;
   uint32_t stackCount_ = 0;
   uint32_t localsCount_ = 0;
-  
+
   TR::IlType* returnType_;
-  
+
   std::vector<std::string> param_names_;
   std::vector<TR::IlType*> param_types_;
 
@@ -222,67 +260,11 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
   };
 
   std::vector<PreviousCompilerState> stackOfStacks_;
-  
+
   bool Emit(TR::BytecodeBuilder* b, const uint8_t* istream, const uint8_t* pc);
 };
 
-class FunctionImport {
-  public:
-    FunctionImport(interp::Func *fn):fn_(fn){}
-
-    std::vector<TR::IlType*> param_types_;
-    interp::Func *fn_;
-};
-
-class AOTManager {
- public:
-  void push_back_FB(uint32_t offset, std::unique_ptr<AOTFunctionBuilder>&& b,
-		    std::unique_ptr<AOTTypeDictionary>&& t)
-  {
-    func_index_[offset] = {std::move(b), std::move(t)};
-  }
-
-  void push_back_import(std::string name, interp::Func* fn){
-    import_index_.emplace_back(name,fn);
-  }
-  
-  AOTFunctionBuilder& getFB(uint32_t i) {
-    return *func_index_[i].first;
-  }
-
-  AOTTypeDictionary* getTD(uint32_t i) {
-    return func_index_[i].second.get();
-  }
-  
-  void broadcastNames() {
-    for(auto& builder_kv: func_index_) {
-      for(auto& inner_kv: func_index_) {
-	auto& builder_fn = builder_kv.second.first;
-	inner_kv.second.first->defineFunction(builder_fn->getName(),
-					      builder_fn->getFn());
-      }
-    }
-  }
-
-  void broadcastImports() {
-    for(auto& builder: func_index_) {
-      for(auto& import: import_index_) {
-        builder.second.first->defineImportFunction(import.first,import.second);
-      }
-    }
-  }
-
- private:
-  std::map<uint32_t, std::pair<std::unique_ptr<AOTFunctionBuilder>,
-                               std::unique_ptr<AOTTypeDictionary>>>
-    func_index_;
-
-  std::vector<std::pair<std::string,FunctionImport>> import_index_;
-};
-
-
-
-}
-}
+} // namespace aot
+} // namespace wabt
 
 #endif

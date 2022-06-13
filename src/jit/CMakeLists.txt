@@ -21,6 +21,7 @@ add_library(wabtjit STATIC
   wabtjit.cc
   stack.cc
   vms_hack.cc
+  thunk.cc
 )
 
 # Mark JitBuilder include directories as "system" include directories. For most compilers, this
@@ -34,4 +35,3 @@ add_dependencies(wabtjit jitbuilder)
 target_include_directories(wabtjit SYSTEM PUBLIC "${JITBUILDER_INCLUDE}")
 target_include_directories(wabtjit SYSTEM PUBLIC "${JITBUILDER_EXTRA_INCLUDE}")
 target_link_libraries(wabtjit PUBLIC jitbuilder)
-
