@@ -489,7 +489,10 @@ if(no_of_modules > 1){
 
     char* soFilename = "./wasmaot.so";
     if( access( static_cast<const char *>(soFilename), F_OK ) == 0 ) {
-      loadFileInMemory(soFilename);
+      /** The load wasmaot.so (multiple files into memory)
+       * was not tested after introducing WABTAOTCompilerLib
+       */
+      WABTAOTCompilerLib::loadELFToMemory(soFilename);
       build_type = 1;
     }
 
@@ -500,6 +503,7 @@ if(no_of_modules > 1){
 #ifndef WASM_SHARED_CACHE
   if(no_of_modules == 1){
     WABTAOTCompilerLib::getSOFilename(src_filename);
+    WABTAOTCompilerLib::loadELFToMemory(src_filename);
     }
 #endif
 
