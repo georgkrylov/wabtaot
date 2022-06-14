@@ -70,6 +70,7 @@ if(OMR_ELF_SHARED_OBJECT)
 	add_wabtaot_elf_subdirectory(codegen)
 	add_wabtaot_elf_subdirectory(runtime)
 	add_wabtaot_elf_subdirectory(compile)
+	add_wabtaot_elf_subdirectory(env)
 	add_wabtaot_elf_subdirectory(elfso/env)
 	add_wabtaot_elf_subdirectory(${TR_TARGET_ARCH})
 	set(WABTAOT_ELF_INCLUDES
@@ -104,6 +105,20 @@ if (WASM_SHARED_CACHE)
 		message(STATUS "wabtaot sc files:" ${Thing})
 	endforeach()
 
+	# This is needed to add new changes to AOTMethodHeader
+	# to wasm_shared_cache target
+	target_sources(wasm_shared_cache
+		PRIVATE
+		${WABTAOT_SC_FILES})
+
+	# As we've just added several source files to the wasm_shared_cache
+	# target, we need to update the include directories to "shadow"
+	# the  includes defined by OMR and facilitate extensible classes
+	# functionality
+	target_include_directories(wasm_shared_cache
+		BEFORE PRIVATE
+		${WABTAOT_SC_INCLUDES})
+
 	target_sources(jitbuilder
 		PRIVATE
 		${WABTAOT_SC_FILES})
@@ -132,8 +147,31 @@ if(OMR_ELF_SHARED_OBJECT)
 	target_include_directories(aotelfcomp PUBLIC
 		${WABTAOT_ELF_INCLUDES}
 	)
+
+	# As we need to partially substitute OMR functionality of OMRAOTMethodHeader
+	# with some of our own, we need to add sources to OMR target that builds ELF
+	# compatible sources
+	target_sources(aotelf
+		PRIVATE
+		${WABTAOT_ELF_FILES})
+
 	target_link_libraries(aotelfcomp PUBLIC jitbuilder )
 	target_link_libraries(jitbuilder PUBLIC aotelfcomp )
+
+	# As we've just added several source files to the aotelf
+	# target, we need to update the include directories to "shadow"
+	# the  includes defined by OMR and facilitate extensible classes
+	# functionality
+	target_include_directories(aotelf BEFORE PUBLIC
+	${WABTAOT_SOURCE_DIR}/compiler/elfso
+	${WABTAOT_SOURCE_DIR}/compiler/${TR_TARGET_ARCH}/${TR_TARGET_SUBARCH}
+	${WABTAOT_SOURCE_DIR}/compiler/${TR_TARGET_ARCH}
+	${WABTAOT_SOURCE_DIR}/compiler/compile
+	${WABTAOT_SOURCE_DIR}/compiler/runtime
+	${WABTAOT_SOURCE_DIR}/compiler
+	${WABTAOT_SOURCE_DIR}/
+	)
+
 	target_include_directories(jitbuilder BEFORE PUBLIC
 		${WABTAOT_SOURCE_DIR}/compiler/elfso
 		${WABTAOT_SOURCE_DIR}/compiler/${TR_TARGET_ARCH}/${TR_TARGET_SUBARCH}
