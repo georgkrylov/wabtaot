@@ -2,7 +2,7 @@
 #include "codegen/AheadOfTimeCompile.hpp"
 #include "runtime/TRRelocationTarget.hpp"
 #include "runtime/TRRelocationRecord.hpp"
-#include "runtime/AOTRelocationRuntime.hpp"
+#include "runtime/TRRelocationRuntime.hpp"
 
 
 TR::AheadOfTimeCompile *

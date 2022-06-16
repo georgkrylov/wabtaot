@@ -19,18 +19,18 @@
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
 
-#include "env/AOTStorageInterface.hpp"
+#include "env/AOTStorage.hpp"
 
 #include <limits.h>
 #include <stddef.h>
 #include <stdint.h>
 
-TR::AOTStorageInterface* 
-AOTStorageInterfaceConnector::self(){
-  return static_cast <TR::AOTStorageInterface*> (this);
+TR::AOTStorage*
+AOTStorageConnector::self(){
+  return static_cast <TR::AOTStorage*> (this);
 }
 uint8_t*
-AOTStorageInterfaceConnector::allocateMemoryInCache(uintptr_t size){
+AOTStorageConnector::allocateMemoryInCache(uintptr_t size){
   return (uint8_t*) malloc(sizeof(uint8_t) * size);
 }
 

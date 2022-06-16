@@ -47,8 +47,8 @@ class OMR_EXTENSIBLE AOTMethodHeader : public OMR::AOTMethodHeaderConnector
    {
 public:
 
-   AOTMethodHeader(uint8_t* compiledCodeStart, uint32_t compiledCodeSize, uint8_t* relocationsStart, uint32_t relocationsSize)
-   : OMR::AOTMethodHeaderConnector(compiledCodeStart,compiledCodeSize,relocationsStart,relocationsSize){};
+   AOTMethodHeader(uint8_t* compiledCodeStart, uint32_t compiledCodeSize, TR::RelocationRecordBinaryTemplate* relocationsBinaryTemplate, uint32_t relocationsSize)
+   : OMR::AOTMethodHeaderConnector(compiledCodeStart,compiledCodeSize,relocationsBinaryTemplate,relocationsSize){};
 
    AOTMethodHeader(uint8_t* serializedMethodData);
 

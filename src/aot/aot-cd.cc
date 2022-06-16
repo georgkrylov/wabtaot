@@ -363,18 +363,19 @@ void relocateAOT(interp::Environment& env,DefinedModule *module)
   std::vector<std::string> global_names;
   for(int i=0;i<env.GetGlobalCount();i++) {
     globals[i] = env.GetGlobal(i)->typed_value.value;
-    char global_name[6];
+    char* global_name = (char*) calloc(6,sizeof(char));
     sprintf(global_name,"g%d",i);
     global_names.emplace_back(global_name);
-    setCodeEntry(const_cast<char*>(global_names.back().data()),reinterpret_cast<void*>(globals+i));
+    setCodeEntry(global_name,reinterpret_cast<void*>(globals+i));
+    global_name = NULL;
   }
   env.FillMemories();
-  char memory_name[6];
-  for(int i=0;i<env.GetMemoryCount();i++) {
-
+  char* memory_name = (char*) calloc(6,sizeof(char));
+  for(unsigned int i=0;i<env.GetMemoryCount();i++) {
     sprintf(memory_name,"m%d",i);
     //global_names.emplace_back(global_name);
-    setCodeEntry(const_cast<char*>(memory_name),reinterpret_cast<void*>(env.GetMems()+i));
+    setCodeEntry(memory_name,reinterpret_cast<void*>(env.GetMems()+i));
+    memory_name = NULL;
   }
   setCodeEntry(const_cast<char*>("Params"), reinterpret_cast<void*>(&env.indirectCallParams));
   // uint16_t compiled_function_index = 0;

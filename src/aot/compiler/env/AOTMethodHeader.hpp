@@ -29,11 +29,11 @@ class OMR_EXTENSIBLE AOTMethodHeader:public WASM::AOTMethodHeaderConnector
    {
 public:
 
-   AOTMethodHeader(uint8_t* compiledCodeStart, uint32_t compiledCodeSize, uint8_t* relocationsStart, uint32_t relocationsSize)
-   : WASM::AOTMethodHeaderConnector(compiledCodeStart,compiledCodeSize,relocationsStart,relocationsSize)
+   AOTMethodHeader(uint8_t *compiledCodeStart, uint32_t compiledCodeSize, TR::RelocationRecordBinaryTemplate *relocationBinaryTemplate, uint32_t relocationsSize)
+   : WASM::AOTMethodHeaderConnector(compiledCodeStart,compiledCodeSize,relocationBinaryTemplate,relocationsSize)
       { };
 
-   AOTMethodHeader(uint8_t* serializedMethodData)
+   AOTMethodHeader(uint8_t *serializedMethodData)
    : WASM::AOTMethodHeaderConnector(serializedMethodData)
       { };
 

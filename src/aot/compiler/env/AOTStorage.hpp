@@ -19,14 +19,19 @@
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
 
-#ifndef WASM_SHARED_CACHE_INCL
-#define WASM_SHARED_CACHE_INCL
+#ifndef TR_AOTSTORAGE_INCL
+#define TR_AOTSTORAGE_INCL
 
-#ifndef WASM_SHARED_CACHE_CONNECTOR
-#define WASM_SHARED_CACHE_CONNECTOR
-class WASMCompositeCache;
-typedef WASMCompositeCache AOTStorageInterfaceConnector;
-#endif
-#include "WASMCompositeCache.hpp"
+#include "env/WASMStorage.hpp"
 
+namespace TR
+{
+  class AOTStorage : public AOTStorageConnector
+  {
+  public:
+
+  AOTStorage() : AOTStorageConnector() {}
+
+  };
+}
 #endif

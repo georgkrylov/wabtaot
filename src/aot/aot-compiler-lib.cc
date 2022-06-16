@@ -144,18 +144,19 @@ void WABTAOTCompilerLib::relocateAOT(interp::Environment& env,DefinedModule *mod
   std::vector<std::string> global_names;
   for(int i=0;i<env.GetGlobalCount();i++) {
     globals[i] = env.GetGlobal(i)->typed_value.value;
-    char global_name[6];
+    char* global_name = (char*) calloc(6,sizeof(char));
     sprintf(global_name,"g%d",i);
     global_names.emplace_back(global_name);
-    setCodeEntry(const_cast<char*>(global_names.back().data()),reinterpret_cast<void*>(globals+i));
+    setCodeEntry(global_name,reinterpret_cast<void*>(globals+i));
+    global_name = NULL;
   }
   env.FillMemories();
-  char memory_name[6];
+  char* memory_name = (char*) calloc(6,sizeof(char));
   for(unsigned int i=0;i<env.GetMemoryCount();i++) {
-
     sprintf(memory_name,"m%d",i);
     //global_names.emplace_back(global_name);
-    setCodeEntry(const_cast<char*>(memory_name),reinterpret_cast<void*>(env.GetMems()+i));
+    setCodeEntry(memory_name,reinterpret_cast<void*>(env.GetMems()+i));
+    memory_name = NULL;
   }
   setCodeEntry(const_cast<char*>("Params"), reinterpret_cast<void*>(&env.indirectCallParams));
   // uint16_t compiled_function_index = 0;
@@ -180,14 +181,17 @@ void WABTAOTCompilerLib::compileEverything(interp::Environment& env, wabt::aot::
       auto* fn = cast<wabt::interp::DefinedFunc>(env.GetFunc(i));
       auto& builder = aotManager.getFB(fn->offset);
       void* function = nullptr;
-      function = getCodeEntry(const_cast<char*>(fn->dbg_name_.c_str()));
+      char * functionNameSpace = (char*)calloc(fn->dbg_name_.size()+1,sizeof(char));
+      memcpy(functionNameSpace,fn->dbg_name_.c_str(),fn->dbg_name_.size());
+      function = getCodeEntry(functionNameSpace);
       if(!function) {
         someFunctionsCompiled = 1;
         internal_compileMethodBuilder(&builder, &function);
-        storeCodeEntry((char *)fn->dbg_name_.c_str());
-	      function = getCodeEntry(const_cast<char*>(fn->dbg_name_.c_str()));
+        storeCodeEntry(functionNameSpace);
+	      function = getCodeEntry(functionNameSpace);
         assert(function!=NULL);
       }
+      // free(functionNameSpace);
       module->aot_compiled_functions.push_back(function);
       env.GetFunc(i)->is_compiled = true;
 

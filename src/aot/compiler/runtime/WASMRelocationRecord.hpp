@@ -72,7 +72,7 @@ class RelocationRecordWithOffset:public WASM::WASMRelocationRecordConnector{
 					    TR::RelocationTarget *reloTarget, 
 					    TR::RelocationRecordBinaryTemplate *record);*/
         void preparePrivateData(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget);
-        uintptr_t offset(TR::RelocationTarget *reloTarget);
+        uint8_t* offset(TR::RelocationTarget *reloTarget);
 	void setOffset(TR::RelocationTarget *reloTarget, UDATA offset); 
       int32_t applyRelocation(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, uint8_t *reloLocation);
         int32_t applyRelocation(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, uint8_t *reloLocationHigh, uint8_t *reloLocationLow);
@@ -114,7 +114,7 @@ class RelocationRecordBranchTable : public WASMRelocationRecordConnector
     int32_t applyRelocation(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, uint8_t *reloLocation);
     int32_t applyRelocation(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget, uint8_t *reloLocationHigh, uint8_t *reloLocationLow);
      void preparePrivateData(TR::RelocationRuntime *reloRuntime, TR::RelocationTarget *reloTarget);
-       uintptr_t offset(TR::RelocationTarget *reloTarget);
+       uint8_t* offset(TR::RelocationTarget *reloTarget);
     };
 
 

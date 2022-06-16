@@ -4,7 +4,7 @@
 #ifndef WASM_SHARED_CACHE_CONNECTOR
 #define WASM_SHARED_CACHE_CONNECTOR
 namespace WASM { class WASMCompositeCache;}
-namespace WASM { typedef WASM::WASMCompositeCache AOTStorageInterfaceConnector;}
+namespace WASM { typedef WASM::WASMCompositeCache AOTStorageConnector;}
 #endif
 #include <map>
 #include <string>
@@ -12,7 +12,7 @@ namespace WASM { typedef WASM::WASMCompositeCache AOTStorageInterfaceConnector;}
 #include "CacheCRCChecker.hpp"
 #include "OSCacheBumpRegionFocus.hpp"
 #include "SynchronizedCacheCounter.hpp"
-#include "env/OMRAOTStorageInterface.hpp"
+#include "env/OMRAOTStorage.hpp"
 #include "OSMemoryMappedCache.hpp"
 
 #include "OSCacheImpl.hpp"
@@ -23,12 +23,12 @@ namespace WASM { typedef WASM::WASMCompositeCache AOTStorageInterfaceConnector;}
 #include "runtime/Runtime.hpp"
 #include "env/TRMemory.hpp"
 
-class WASMCompositeCache :public OMR::AOTStorageInterfaceConnector {
+class WASMCompositeCache :public OMR::AOTStorageConnector {
 protected:
-  TR::AOTStorageInterface* self();
+  TR::AOTStorage* self();
 public:
   TR_ALLOC(TR_Memory::SharedCache)
-  
+
   WASMCompositeCache();
 
   virtual ~WASMCompositeCache() {
@@ -51,10 +51,10 @@ public:
   void storeCallAddressToHeaders(void *calleeMethod,size_t methodNameTemplateOffset,void *calleeCodeCacheAddress);
 
   bool checkTime(uint64_t moduleTime);
-  
+
 private:
   virtual WASMDataSectionEntryIterator constructEntryIterator(WASMCacheEntry* delimiter);
-  
+
   UDATA dataSectionFreeSpace() const;
   void populateTables();
 

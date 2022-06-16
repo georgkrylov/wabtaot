@@ -19,17 +19,17 @@
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
 
-#ifndef TR_AOTSTORAGEINTERFACE_INCL
-#define TR_AOTSTORAGEINTERFACE_INCL
+#ifndef TR_AOTSTORAGE_INCL
+#define TR_AOTSTORAGE_INCL
 
 #include "codegen/ELFSharedStorageGenerator.hpp"
 
 namespace TR{
 
-class OMR_EXTENSIBLE AOTStorageInterface : public ELF::AOTStorageInterfaceConnector
+class OMR_EXTENSIBLE AOTStorage: public ELF::AOTStorageConnector
    {
 public:
-   AOTStorageInterface() : ELF::AOTStorageInterfaceConnector(TR::RawAllocator())
+   AOTStorage() : ELF::AOTStorageConnector(TR::RawAllocator())
       { };
    
    };

@@ -85,7 +85,7 @@ WASM::AOTMethodHeader::AOTMethodHeader(uint8_t* serializedMethodData) : OMR::AOT
 
    // We take note of the relocationsStart to use the
    // relocations related information in future
-   self()->setRelocationsStart(serializedMethodData);
+   self()->setRelocationsStart(reinterpret_cast<TR::RelocationRecordBinaryTemplate*>(serializedMethodData));
 
    size_t computedSize = self()->sizeOfSerializedVersion();
 
