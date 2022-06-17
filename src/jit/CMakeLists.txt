@@ -13,21 +13,36 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# Disable warnings when building all OMR components since OMR is more lax about some warnings.
+# Since this logic is inside a function, this only applies within the scope of the OMR CMake
+# files.
+cmake_policy(SET CMP0012 NEW)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w")
+set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../third_party/omr/cmake/modules" ${CMAKE_MODULE_PATH})
+include(OmrTargetSupport)
+include(OmrPlatform)
+include(OmrCompilerSupport)
+add_subdirectory(../../third_party/omr/example/glue omr/example/glue EXCLUDE_FROM_ALL)
+add_subdirectory(../../third_party/omr  omr/build EXCLUDE_FROM_ALL)
 
-add_library(wabtjit STATIC
-  environment.cc
-  type-dictionary.cc
-  function-builder.cc
-  wabtjit.cc
-  stack.cc
-  vms_hack.cc
-  thunk.cc
-)
-
-# Mark JitBuilder include directories as "system" include directories. For most compilers, this
-# suppresses any warnings they would otherwise generate.
-set(JITBUILDER_EXTRA_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/../../third_party/omr/compiler ${CMAKE_CURRENT_SOURCE_DIR}/../../third_party/omr)
 get_property(JITBUILDER_INCLUDE TARGET jitbuilder PROPERTY INTERFACE_INCLUDE_DIRECTORIES)
-target_include_directories(wabtjit SYSTEM PUBLIC "${JITBUILDER_INCLUDE}")
-target_include_directories(wabtjit SYSTEM PUBLIC "${JITBUILDER_EXTRA_INCLUDE}")
+
+get_property(JITBUILDER_DEFINITIONS TARGET jitbuilder PROPERTY INTERFACE_COMPILE_DEFINITIONS)
+
+set(WABTJIT_FILES  environment.cc
+type-dictionary.cc
+function-builder.cc
+wabtjit.cc
+stack.cc
+vms_hack.cc
+thunk.cc)
+
+create_omr_compiler_library(
+	NAME wabtjit
+	OBJECTS ${WABTJIT_FILES}
+	DEFINES ${JITBUILDER_DEFINITIONS}
+	INCLUDES ${JITBUILDER_INCLUDE}
+)
+make_compiler_target(wabtjit PUBLIC COMPILER jitbuilder)
+add_dependencies(wabtjit jitbuilder)
 target_link_libraries(wabtjit PUBLIC jitbuilder)

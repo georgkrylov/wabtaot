@@ -39,7 +39,7 @@ TR::IlValue* VirtualStack::Pop() {
 }
 
 void VirtualStack::DropKeep(size_t drop_count, size_t keep_count) {
-  TR_ASSERT(drop_count + keep_count >= drop_count && values_.size() > drop_count + keep_count,
+  TR_ASSERT(drop_count + keep_count >= drop_count &&   values_.size() >= drop_count + keep_count,
             "Attempt to drop_keep beyond the end of the stack");
 
   values_.erase(values_.end() - drop_count - keep_count, values_.end() - keep_count);
@@ -74,8 +74,8 @@ void VirtualStack::MergeInto(const VirtualStack* other, TR::IlBuilder* b) {
       TR_ASSERT((*this_it)->getDataType() == (*other_it)->getDataType(),
                 "Attempt to merge divergent stacks: types don't match at element %zu (%s != %s)",
                 this_it - values_.begin(),
-                (*this_it)->getDataType()->toString(),
-                (*this_it)->getDataType()->toString());
+                (*this_it)->getDataType().toString(),
+                (*this_it)->getDataType().toString());
 
       b->StoreOver(*other_it, *this_it);
     }

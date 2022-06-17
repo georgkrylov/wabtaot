@@ -17,7 +17,7 @@
 cmake_minimum_required(VERSION 2.6)
 project(WABT)
 
-option(BUILD_TESTS "Build GTest-based tests" ON)
+option(BUILD_TESTS "Build GTest-based tests" OFF)
 option(BUILD_TOOLS "Build wabt commandline tools" ON)
 option(USE_ASAN "Use address sanitizer" OFF)
 option(USE_MSAN "Use memory sanitizer" OFF)
@@ -266,23 +266,6 @@ add_library(wabt STATIC
 )
 
 
-function(add_omr)
-  # Disable warnings when building all OMR components since OMR is more lax about some warnings.
-  # Since this logic is inside a function, this only applies within the scope of the OMR CMake
-  # files.
-  cmake_policy(SET CMP0012 NEW)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w")
-  set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/third_party/omr/cmake/modules" ${CMAKE_MODULE_PATH})
-  include(OmrTargetSupport)
-  add_subdirectory(third_party/omr/example/glue EXCLUDE_FROM_ALL)
-  add_subdirectory(third_party/omr EXCLUDE_FROM_ALL)
-endfunction()
-# in response to https://github.com/eclipse/omr/issues/6544
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DTR_TARGET_X86 ")
-# in response to needing to include time.h in cstimer.h in omr
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DLINUX ")
-
-add_omr()
 add_subdirectory(src/jit)
 target_link_libraries(wabt PUBLIC wabtjit)
 
