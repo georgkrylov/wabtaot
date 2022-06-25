@@ -1761,21 +1761,22 @@ bool Environment::TryAOT(Thread* t, Index ind, DefinedFunc* fn) {
   Index moduleIndex =       WABTAOTCompilerLib::getModuleIndexByFunctionIndex(*this,ind);
   modulee = reinterpret_cast<DefinedModule*>(this->GetModule(moduleIndex));
   if(fn->is_compiled == false && fn->is_host == false) {
-      std::unique_ptr<AOTTypeDictionary> types(new (PERSISTENT_NEW) AOTTypeDictionary());
       // Two here is hardcoded as em-module.hpp appends two modules and there's an env module
 
       /**This line is used to construct debug name, limited to 8 symbols as relocation infrastructure does not
        * support longer names
        */
       std::string name = "f" + std::to_string(ind) +"m" +modulee->name.substr(0,3);
+      AOTTypeDictionary* types = new (PERSISTENT_NEW) AOTTypeDictionary();
+      //static AOTTypeDictionary types;
       AOTFunctionBuilder* builder = new (PERSISTENT_NEW) AOTFunctionBuilder(t, fn,
                   std::move(name),
-                  types.get(),
+                  types,
                   *this, *aotManager);
 
-      std::unique_ptr<AOTFunctionBuilder> builder_ptr(builder);
+      aotManager->push_back_FB(fn->offset, builder, types);
 
-      aotManager->push_back_FB(fn->offset, std::move(builder_ptr), std::move(types));
+
       // This line is used to construct debug name, limited to 8 symbols as relocation infrastructure does not
       // support longer names
       fn->dbg_name_ = "f" + std::to_string(ind) +"m"+modulee->name.substr(0,3);
