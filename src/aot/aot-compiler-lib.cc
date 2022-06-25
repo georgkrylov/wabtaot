@@ -218,17 +218,15 @@ void WABTAOTCompilerLib::registerMethods(wabt::aot::AOTManager& aotManager,inter
     auto functionInQuestion = env.GetFunc(i);
     if(functionInQuestion->is_compiled == false && functionInQuestion->is_host == false) {
       auto* fn = dynamic_cast<wabt::interp::DefinedFunc*>(env.GetFunc(i));
-      std::unique_ptr<AOTTypeDictionary> types(new (PERSISTENT_NEW) AOTTypeDictionary());
+      AOTTypeDictionary* types = new (PERSISTENT_NEW) AOTTypeDictionary();
       //static AOTTypeDictionary types;
       std::string name = "f" + std::to_string(j) +"m" +module->name.substr(0,3);
       AOTFunctionBuilder* builder = new (PERSISTENT_NEW) AOTFunctionBuilder(&thread, fn,
 							   std::move(name),
-							   types.get(),
+							   types,
 							   env, aotManager);
 
-      std::unique_ptr<AOTFunctionBuilder> builder_ptr(builder);
-
-      aotManager.push_back_FB(fn->offset, std::move(builder_ptr), std::move(types));
+      aotManager.push_back_FB(fn->offset, builder, types);
 
       env.GetFunc(i)->dbg_name_ = "f" + std::to_string(j) +"m"+module->name.substr(0,3);
       //** Trying to assign debug name, might be problematic if that's an import **/

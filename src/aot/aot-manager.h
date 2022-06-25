@@ -28,11 +28,12 @@ class FunctionImport {
  * from the interpreter. The contents of aot-cd.cc will slowly migrate here
  */
 class AOTManager {
+
  public:
-  void push_back_FB(uint32_t offset, std::unique_ptr<AOTFunctionBuilder>&& b,
-		    std::unique_ptr<AOTTypeDictionary>&& t)
+  void push_back_FB(uint32_t offset, AOTFunctionBuilder* b,
+		    AOTTypeDictionary* t)
   {
-    func_index_[offset] = {std::move(b), std::move(t)};
+    func_index_[offset] = {b, t};
   }
 
   void push_back_import(std::string name, interp::Func* fn){
@@ -50,7 +51,7 @@ class AOTManager {
    * @return AOTTypeDictionary*
    */
   AOTTypeDictionary* getTD(uint32_t i) {
-    return func_index_[i].second.get();
+    return func_index_[i].second;
   }
 /**
  * @brief For all the functions known within AOTManager
@@ -103,8 +104,8 @@ class AOTManager {
    */
   int CheckDependenciesCompiled(wabt::interp::Environment* env, wabt::Index ind,wabt::interp::DefinedFunc* func);
  private:
-  std::map<uint32_t, std::pair<std::unique_ptr<AOTFunctionBuilder>,
-                               std::unique_ptr<AOTTypeDictionary>>>
+  std::map<uint32_t, std::pair<AOTFunctionBuilder*,
+                               AOTTypeDictionary*>>
     func_index_;
 
 

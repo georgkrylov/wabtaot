@@ -28,44 +28,6 @@ option(CODE_COVERAGE "Build with code coverage enabled" OFF)
 option(WITH_EXCEPTIONS "Build with exceptions enabled" ON)
 option(WERROR "Build with warnings as errors" OFF)
 
-list(APPEND CMAKE_MODULE_PATH
-	cmake/Modules
-	${CMAKE_CURRENT_LIST_DIR}/third_party/omr/cmake/modules/
-)
-set(OMR_DDR OFF CACHE BOOL "Enable DDR")
-set(OMR_EXAMPLE OFF CACHE BOOL "")
-set(OMR_COMPILER  ON CACHE BOOL "")
-set(OMR_JITBUILDER ON CACHE BOOL "")
-set(OMR_GC OFF CACHE BOOL "")
-set(OMR_PORT ON CACHE BOOL "")
-set(OMR_THREAD ON CACHE BOOL "")
-set(OMR_TEST_COMPILER OFF CACHE BOOL "")
-set(OMR_OMRSIG OFF CACHE BOOL "")
-set(OMR_FVTEST OFF CACHE BOOL "")
-set(OMR_GC_SEGREGATED_HEAP OFF CACHE BOOL "")
-set(OMR_GC_MODRON_SCAVENGER OFF CACHE BOOL "")
-set(OMR_GC_MODRON_CONCURRENT_MARK OFF CACHE BOOL "")
-set(OMR_THR_CUSTOM_SPIN_OPTIONS OFF CACHE BOOL "")
-set(OMR_NOTIFY_POLICY_CONTROL OFF CACHE BOOL "")
-set(OMR_THR_SPIN_WAKE_CONTROL OFF CACHE BOOL "")
-set(OMR_THR_SPIN_CODE_REFACTOR OFF CACHE BOOL "")
-set(OMR_THR_FORK_SUPPORT OFF CACHE BOOL "")
-set(OMR_WARNINGS_AS_ERRORS ON CACHE BOOL "")
-set(OMR_AOT ON CACHE BOOL "")
-
-set(OMR_SHARED_CACHE_MODS ON CACHE BOOL "")
-set(WASM_SHARED_CACHE OFF CACHE BOOL "")
-set(OMR_SHARED_CACHE OFF CACHE BOOL "")
-set(OMR_ELF_SHARED_OBJECT OFF CACHE BOOL "")
-
-if(WASM_SHARED_CACHE)
-  add_definitions(-DWASM_SHARED_CACHE)
-endif()
-
-if(OMR_ELF_SHARED_OBJECT)
-  add_definitions(-DOMR_ELF_SHARED_OBJECT)
-endif()
-
 if (CMAKE_C_COMPILER_ID MATCHES "Clang")
   set(COMPILER_IS_CLANG 1)
   set(COMPILER_IS_GNU 0)
@@ -236,7 +198,7 @@ if (USE_UBSAN)
 endif ()
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${WABT_SOURCE_DIR}/cmake)
-
+include(OMRAotAndJit)
 add_custom_target(everything)
 
 add_library(wabt STATIC
@@ -285,32 +247,12 @@ add_library(wabt STATIC
 )
 
 
-function(add_omr)
-  # Disable warnings when building all OMR components since OMR is more lax about some warnings.
-  # Since this logic is inside a function, this only applies within the scope of the OMR CMake
-  # files.
-  cmake_policy(SET CMP0012 NEW)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w")
-  set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/third_party/omr/cmake/modules" ${CMAKE_MODULE_PATH})
-  include(OmrTargetSupport)
-  add_subdirectory(third_party/omr/example/glue EXCLUDE_FROM_ALL)
-  add_subdirectory(third_party/omr EXCLUDE_FROM_ALL)
-endfunction()
-# in response to https://github.com/eclipse/omr/issues/6544
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DTR_TARGET_X86 ")
-# in response to needing to include time.h in cstimer.h in omr
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DLINUX ")
 
-add_omr()
-add_subdirectory(src/jit)
 
-add_subdirectory(src/aot)
-target_link_libraries(wabt PUBLIC wabtaotcomp)
-# add_subdirectory(src/mix-aot)
+add_omr_aot_and_jit()
+
 add_subdirectory(em-interp)
-#target_link_libraries(libwabt PUBLIC wabtjit)
 
-target_link_libraries(wabt PUBLIC wabtjit)
 
 
 if (NOT EMSCRIPTEN)
