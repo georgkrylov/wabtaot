@@ -1,6 +1,7 @@
 #include "aot-manager.h"
 #include "aot-function-builder.h"
 #include "aot-compiler-lib.hpp"
+#include "compiler/env/AOTLoadStoreDriver.hpp"
 
 void wabt::aot::AOTManager::broadcastNames()
  {
@@ -34,9 +35,11 @@ void  wabt::aot::AOTManager::broadcastImports()
     }
   }
 int  wabt::aot::AOTManager::CheckDependenciesCompiled(wabt::interp::Environment* env, wabt::Index ind,wabt::interp::DefinedFunc* func){
+  TR::AOTMethodHeader* header = _loadStoreDriver->getRegisteredAOTMethodHeader(const_cast<char*>(func->dbg_name_.c_str()));
   return 1;
 }
 void*  wabt::aot::AOTManager::AOTCompileAFunction(wabt::interp::Environment* env, wabt::Index ind,wabt::interp::DefinedFunc* fn){
+  _loadStoreDriver = reinterpret_cast<TR::AOTLoadStoreDriver*>(getLoadStoreDriver());
   if(!env->GetFunc(ind)->is_compiled) {
       auto& builder = this->getFB(fn->offset);
       void* function = nullptr;

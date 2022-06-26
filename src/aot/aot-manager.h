@@ -12,6 +12,8 @@
 #include <vector>
 #include <type_traits>
 
+namespace TR {class AOTLoadStoreDriver;}
+
 namespace wabt {
 namespace aot {
 
@@ -103,7 +105,15 @@ class AOTManager {
    * @return int - 0 for dependencies failed, 1 for set continuing compilation
    */
   int CheckDependenciesCompiled(wabt::interp::Environment* env, wabt::Index ind,wabt::interp::DefinedFunc* func);
- private:
+
+protected:
+  /**
+   * @brief This pointer is necessary to be able to load and store
+   * methodheaders, extracted from JIT.cpp
+   */
+  TR::AOTLoadStoreDriver* _loadStoreDriver;
+
+private:
   std::map<uint32_t, std::pair<AOTFunctionBuilder*,
                                AOTTypeDictionary*>>
     func_index_;
