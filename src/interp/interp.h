@@ -337,6 +337,7 @@ struct DefinedFunc : Func {
   uint32_t num_calls_ = 0;
   bool tried_jit_ = false;
   jit::JITedFunction jit_fn_ = nullptr;
+  jit::AOTedFunction aot_fn_ = nullptr;
 #if not defined(unneeded)
   /**
    * @brief  Offset in defined function is to the bytes stream
@@ -702,14 +703,14 @@ class Environment {
   friend class wabt::aot::AOTFunctionBuilder;
 
 
-  using AOTedFunction = interp::DefinedFunc*;
+
 
   struct AOTMeta {
     Func* wasm_fn;
     uint32_t num_calls = 0;
 
     bool tried_jit = false;
-    AOTedFunction jit_fn = nullptr;
+    wabt::jit::AOTedFunction jit_fn = nullptr;
 
     AOTMeta(unsigned int ind, Func* wasm_fn) : wasm_fn(wasm_fn) {
       //wasm_fn->dbg_name_= "func_" + std::to_string(numOfFunction);
@@ -868,7 +869,16 @@ class Environment {
   BindingHash registered_module_bindings_;
   aot::AOTManager* aotManager = NULL;
   std::vector<jit::JITedFunction> jit_funcs_;
+  /** Introducing this as an idea to hold aot functions
+   * in the environment, possibly can be deleted later
+   * when aot functions and jit functions will be proven
+   * to be equivalent. Or reintroduced when jit will 
+   * be at higher opt level */
+  std::vector<jit::AOTedFunction> aot_funcs_;
   jit::JitEnvironment jit_env_;
+  /** Could be later turned into methodHeader, or tied
+   * with it.
+   */
   std::unordered_map<IstreamOffset, AOTMeta> aot_meta_;
   /**
    * @brief memories for AOT compiler, set in env.FillMemories()

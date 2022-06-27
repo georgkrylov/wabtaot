@@ -1722,9 +1722,11 @@ ValueTypeRep<R> SimdReplaceLane(V value, uint32_t lane_idx, T lane_val) {
 
 Result Environment::TryJit(Thread* t, DefinedFunc* fn, Index ind) {
 // In-development feature that needs to resume
-  if (true == TryAOT(t, ind,fn)){
-    // printf("TryAOT returned 0\n");
-  }
+  // if (true == TryAOT(t, ind,fn)){
+  //   // printf("TryAOT returned 0\n");
+  //   if (fn->aot_fn_)
+  //       aot_funcs_[ind] = fn->aot_fn_;
+  // }
 
   if (!enable_jit) {
     return Result::Ok;
@@ -1736,58 +1738,59 @@ Result Environment::TryJit(Thread* t, DefinedFunc* fn, Index ind) {
     if (fn->num_calls_ >= jit_threshold) {
       fn->jit_fn_ = jit::compile(t, fn);
       fn->tried_jit_ = true;
-
-      if (fn->jit_fn_)
-        jit_funcs_[ind] = fn->jit_fn_;
     }
+    if (fn->jit_fn_)
+      jit_funcs_[ind] = fn->jit_fn_;
   }
 
+  
   TRAP_IF(fn->tried_jit_ && !fn->jit_fn_ && trap_on_failed_comp, FailedJITCompilation);
   return Result::Ok;
 }
 
-bool Environment::TryAOT(Thread* t, Index ind, DefinedFunc* fn) {
-    // DefinedFunc should have dbg_name_
-    using namespace wabt::aot;
-  // Looks like AOTManager in aot-cd.cc is aware of all functions, whereas TryAOT currently recreates AOTManager every time
-  // Such awareness allows calls
-  //  if (aotManager == NULL){
-    aotManager = new AOTManager();
-  //  }
-  aotManager->setFunctionThatManagerWasCreatedFor(ind);
-  this->FillMemories();
-  WABTAOTCompilerLib::registerAllImports(*aotManager,*this);
-  DefinedModule* modulee;
-  Index moduleIndex =       WABTAOTCompilerLib::getModuleIndexByFunctionIndex(*this,ind);
-  modulee = reinterpret_cast<DefinedModule*>(this->GetModule(moduleIndex));
-  if(fn->is_compiled == false && fn->is_host == false) {
+bool Environment::TryAOT(Thread *t, Index ind, DefinedFunc *fn)
+   {
+   // DefinedFunc should have dbg_name_
+   using namespace wabt::aot;
+   // Looks like AOTManager in aot-cd.cc is aware of all functions, whereas TryAOT currently recreates AOTManager every time
+   // Such awareness allows calls
+   //  if (aotManager == NULL){
+   aotManager = new AOTManager();
+   //  }
+   aotManager->setFunctionThatManagerWasCreatedFor(ind);
+   this->FillMemories();
+   WABTAOTCompilerLib::registerAllImports(*aotManager, *this);
+   DefinedModule *modulee;
+   Index moduleIndex = WABTAOTCompilerLib::getModuleIndexByFunctionIndex(*this, ind);
+   modulee = reinterpret_cast<DefinedModule *>(this->GetModule(moduleIndex));
+   if (fn->is_compiled == false && fn->is_host == false)
+      {
       // Two here is hardcoded as em-module.hpp appends two modules and there's an env module
 
       /**This line is used to construct debug name, limited to 8 symbols as relocation infrastructure does not
        * support longer names
        */
-      std::string name = "f" + std::to_string(ind) +"m" +modulee->name.substr(0,3);
-      AOTTypeDictionary* types = new (PERSISTENT_NEW) AOTTypeDictionary();
-      //static AOTTypeDictionary types;
-      AOTFunctionBuilder* builder = new (PERSISTENT_NEW) AOTFunctionBuilder(t, fn,
-                  std::move(name),
-                  types,
-                  *this, *aotManager);
+      std::string name = "f" + std::to_string(ind) + "m" + modulee->name.substr(0, 3);
+      AOTTypeDictionary *types = new (PERSISTENT_NEW) AOTTypeDictionary();
+      // static AOTTypeDictionary types;
+      AOTFunctionBuilder *builder = new (PERSISTENT_NEW) AOTFunctionBuilder(t, fn,
+                                                                            std::move(name),
+                                                                            types,
+                                                                            *this, *aotManager);
 
       aotManager->push_back_FB(fn->offset, builder, types);
 
-
       // This line is used to construct debug name, limited to 8 symbols as relocation infrastructure does not
       // support longer names
-      fn->dbg_name_ = "f" + std::to_string(ind) +"m"+modulee->name.substr(0,3);
+      fn->dbg_name_ = "f" + std::to_string(ind) + "m" + modulee->name.substr(0, 3);
       /** Trying to assign debug name, might be problematic if that's an import
        * Two here is hardcoded as em-module.hpp appends two modules and there's an env module
        */
-      reinterpret_cast<DefinedFunc*>(fn)->dbg_name_ = "f" + std::to_string(ind) +"m"+this->GetModule(moduleIndex)->name.substr(0,3);
-      reinterpret_cast<DefinedModule*>(this->GetModule(moduleIndex))->funcs.emplace_back(fn);
-    }
-    else
-    {
+      reinterpret_cast<DefinedFunc *>(fn)->dbg_name_ = "f" + std::to_string(ind) + "m" + this->GetModule(moduleIndex)->name.substr(0, 3);
+      reinterpret_cast<DefinedModule *>(this->GetModule(moduleIndex))->funcs.emplace_back(fn);
+      }
+   else
+      {
       // Need to fix imports probably.
       //  for (int ii = 0 ; ii < this->GetModuleCount();ii++)
       //   for (int j = 0 ; j <  this->GetModule(ii)->exports.size();j++){
@@ -1805,16 +1808,16 @@ bool Environment::TryAOT(Thread* t, Index ind, DefinedFunc* fn) {
       //     }
       //   }
       // }
-    }
-    aotManager->broadcastNames();
-    // Need to fix imports probably.
-    // aotManager->broadcastImports();
-    auto func_count = this->GetFuncCount();
-    modulee->aot_compiled_functions.reserve(func_count);
-    void* function = aotManager->AOTCompileAFunction(this,ind,fn);
-    modulee->aot_compiled_functions.push_back(function);
-    return true;
-}
+      }
+   aotManager->broadcastNames();
+   // Need to fix imports probably.
+   // aotManager->broadcastImports();
+   auto func_count = this->GetFuncCount();
+   modulee->aot_compiled_functions.reserve(func_count);
+   void *function = aotManager->AOTCompileAFunction(this, ind, fn);
+   modulee->aot_compiled_functions.push_back(function);
+   return true;
+   }
 
 
 #if defined (unneeded)

@@ -26,7 +26,6 @@ namespace wabt {
 namespace jit {
 
 JITedFunction compile(interp::Thread* thread, interp::DefinedFunc* fn);
-using AOTedFunction = interp::Result (*)();
 
 
 //wabt::Result compileAOT(interp::Thread*, interp::Environment&);

@@ -8,8 +8,8 @@ namespace wabt {
 namespace jit {
 
 /**
- * @brief This function is called when reading functions section
- * 
+ * @brief This function is created when reading functions section,
+ *  I believe it allows doing interpreter calls from jit 
  * @param th 
  * @param ind 
  * @return Result_t 
@@ -52,8 +52,8 @@ Result_t InterpThunk(ThreadInfo* th, Index ind) {
   }
 }
 /**
- * @brief This function is called when reading functions section
- * 
+ * @brief This function is created when reading functions section,
+ *  I believe it allows calling host function calls from jit 
  * @param th 
  * @param ind 
  * @return Result_t 

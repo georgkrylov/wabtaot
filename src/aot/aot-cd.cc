@@ -1,11 +1,12 @@
 #include "../common.h" // for ReadFile, DataOrNull.
 
-#include "../interp/binary-reader-interp.h"
 #include "../binary-reader.h"
 #include "../cast.h"
 #include "../error-formatter.h"
 #include "../feature.h"
+#include "../interp/binary-reader-interp.h"
 
+#include "../em-interp/em-module.hpp"
 #include "../literal.h"
 #include "../option-parser.h"
 #include "../resolve-names.h"
@@ -14,22 +15,24 @@
 #include "../wast-lexer.h"
 #include "../wast-parser.h"
 
-#include "aot-type-dictionary.h"
-#include "aot-function-builder.h"
-#include "trap-with.h"
 #include "aot-compiler-lib.hpp"
+#include "aot-function-builder.h"
 #include "aot-manager.h"
+#include "aot-type-dictionary.h"
+#include "trap-with.h"
 
 #include <algorithm>
-#include <iostream>
-#include <memory>
-#include <math.h>
-#include <string>
 #include <dlfcn.h>
-#include <time.h>
 #include <iomanip> // for the precision, for testing purposes
+#include <iostream>
+#include <math.h>
+#include <memory>
+#include <string>
+#include <time.h>
 #include <unistd.h>
 
+int realArgc;
+char **realArgv;
 using namespace wabt;
 using namespace wabt::interp;
 /*
@@ -92,9 +95,7 @@ class WasmInterpHostImportDelegate : public HostImportDelegate {
   }
 };*/
 
-
-
-extern int32_t internal_compileMethodBuilder(TR::MethodBuilder * methodBuilder, void ** entryPoint);
+extern int32_t internal_compileMethodBuilder(TR::MethodBuilder *methodBuilder, void **entryPoint);
 
 int numOfArgs;
 char **args_arr;
@@ -102,436 +103,508 @@ char **args_arr;
 static std::unique_ptr<FileStream> s_stdout_stream;
 static std::unique_ptr<FileStream> s_log_stream;
 
-static interp::Result PrintCallback(const HostFunc* func,
-                                    const interp::FuncSignature* sig,
-                                    const TypedValues& args,
-                                    TypedValues& results) {
-  printf("called host ");
-  WriteCall(s_stdout_stream.get(), func->module_name, func->field_name, args,
-            results, interp::Result::Ok);
-  return interp::Result::Ok;
-}
+static interp::Result PrintCallback(const HostFunc *func,
+                                    const interp::FuncSignature *sig,
+                                    const TypedValues &args,
+                                    TypedValues &results)
+   {
+   printf("called host ");
+   WriteCall(s_stdout_stream.get(), func->module_name, func->field_name, args,
+             results, interp::Result::Ok);
+   return interp::Result::Ok;
+   }
 
 // from wasm-interp.cc in wasmjit-omr/src/tools.
-static wabt::Result ReadModule(const char* module_filename,
-                               Environment* env,
-                               Errors* errors,
-                               DefinedModule** out_module)
-{
-  wabt::Result result;
-  std::vector<uint8_t> file_data;
+static wabt::Result ReadModule(const char *module_filename,
+                               Environment *env,
+                               Errors *errors,
+                               DefinedModule **out_module)
+   {
+   wabt::Result result;
+   std::vector<uint8_t> file_data;
 
-  HostModule* host_module = env->AppendHostModule("host");
-  host_module->on_unknown_func_export =
-      [](Environment* env, HostModule* host_module, string_view name,
-         Index sig_index) -> Index {
+   // HostModule *host_module = env->AppendHostModule("host");
+   // host_module->on_unknown_func_export =
+   //     [](Environment *env, HostModule *host_module, string_view name,
+   //        Index sig_index) -> Index
+   // {
+   //    if (name != "")
+   //       {
+   //       std::pair<HostFunc *, Index> pair =
+   //           host_module->AppendFuncExport(name, sig_index, PrintCallback);
+   //       return pair.second;
+   //       }
 
-    if (name != "") {
-      std::pair<HostFunc*, Index> pair =
-        host_module->AppendFuncExport(name, sig_index, PrintCallback);
-      return pair.second;
-    }
+   //    return kInvalidIndex;
+   // };
 
-    return kInvalidIndex;
+   // HostModule *wasi = env->AppendHostModule("wasi_unstable");
+   // wasi->on_unknown_func_export =
+   //     [](Environment *env, HostModule *host_module, string_view name,
+   //        Index sig_index) -> Index
+   // {
+   //    if (name != "")
+   //       {
+   //       std::pair<HostFunc *, Index> pair =
+   //           host_module->AppendFuncExport(name, sig_index, PrintCallback);
+   //       return pair.second;
+   //       }
 
-  };
+   //    return kInvalidIndex;
+   // };
 
-  HostModule *wasi = env->AppendHostModule("wasi_unstable");
-  wasi->on_unknown_func_export =
-      [](Environment* env, HostModule* host_module, string_view name,
-         Index sig_index) -> Index {
+   // HostModule *envi = env->AppendHostModule("env");
+   // envi->on_unknown_func_export =
+   //     [](Environment *env, HostModule *host_module, string_view name,
+   //        Index sig_index) -> Index
+   // {
+   //    if (name != "")
+   //       {
+   //       std::pair<HostFunc *, Index> pair =
+   //           host_module->AppendFuncExport(name, sig_index, PrintCallback);
+   //       return pair.second;
+   //       }
 
-    if (name != "") {
-      std::pair<HostFunc*, Index> pair =
-        host_module->AppendFuncExport(name, sig_index, PrintCallback);
-      return pair.second;
-    }
+   //    return kInvalidIndex;
+   // };
 
-    return kInvalidIndex;
+   // envi->on_unknown_export =
+   //     [](Environment *env, HostModule *module, string_view name, ExternalKind kind)
+   //     -> Index
+   // {
+   //    if (name != "")
+   //       {
 
-   };
+   //       switch (kind)
+   //          {
+   //       case ExternalKind::Memory:
+   //          {
+   //          auto pair = module->AppendMemoryExport(name, Limits(256, 256));
+   //          return pair.second;
+   //          }
+   //       case ExternalKind::Table:
+   //          {
+   //          auto pair = module->AppendTableExport(name, Type::Funcref, Limits(6));
+   //          return pair.second;
+   //          }
+   //          }
+   //       }
 
-  HostModule *envi = env->AppendHostModule("env");
-  envi->on_unknown_func_export =
-      [](Environment* env, HostModule* host_module, string_view name,
-         Index sig_index) -> Index {
+   //    return kInvalidIndex;
+   // };
 
-    if (name != "") {
-      std::pair<HostFunc*, Index> pair =
-        host_module->AppendFuncExport(name, sig_index, PrintCallback);
-      return pair.second;
-    }
+   // *out_module = nullptr;
 
-    return kInvalidIndex;
-
-  };
-
-  envi->on_unknown_export =
-      [](Environment* env, HostModule* module, string_view name, ExternalKind kind)
-         -> Index {
-    if (name != "") {
-
-      switch(kind) {
-          case ExternalKind::Memory: {
-              auto pair = module->AppendMemoryExport(name, Limits(256, 256));
-              return pair.second;
-          }
-          case ExternalKind::Table: {
-              auto pair = module->AppendTableExport(name, Type::Funcref, Limits(6));
-              return pair.second;
-          }
-      }
-    }
-
-    return kInvalidIndex;
-
-  };
-
-  // *out_module = nullptr;
-
-  result = ReadFile(module_filename, &file_data);
-  if (Succeeded(result)) {
-    const bool kReadDebugNames = true;
-    const bool kStopOnFirstError = true;
-    const bool kFailOnCustomSectionError = true;
-
-    Features s_features;
-    ReadBinaryOptions options(s_features, s_log_stream.get(), kReadDebugNames,
-                              kStopOnFirstError, kFailOnCustomSectionError);
-    result = ReadBinaryInterp(env, file_data.data(), file_data.size(),
-                              options, errors, out_module);
-/*
-    if (Succeeded(result)) {
-      if (s_verbose) {
-        env->DisassembleModule(s_stdout_stream.get(), out_module);
-      }
-    }*/
-  }
-  return result;
-}
-
-
-
-int compileAOT(interp::Environment& env, DefinedModule* module, char * filename){
-  using namespace wabt::aot;
-  AOTManager aotManager;
-   interp::Thread thread(&env);
-  WABTAOTCompilerLib::registerMethods(aotManager,env,module,filename,thread);
-  auto func_count = env.GetFuncCount();
-  int flag = 0;
-  for(Index i = 0; i < func_count; ++i) {
-
-    if(!env.GetFunc(i)->is_compiled) {
-      auto* fn = cast<wabt::interp::DefinedFunc>(env.GetFunc(i));
-      auto& builder = aotManager.getFB(fn->offset);
-      void* function = nullptr;
-      function = getCodeEntry(const_cast<char*>(fn->dbg_name_.c_str()));
-      if(!function) {
-        flag = 1;
-        internal_compileMethodBuilder(&builder, &function);
-        storeCodeEntry((char *)fn->dbg_name_.c_str());
-	      function = getCodeEntry(const_cast<char*>(fn->dbg_name_.c_str()));
-        assert(function!=NULL);
-      }
-      module->aot_compiled_functions.push_back(function);
-      env.GetFunc(i)->is_compiled = true;
-
-    }
-
-  }
-  if(flag == 1){
-    return 2;
-  } else
-  {
-    return 0;
-  }
-}
-
-uint32_t printaa(int32_t a,int32_t b,int32_t c,int32_t d) {
-  uint32_t bufferLoc = *(uint32_t*)(envPointer->GetMems()[0]+b);
-  char *buffer = envPointer->GetMems()[0]+bufferLoc;
-  uint32_t buffsize = *(uint32_t*)(envPointer->GetMems()[0]+b+4);
-  if(buffsize){
-  std::cout<<std::string(buffer,buffsize);
-  }
-  return buffsize;
-}
-
-uint32_t gettimeod(int32_t a, int32_t b) {
-  static int i = 0;
-  uint32_t bufferLoc1 = *(uint32_t*)(envPointer->GetMems()[0]+a);
-  time_t *bufferLoc = (time_t*)(envPointer->GetMems()[0]+bufferLoc1);
-  suseconds_t *miliLoc = (suseconds_t*)(envPointer->GetMems()[0]+bufferLoc1+8);
-  struct timeval tv{};
-  gettimeofday(&tv,NULL);
-  //*bufferLoc = tv.tv_sec;
-  //*miliLoc = tv.tv_usec;
-  *bufferLoc = -1 - (++i);
-  *miliLoc = -1 - (++i);
-  return 0;
-}
-
-int32_t print1(int32_t a,int32_t b){std::cout<<a<<","<<b<<"\n"; return 0;}
-void print2(int32_t a,int32_t b){std::cout<<a+b<<"\n";}
-int32_t seek(int32_t a,int64_t b,int32_t c,int32_t d) { std::cout<<a<<b<<c<<d<<"\n"; return 0;}
-int32_t clos(int32_t a){ std::cout<<a; return 0; };
-void clus(int32_t a){ std::cout<<a;};
-
-int32_t args_get(int32_t argv,int32_t argv_buf) {
-  uint32_t *bufferLoc = (uint32_t*)(envPointer->GetMems()[0]+argv);
-  uint8_t *bufferLocsize = (uint8_t*)(envPointer->GetMems()[0]+argv_buf);
-  *bufferLoc = argv_buf;
-  if(numOfArgs>1)
-    *(bufferLoc+1) = argv_buf+strlen(args_arr[1]);
-  memcpy(bufferLocsize,args_arr[1],strlen(args_arr[1])+1);
-  if(numOfArgs>1)
-    memcpy(bufferLocsize+strlen(args_arr[1]),args_arr[2],strlen(args_arr[2])+1);
-  return 0;
-}
-int32_t args_size_get(int32_t numOfArgs1, int32_t sizeOfArgs1){
-  uint32_t *bufferLoc = (uint32_t*)(envPointer->GetMems()[0]+numOfArgs1);
-  uint32_t *bufferLocsize = (uint32_t*)(envPointer->GetMems()[0]+sizeOfArgs1);
-  *bufferLoc = numOfArgs;
-  if(numOfArgs>1)
-    *bufferLocsize = strlen(args_arr[2])+strlen(args_arr[1])+2;
-  else
-    *bufferLocsize = 0;
-  return 0;
-}
-
-
-void funpr(uint64_t a) { std::cout<<((char*)(&a)); }
-
-void relocateAOT(interp::Environment& env,DefinedModule *module)
-{
-  auto func_count = env.GetFuncCount();
-  setCodeEntry("trapWith",reinterpret_cast<void*>(trapWith));
-  double(*sqr)(double) = sqrt;
-  setCodeEntry("sqrt",reinterpret_cast<void*>(sqr));
-  double(*cpsign)(double,double) = copysign;
-  setCodeEntry("copysign",reinterpret_cast<void*>(cpsign));
-  setCodeEntry("sqrtf",reinterpret_cast<void*>(sqrtf));
-  setCodeEntry("copysignf",reinterpret_cast<void*>(copysignf));
-  setCodeEntry("CallIndi",reinterpret_cast<void*>(wabt::aot::AOTFunctionBuilder::AOTCallIndirectHelper));
-  setCodeEntry("GrowMem",reinterpret_cast<void*>(wabt::aot::AOTFunctionBuilder::GrowMemory));
-  setCodeEntry("MemSize",reinterpret_cast<void*>(wabt::aot::AOTFunctionBuilder::CalculateMemorySize));
-  setCodeEntry("PrintSt",reinterpret_cast<void*>(wabt::aot::AOTFunctionBuilder::PrintSomething));
-  setCodeEntry("fd_write",reinterpret_cast<void*>(printaa));
-  setCodeEntry("__lock",reinterpret_cast<void*>(1));
-  setCodeEntry("__unlock",reinterpret_cast<void*>(1));
-  setCodeEntry("emscripten_memcpy_big",reinterpret_cast<void*>(1));
-  setCodeEntry("emscripten_resize_heap",reinterpret_cast<void*>(1));
-  setCodeEntry("setTempRet0",reinterpret_cast<void*>(1));
-  setCodeEntry("memory",reinterpret_cast<void*>(1));
-  setCodeEntry("table",reinterpret_cast<void*>(1));
-  setCodeEntry("emscript",reinterpret_cast<void*>(clus));
-  setCodeEntry("setTempR",reinterpret_cast<void*>(1));
-  setCodeEntry("Popcount",reinterpret_cast<void*>(static_cast<int(*)(unsigned)>(wabt::Popcount)));
-  setCodeEntry("Popcountll",reinterpret_cast<void*>(static_cast<int(*)(unsigned long long)>(wabt::Popcount)));
-  setCodeEntry("args_siz",reinterpret_cast<void*>(args_size_get));
-  setCodeEntry("args_get",reinterpret_cast<void*>(args_get));
-  setCodeEntry("proc_exi",reinterpret_cast<void*>(clus));
-  setCodeEntry("fd_seek",reinterpret_cast<void*>(seek));
-  setCodeEntry("fd_close",reinterpret_cast<void*>(clos));
-  setCodeEntry("funpr",reinterpret_cast<void*>(funpr));
-  setCodeEntry("gettimeo",reinterpret_cast<void*>(gettimeod));
-  // for(Index i = 0; i < func_count; ++i) {
-  //   if(env.GetFunc(i)->is_host) {
-  //     setCodeEntry()
-  //   }
-  // }
-  //setCodeEntry(const_cast<char*>(env.GetFunc(0)->dbg_name_.data()),reinterpret_cast<void*>(print));
-  //setCodeEntry(const_cast<char*>(env.GetFunc(1)->dbg_name_.data()),reinterpret_cast<void*>(print1));
-  //setCodeEntry("print1",reinterpret_cast<void*>(print1));
-  /*for(int i=0;i<env.GetFuncCount();i++){
-    interp::Func *func = env.GetFunc(i);
-    if(func->is_host){
-      void *handle = dlopen("libc.so.6",RTLD_LAZY);
-      if(!handle){
-        std::cerr<<"Cannot open libc!"<<"\n";
-        exit(-1);
-      }
-      void *cfunc = dlsym(handle,func->dbg_name_.c_str());
-      if(!cfunc){
-        std::cerr<<"Cannot find "<<func->dbg_name_<<"\n";
-        exit(-1);
-      }
-      setCodeEntry(const_cast<char*>(func->dbg_name_.data()),cfunc);
-    }
-    }*/
-  Value *globals = new Value[env.GetGlobalCount()]();
-  std::vector<std::string> global_names;
-  for(int i=0;i<env.GetGlobalCount();i++) {
-    globals[i] = env.GetGlobal(i)->typed_value.value;
-    char* global_name = (char*) calloc(6,sizeof(char));
-    sprintf(global_name,"g%d",i);
-    global_names.emplace_back(global_name);
-    setCodeEntry(global_name,reinterpret_cast<void*>(globals+i));
-    global_name = NULL;
-  }
-  env.FillMemories();
-  char* memory_name = (char*) calloc(6,sizeof(char));
-  for(unsigned int i=0;i<env.GetMemoryCount();i++) {
-    sprintf(memory_name,"m%d",i);
-    //global_names.emplace_back(global_name);
-    setCodeEntry(memory_name,reinterpret_cast<void*>(env.GetMems()+i));
-    memory_name = NULL;
-  }
-  setCodeEntry(const_cast<char*>("Params"), reinterpret_cast<void*>(&env.indirectCallParams));
-  // uint16_t compiled_function_index = 0;
-  for(Index i = 0; i < module->aot_compiled_functions.size(); ++i) {
-    // if(!env.GetFunc(i)->is_host) {
-    if(module->aot_compiled_functions[i]){
-      auto* fn = static_cast<DefinedFunc*>(module->funcs[i]);
-      relocateCodeEntry(const_cast<char *>(fn->dbg_name_.c_str()));
-      // compiled_function_index++;
-    }
-    // }
-  }
-}
-
-void runExports(interp::Environment& env,DefinedModule *module, int run_all_exports)
-{
-  if (run_all_exports == 1)
-      std::cout << std::setprecision(6) << std::fixed;
-  for(auto exported:module->exports){
-    if(exported.kind != ExternalKind::Func) { continue;}
-    std::string index = std::to_string(exported.index);
-    std::string funcname = reinterpret_cast<DefinedFunc*>(env.GetFunc(exported.index))->dbg_name_;
-    // std::cout<<"Funcname is:"<<funcname<<std::endl;
-    void *fn = nullptr;
-    if (run_all_exports != 1)
-       if(exported.name != "_start") continue;
-
-    for(uint32_t i = 0;i<module->funcs.size();i++){
-      if(!funcname.compare(module->funcs[i]->dbg_name_)){
-        fn = module->aot_compiled_functions[i];
-        break;
-      }
-      if(!funcname.compare(reinterpret_cast<DefinedFunc*>(module->funcs[i])->dbg_name_)){
-        fn = module->aot_compiled_functions[i];
-        break;
-      }
-    }
-
-    // void *fun = module->compiled_functions[exported.index];
-    if(env.GetFuncSignature(env.GetFunc(exported.index)->sig_index)->result_types.size()){
-      if(env.GetFuncSignature(env.GetFunc(exported.index)->sig_index)->result_types.front() == Type::F32) {
-        float a = reinterpret_cast<float(*)()>(fn)();
-        std::cout<<exported.name<<"() => f32:"<<a<<"\n";
-        }
-      else if(env.GetFuncSignature(env.GetFunc(exported.index)->sig_index)->result_types.front() == Type::F64) {
-        std::cout << std::setprecision(6) << std::fixed;
-        double a = reinterpret_cast<double(*)()>(fn)();
-        std::cout<<exported.name<<"() => f64:"<<a<<"\n";
-        }
-      else if(env.GetFuncSignature(env.GetFunc(exported.index)->sig_index)->result_types.front() == Type::I32)  {
-      uint32_t a = reinterpret_cast<uint64_t(*)()>(fn)();
-      std::cout<<exported.name<<"() => i32:"<<a<<"\n";
-      }else
+   result = ReadFile(module_filename, &file_data);
+   if (Succeeded(result))
       {
-      uint64_t a = reinterpret_cast<uint64_t(*)()>(fn)();
-      std::cout<<exported.name<<"() => i64:"<<a<<"\n";
+      const bool kReadDebugNames = true;
+      const bool kStopOnFirstError = true;
+      const bool kFailOnCustomSectionError = true;
+
+      Features s_features;
+      ReadBinaryOptions options(s_features, s_log_stream.get(), kReadDebugNames,
+                                kStopOnFirstError, kFailOnCustomSectionError);
+      result = ReadBinaryInterp(env, file_data.data(), file_data.size(),
+                                options, errors, out_module);
+      /*
+          if (Succeeded(result)) {
+            if (s_verbose) {
+              env->DisassembleModule(s_stdout_stream.get(), out_module);
+            }
+          }*/
       }
-    }else{
-      reinterpret_cast<void(*)()>(fn)();
-    }
-  }
+   return result;
+   }
+
+int compileAOT(interp::Environment &env, DefinedModule *module, char *filename)
+   {
+   using namespace wabt::aot;
+   AOTManager aotManager;
+   interp::Thread thread(&env);
+   WABTAOTCompilerLib::registerMethods(aotManager, env, module, filename, thread);
+   auto func_count = env.GetFuncCount();
+   int flag = 0;
+   for (Index i = 0; i < func_count; ++i)
+      {
+
+      if (!env.GetFunc(i)->is_compiled)
+         {
+         auto *fn = cast<wabt::interp::DefinedFunc>(env.GetFunc(i));
+         auto &builder = aotManager.getFB(fn->offset);
+         void *function = nullptr;
+         function = getCodeEntry(const_cast<char *>(fn->dbg_name_.c_str()));
+         if (!function)
+            {
+            flag = 1;
+            internal_compileMethodBuilder(&builder, &function);
+            storeCodeEntry((char *)fn->dbg_name_.c_str());
+            function = getCodeEntry(const_cast<char *>(fn->dbg_name_.c_str()));
+            assert(function != NULL);
+            }
+         module->aot_compiled_functions.push_back(function);
+         env.GetFunc(i)->is_compiled = true;
+         }
+      }
+   if (flag == 1)
+      {
+      return 2;
+      }
+   else
+      {
+      return 0;
+      }
+   }
+
+uint32_t printaa(int32_t a, int32_t b, int32_t c, int32_t d)
+   {
+   uint32_t bufferLoc = *(uint32_t *)(envPointer->GetMems()[0] + b);
+   char *buffer = envPointer->GetMems()[0] + bufferLoc;
+   uint32_t buffsize = *(uint32_t *)(envPointer->GetMems()[0] + b + 4);
+   if (buffsize)
+      {
+      std::cout << std::string(buffer, buffsize);
+      }
+   return buffsize;
+   }
+
+uint32_t gettimeod(int32_t a, int32_t b)
+   {
+   static int i = 0;
+   uint32_t bufferLoc1 = *(uint32_t *)(envPointer->GetMems()[0] + a);
+   time_t *bufferLoc = (time_t *)(envPointer->GetMems()[0] + bufferLoc1);
+   suseconds_t *miliLoc = (suseconds_t *)(envPointer->GetMems()[0] + bufferLoc1 + 8);
+   struct timeval tv
+      {
+      };
+   gettimeofday(&tv, NULL);
+   //*bufferLoc = tv.tv_sec;
+   //*miliLoc = tv.tv_usec;
+   *bufferLoc = -1 - (++i);
+   *miliLoc = -1 - (++i);
+   return 0;
+   }
+
+int32_t print1(int32_t a, int32_t b)
+   {
+   std::cout << a << "," << b << "\n";
+   return 0;
+   }
+void print2(int32_t a, int32_t b) { std::cout << a + b << "\n"; }
+int32_t seek(int32_t a, int64_t b, int32_t c, int32_t d)
+   {
+   std::cout << a << b << c << d << "\n";
+   return 0;
+   }
+int32_t clos(int32_t a)
+   {
+   std::cout << a;
+   return 0;
+   };
+void clus(int32_t a) { std::cout << a; };
+
+int32_t args_get(int32_t argv, int32_t argv_buf)
+   {
+   uint32_t *bufferLoc = (uint32_t *)(envPointer->GetMems()[0] + argv);
+   uint8_t *bufferLocsize = (uint8_t *)(envPointer->GetMems()[0] + argv_buf);
+   *bufferLoc = argv_buf;
+   if (numOfArgs > 1)
+      *(bufferLoc + 1) = argv_buf + strlen(args_arr[1]);
+   memcpy(bufferLocsize, args_arr[1], strlen(args_arr[1]) + 1);
+   if (numOfArgs > 1)
+      memcpy(bufferLocsize + strlen(args_arr[1]), args_arr[2], strlen(args_arr[2]) + 1);
+   return 0;
+   }
+int32_t args_size_get(int32_t numOfArgs1, int32_t sizeOfArgs1)
+   {
+   uint32_t *bufferLoc = (uint32_t *)(envPointer->GetMems()[0] + numOfArgs1);
+   uint32_t *bufferLocsize = (uint32_t *)(envPointer->GetMems()[0] + sizeOfArgs1);
+   *bufferLoc = numOfArgs;
+   if (numOfArgs > 1)
+      *bufferLocsize = strlen(args_arr[2]) + strlen(args_arr[1]) + 2;
+   else
+      *bufferLocsize = 0;
+   return 0;
+   }
+
+void funpr(uint64_t a) { std::cout << ((char *)(&a)); }
+
+void preSetCodeEntries(){
+   setCodeEntry("trapWith", reinterpret_cast<void *>(trapWith));
+   double (*sqr)(double) = sqrt;
+   setCodeEntry("sqrt", reinterpret_cast<void *>(sqr));
+   double (*cpsign)(double, double) = copysign;
+   setCodeEntry("copysign", reinterpret_cast<void *>(cpsign));
+   setCodeEntry("sqrtf", reinterpret_cast<void *>(sqrtf));
+   setCodeEntry("copysignf", reinterpret_cast<void *>(copysignf));
+   setCodeEntry("CallIndi", reinterpret_cast<void *>(wabt::aot::AOTFunctionBuilder::AOTCallIndirectHelper));
+   setCodeEntry("GrowMem", reinterpret_cast<void *>(wabt::aot::AOTFunctionBuilder::GrowMemory));
+   setCodeEntry("MemSize", reinterpret_cast<void *>(wabt::aot::AOTFunctionBuilder::CalculateMemorySize));
+   setCodeEntry("PrintSt", reinterpret_cast<void *>(wabt::aot::AOTFunctionBuilder::PrintSomething));
+   setCodeEntry("fd_write", reinterpret_cast<void *>(printaa));
+   setCodeEntry("__lock", reinterpret_cast<void *>(1));
+   setCodeEntry("__unlock", reinterpret_cast<void *>(1));
+   setCodeEntry("emscripten_memcpy_big", reinterpret_cast<void *>(1));
+   setCodeEntry("emscripten_resize_heap", reinterpret_cast<void *>(1));
+   setCodeEntry("setTempRet0", reinterpret_cast<void *>(1));
+   setCodeEntry("memory", reinterpret_cast<void *>(1));
+   setCodeEntry("table", reinterpret_cast<void *>(1));
+   setCodeEntry("emscript", reinterpret_cast<void *>(clus));
+   setCodeEntry("setTempR", reinterpret_cast<void *>(1));
+   setCodeEntry("Popcount", reinterpret_cast<void *>(static_cast<int (*)(unsigned)>(wabt::Popcount)));
+   setCodeEntry("Popcountll", reinterpret_cast<void *>(static_cast<int (*)(unsigned long long)>(wabt::Popcount)));
+   setCodeEntry("args_siz", reinterpret_cast<void *>(args_size_get));
+   setCodeEntry("args_get", reinterpret_cast<void *>(args_get));
+   setCodeEntry("proc_exi", reinterpret_cast<void *>(clus));
+   setCodeEntry("fd_seek", reinterpret_cast<void *>(seek));
+   setCodeEntry("fd_close", reinterpret_cast<void *>(clos));
+   setCodeEntry("funpr", reinterpret_cast<void *>(funpr));
+   setCodeEntry("gettimeo", reinterpret_cast<void *>(gettimeod));
 }
-
-void registerModules(const char* module_filename, Environment* env){
-  std::string module_name(module_filename);
-  // env->AppendHostModule(module.substr(0,module.find(".")))->import_delegate.reset(new WasmInterpHostImportDelegate());
-  DefinedModule* module = new DefinedModule();
-  module->name = module_name.substr(module_name.find_last_of('/')+1,module_name.find_last_of('.')-module_name.find_last_of('/')-1);
-  //module->name = module_name.substr(0,module_name.find_last_of('.'));
-  //module->name = module_name;//.substr(module_name.find_last_of('/')+1,3);
-  env->AppendDefModule(module);
-}
-
-int main(int argc, char** argv) {
-  if(argc < 2) {
-    std::cout << "usage: wabtaot <filename>\n";
-    return -1;
-  }
-  //TODO rewrite using the infrastructure
-  int run_all_exports = 0;
-  uint32_t no_of_modules = 0;
-
-  if (argc >= 2) {
-    for (int i = 0 ; i < argc; i++){
-      std::string last_argument(argv[i]);
-  if(last_argument.substr(last_argument.find_last_of(".") + 1) == "wasm") {
-        no_of_modules++;
+void relocateAOT(interp::Environment &env, DefinedModule *module)
+   {
+   auto func_count = env.GetFuncCount();
+   preSetCodeEntries();
+   // for(Index i = 0; i < func_count; ++i) {
+   //   if(env.GetFunc(i)->is_host) {
+   //     setCodeEntry()
+   //   }
+   // }
+   // setCodeEntry(const_cast<char*>(env.GetFunc(0)->dbg_name_.data()),reinterpret_cast<void*>(print));
+   // setCodeEntry(const_cast<char*>(env.GetFunc(1)->dbg_name_.data()),reinterpret_cast<void*>(print1));
+   // setCodeEntry("print1",reinterpret_cast<void*>(print1));
+   /*for(int i=0;i<env.GetFuncCount();i++){
+     interp::Func *func = env.GetFunc(i);
+     if(func->is_host){
+       void *handle = dlopen("libc.so.6",RTLD_LAZY);
+       if(!handle){
+         std::cerr<<"Cannot open libc!"<<"\n";
+         exit(-1);
+       }
+       void *cfunc = dlsym(handle,func->dbg_name_.c_str());
+       if(!cfunc){
+         std::cerr<<"Cannot find "<<func->dbg_name_<<"\n";
+         exit(-1);
+       }
+       setCodeEntry(const_cast<char*>(func->dbg_name_.data()),cfunc);
+     }
+     }*/
+   Value *globals = new Value[env.GetGlobalCount()]();
+   std::vector<std::string> global_names;
+   for (int i = 0; i < env.GetGlobalCount(); i++)
+      {
+      globals[i] = env.GetGlobal(i)->typed_value.value;
+      char *global_name = (char *)calloc(6, sizeof(char));
+      sprintf(global_name, "g%d", i);
+      global_names.emplace_back(global_name);
+      setCodeEntry(global_name, reinterpret_cast<void *>(globals + i));
+      global_name = NULL;
       }
-      if (last_argument.compare("--run-all-exports")==0) {
-        run_all_exports = 1;
+   env.FillMemories();
+   char *memory_name = (char *)calloc(6, sizeof(char));
+   for (unsigned int i = 0; i < env.GetMemoryCount(); i++)
+      {
+      sprintf(memory_name, "m%d", i);
+      // global_names.emplace_back(global_name);
+      setCodeEntry(memory_name, reinterpret_cast<void *>(env.GetMems() + i));
+      memory_name = NULL;
       }
-    }
-  }
-  numOfArgs = argc-1;
-  args_arr = argv;
+   setCodeEntry(const_cast<char *>("Params"), reinterpret_cast<void *>(&env.indirectCallParams));
+   // uint16_t compiled_function_index = 0;
+   for (Index i = 0; i < module->aot_compiled_functions.size(); ++i)
+      {
+      // if(!env.GetFunc(i)->is_host) {
+      if (module->aot_compiled_functions[i])
+         {
+         auto *fn = static_cast<DefinedFunc *>(module->funcs[i]);
+         relocateCodeEntry(const_cast<char *>(fn->dbg_name_.c_str()));
+         // compiled_function_index++;
+         }
+      // }
+      }
+   }
 
-  Environment env;
-  s_stdout_stream = FileStream::CreateStdout();
-  s_log_stream = nullptr;
-  wabt::Result compile_result;
-  for(uint32_t i = 1;i<=no_of_modules;i++) {
-    registerModules(argv[i],&env);
-  }
-  envPointer = &env;
-  WABTAOTCompilerLib compilerLib = WABTAOTCompilerLib();
-  char* src_filename;
+void runExports(interp::Environment &env, DefinedModule *module, int run_all_exports)
+   {
+   if (run_all_exports == 1)
+      std::cout << std::setprecision(6) << std::fixed;
+   for (auto exported : module->exports)
+      {
+      if (exported.kind != ExternalKind::Func)
+         {
+         continue;
+         }
+      std::string index = std::to_string(exported.index);
+      std::string funcname = reinterpret_cast<DefinedFunc *>(env.GetFunc(exported.index))->dbg_name_;
+      // std::cout<<"Funcname is:"<<funcname<<std::endl;
+      void *fn = nullptr;
+      if (run_all_exports != 1)
+         if (exported.name != "_start")
+            continue;
 
+      for (uint32_t i = 0; i < module->funcs.size(); i++)
+         {
+         if (!funcname.compare(module->funcs[i]->dbg_name_))
+            {
+            fn = module->aot_compiled_functions[i];
+            break;
+            }
+         if (!funcname.compare(reinterpret_cast<DefinedFunc *>(module->funcs[i])->dbg_name_))
+            {
+            fn = module->aot_compiled_functions[i];
+            break;
+            }
+         }
 
- uint32_t build_type=0;
+      // void *fun = module->compiled_functions[exported.index];
+      if (env.GetFuncSignature(env.GetFunc(exported.index)->sig_index)->result_types.size())
+         {
+         if (env.GetFuncSignature(env.GetFunc(exported.index)->sig_index)->result_types.front() == Type::F32)
+            {
+            float a = reinterpret_cast<float (*)()>(fn)();
+            std::cout << exported.name << "() => f32:" << a << "\n";
+            }
+         else if (env.GetFuncSignature(env.GetFunc(exported.index)->sig_index)->result_types.front() == Type::F64)
+            {
+            std::cout << std::setprecision(6) << std::fixed;
+            double a = reinterpret_cast<double (*)()>(fn)();
+            std::cout << exported.name << "() => f64:" << a << "\n";
+            }
+         else if (env.GetFuncSignature(env.GetFunc(exported.index)->sig_index)->result_types.front() == Type::I32)
+            {
+            uint32_t a = reinterpret_cast<uint64_t (*)()>(fn)();
+            std::cout << exported.name << "() => i32:" << a << "\n";
+            }
+         else
+            {
+            uint64_t a = reinterpret_cast<uint64_t (*)()>(fn)();
+            std::cout << exported.name << "() => i64:" << a << "\n";
+            }
+         }
+      else
+         {
+         reinterpret_cast<void (*)()>(fn)();
+         }
+      }
+   }
+
+void registerModules(std::string module_name, Environment *env)
+   {
+   // env->AppendHostModule(module.substr(0,module.find(".")))->import_delegate.reset(new WasmInterpHostImportDelegate());
+   DefinedModule *module = new DefinedModule();
+   module->name = module_name.substr(module_name.find_last_of('/') + 1, module_name.find_last_of('.') - module_name.find_last_of('/') - 1);
+   // module->name = module_name.substr(0,module_name.find_last_of('.'));
+   // module->name = module_name;//.substr(module_name.find_last_of('/')+1,3);
+   env->AppendDefModule(module);
+   }
+
+int main(int argc, char **argv)
+   {
+   if (argc < 2)
+      {
+      std::cout << "usage: wabtaot <filename>\n";
+      return -1;
+      }
+   // TODO rewrite using the infrastructure
+   int run_all_exports = 0;
+   std::vector<std::string> module_names;
+   if (argc >= 2)
+      {
+      for (int i = 0; i < argc; i++)
+         {
+         std::string last_argument(argv[i]);
+         if (last_argument.substr(last_argument.find_last_of(".") + 1) == "wasm")
+            {
+            module_names.push_back(last_argument);
+            }
+         if (last_argument.compare("--run-all-exports") == 0)
+            {
+            run_all_exports = 1;
+            }
+         }
+      }
+   numOfArgs = argc - 1;
+   args_arr = argv;
+
+   Environment env;
+   s_stdout_stream = FileStream::CreateStdout();
+   s_log_stream = nullptr;
+   wabt::Result compile_result;
+   AppendEmscriptenModule(&env);
+   /** Adding emscripten adds two modules, should count them in */
+   module_names.emplace(module_names.begin(), "wasi_unstable");
+   module_names.emplace(module_names.begin(), "env");
+   
+   uint32_t no_of_modules =  module_names.size();
+   for (uint32_t i = 2; i < no_of_modules; i++)
+      {
+      registerModules(module_names[i], &env);
+      }
+   envPointer = &env;
+   WABTAOTCompilerLib compilerLib = WABTAOTCompilerLib();
+   char *src_filename;
+
+   uint32_t build_type = 0;
 #ifndef WASM_SHARED_CACHE
-if(no_of_modules > 1){
+   /** Adding emscripten adds two modules, hence affects value of i */
+   if (no_of_modules > 3)
+      {
 
-    char* soFilename = "./wasmaot.so";
-    if( access( static_cast<const char *>(soFilename), F_OK ) == 0 ) {
-      /** The load wasmaot.so (multiple files into memory)
-       * was not tested after introducing WABTAOTCompilerLib
-       */
-      WABTAOTCompilerLib::loadELFToMemory(soFilename);
-      build_type = 1;
-    }
-
-}
- #endif
-  for(uint32_t i = 1;i<=no_of_modules;i++) {
-    src_filename = argv[i];
+      char *soFilename = "./wasmaot.so";
+      if (access(static_cast<const char *>(soFilename), F_OK) == 0)
+         {
+         /** The load wasmaot.so (multiple files into memory)
+          * was not tested after introducing WABTAOTCompilerLib
+          */
+         WABTAOTCompilerLib::loadELFToMemory(soFilename);
+         build_type = 1;
+         }
+      }
+#endif
+   /** Adding emscripten adds two modules, hence affects value of i */
+   for (uint32_t i = 2; i < no_of_modules; i++)
+      {
+      src_filename = (char*) calloc(sizeof(char),module_names[i].length()+1);
+      strcpy(src_filename,module_names[i].c_str());
 #ifndef WASM_SHARED_CACHE
-  if(no_of_modules == 1){
-    WABTAOTCompilerLib::getSOFilename(src_filename);
-    WABTAOTCompilerLib::loadELFToMemory(src_filename);
-    }
+      if (no_of_modules == 3) /* One plus two added by including emscripten */
+         {
+         WABTAOTCompilerLib::getSOFilename(src_filename);
+         WABTAOTCompilerLib::loadELFToMemory(src_filename);
+         }
 #endif
 
-    DefinedModule* module = nullptr; //new DefinedModule();
-    //ErrorHandlerFile error_handler(Location::Type::Binary);
-    Errors errors;
-    module = dynamic_cast<DefinedModule*>(env.GetModule(i-1));
-    wabt::Result result = ReadModule(src_filename, &env, &errors, &module);
+      DefinedModule *module = nullptr; // new DefinedModule();
+      // ErrorHandlerFile error_handler(Location::Type::Binary);
+      Errors errors;
+      module = dynamic_cast<DefinedModule *>(env.GetModule(i));
+      wabt::Result result = ReadModule(src_filename, &env, &errors, &module);
 
-    if(Succeeded(result)) {
-      wabt::aot::AOTManager aotManager;
-      interp::Thread thread(&env);
-      WABTAOTCompilerLib::registerMethods(aotManager,env,module,const_cast<char*>(src_filename),thread);
-      WABTAOTCompilerLib::compileEverything(env,aotManager,module);
-    }else{
-      std::cout<<"read failure\n";
-    }
-  }
-
-  for(uint32_t i = 1;i<=no_of_modules;i++) {
-    WABTAOTCompilerLib::relocateAOT(env, dynamic_cast<DefinedModule*>(env.GetModule(i-1)));
-  }
-  for(uint32_t i = 1;i<=no_of_modules;i++) {
-    runExports(env,dynamic_cast<DefinedModule*>(env.GetModule(i-1)),run_all_exports);
-  }
+      if (Succeeded(result))
+         {
+         wabt::aot::AOTManager aotManager;
+         interp::Thread thread(&env);
+         WABTAOTCompilerLib::registerMethods(aotManager, env, module, const_cast<char *>(src_filename), thread);
+         preSetCodeEntries();
+         WABTAOTCompilerLib::compileEverything(env, aotManager, module);
+         }
+      else
+         {
+         std::cout << "read failure\n";
+         }
+      }
+   /** Adding emscripten adds two modules, hence affects value of i */
+   for (uint32_t i = 2; i < no_of_modules; i++)
+      {
+      WABTAOTCompilerLib::relocateAOT(env, dynamic_cast<DefinedModule *>(env.GetModule(i)));
+      }
+   /** Adding emscripten adds two modules, hence affects value of i */
+   for (uint32_t i = 2; i < no_of_modules; i++)
+      {
+      runExports(env, dynamic_cast<DefinedModule *>(env.GetModule(i)), run_all_exports);
+      }
 
 #ifndef WASM_SHARED_CACHE
-  WABTAOTCompilerLib::createELFFile(src_filename);
+   WABTAOTCompilerLib::createELFFile(src_filename);
 #endif
-}
+   }

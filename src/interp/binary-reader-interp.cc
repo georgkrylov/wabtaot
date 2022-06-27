@@ -842,6 +842,7 @@ wabt::Result BinaryReaderInterp::OnImportFunc(Index import_index,
   // for wabtaot, record the index within other module
   func->dbg_name_.assign(field_name.to_string());
   // Either this or the  aot-compiler-lib.cc is unnecessary
+  // possibly fixed
   env_->AddAOTMetadataForImport(func,func_index);
   func_env_index = export_->index;
   func_index_mapping_.push_back(export_->index);
