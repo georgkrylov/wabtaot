@@ -837,14 +837,14 @@ wabt::Result BinaryReaderInterp::OnImportFunc(Index import_index,
     PrintError("import signature mismatch");
     return wabt::Result::Error;
   }
+  func_env_index = export_->index;
   // for wabtaot, record the index within other module
   func->offset = func_index;
   // for wabtaot, record the index within other module
   func->dbg_name_.assign(field_name.to_string());
   // Either this or the  aot-compiler-lib.cc is unnecessary
   // possibly fixed
-  env_->AddAOTMetadataForImport(func,func_index);
-  func_env_index = export_->index;
+  env_->AddAOTMetadataForImport(func,func_env_index);
   func_index_mapping_.push_back(export_->index);
 
   num_func_imports_++;
@@ -1290,20 +1290,20 @@ wabt::Result BinaryReaderInterp::BeginFunctionBody(Index index, Offset size) {
   /** Offset was previously swapped to point to index of the function in the environment instead 
    * of the offset in the bytes stream??*/
   func->offset = GetIstreamOffset();
-  bool offset_zero = false;
+  // bool offset_zero = false;
   // needed to differentiate first function and first import
-  if (func->offset == 0) {
-      func->offset += num_func_imports_;
-      offset_zero = true;
-  }
+  // if (func->offset == 0) {
+  //     func->offset += num_func_imports_;
+  //     offset_zero = true;
+  // }
   // printf("Within BeginFunctionBody, func offset is set to %u, offset zero is %i\n",func->offset,offset_zero);
   func->local_decl_count = 0;
   func->local_count = 0;
 
   /* wasmjit-omr: emit JIT metadata now that func->offset is known */
-  env_->AddAOTMetadata(func,index);
-  if (offset_zero)
-      func->offset = 0;
+  env_->AddAOTMetadata(func,TranslateFuncIndexToEnv(index));
+  // if (offset_zero)
+      // func->offset = 0;
 
   current_func_ = func;
   depth_fixups_.clear();

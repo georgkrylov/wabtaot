@@ -47,6 +47,7 @@ static Stream* s_trace_stream;
 static bool s_run_all_exports;
 static bool s_host_print;
 static bool s_disable_jit;
+static bool s_disable_aot;
 static bool s_trap_on_failed_comp;
 static bool s_no_stack_trace;
 static uint32_t s_jit_threshold = 1;
@@ -116,6 +117,9 @@ static void ParseOptions(int argc, char** argv) {
   parser.AddOption("trap-on-failed-comp",
                    "Trap if a JIT compilation fails",
                    []() { s_trap_on_failed_comp = true; });
+  parser.AddOption("disable-aot",
+                "Prevent ahead of time compilation",
+                []() { s_disable_aot = true; });
   parser.AddOption('\0', "jit-threshold", "THRESHOLD",
                    "Number of calls after which to JIT compile a function",
                    [](const std::string& argument) {
@@ -207,6 +211,9 @@ static void InitEnvironment(Environment* env) {
   }
   if (s_disable_jit) {
     env->enable_jit = false;
+  }
+  if (s_disable_aot) {
+    env->enable_aot = false;
   }
   if (s_trap_on_failed_comp) {
     env->trap_on_failed_comp = true;

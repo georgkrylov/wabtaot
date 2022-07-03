@@ -156,7 +156,7 @@ Environment::~Environment() {
   delete [] indirectCallParams;
 }
 int Environment::AOTMeta::numOfFunction = 0;
-unsigned int Environment::AOTMeta::numOfImports = 0;
+unsigned int Environment::AOTMeta::offsetForDefinedFunctions = 0;
 unsigned int Environment::AOTMeta::numOfDeclaredImports = 0;
 
 Index Environment::FindModuleIndex(string_view name) const {
@@ -1721,13 +1721,6 @@ ValueTypeRep<R> SimdReplaceLane(V value, uint32_t lane_idx, T lane_val) {
 
 
 Result Environment::TryJit(Thread* t, DefinedFunc* fn, Index ind) {
-// In-development feature that needs to resume
-  // if (true == TryAOT(t, ind,fn)){
-  //   // printf("TryAOT returned 0\n");
-  //   if (fn->aot_fn_)
-  //       aot_funcs_[ind] = fn->aot_fn_;
-  // }
-
   if (!enable_jit) {
     return Result::Ok;
   }
@@ -1743,15 +1736,17 @@ Result Environment::TryJit(Thread* t, DefinedFunc* fn, Index ind) {
       jit_funcs_[ind] = fn->jit_fn_;
   }
 
-  
   TRAP_IF(fn->tried_jit_ && !fn->jit_fn_ && trap_on_failed_comp, FailedJITCompilation);
   return Result::Ok;
 }
 
-bool Environment::TryAOT(Thread *t, Index ind, DefinedFunc *fn)
-   {
+Result Environment::TryAOT(Thread* t,  DefinedFunc* func, Index ind){
    // DefinedFunc should have dbg_name_
    using namespace wabt::aot;
+  if (!enable_aot) {
+    return Result::Ok;
+  }
+   DefinedFunc* fn = cast<DefinedFunc>(func);
    // Looks like AOTManager in aot-cd.cc is aware of all functions, whereas TryAOT currently recreates AOTManager every time
    // Such awareness allows calls
    //  if (aotManager == NULL){
@@ -1770,7 +1765,7 @@ bool Environment::TryAOT(Thread *t, Index ind, DefinedFunc *fn)
       /**This line is used to construct debug name, limited to 8 symbols as relocation infrastructure does not
        * support longer names
        */
-      std::string name = "f" + std::to_string(ind) + "m" + modulee->name.substr(0, 3);
+      std::string name = "f" + std::to_string(ind+getOffsetForAOTFunctionNaming()) + "m" + modulee->name.substr(0, 3);
       AOTTypeDictionary *types = new (PERSISTENT_NEW) AOTTypeDictionary();
       // static AOTTypeDictionary types;
       AOTFunctionBuilder *builder = new (PERSISTENT_NEW) AOTFunctionBuilder(t, fn,
@@ -1782,11 +1777,11 @@ bool Environment::TryAOT(Thread *t, Index ind, DefinedFunc *fn)
 
       // This line is used to construct debug name, limited to 8 symbols as relocation infrastructure does not
       // support longer names
-      fn->dbg_name_ = "f" + std::to_string(ind) + "m" + modulee->name.substr(0, 3);
+      fn->dbg_name_ = "f" + std::to_string(ind+getOffsetForAOTFunctionNaming()) + "m" + modulee->name.substr(0, 3);
       /** Trying to assign debug name, might be problematic if that's an import
        * Two here is hardcoded as em-module.hpp appends two modules and there's an env module
        */
-      reinterpret_cast<DefinedFunc *>(fn)->dbg_name_ = "f" + std::to_string(ind) + "m" + this->GetModule(moduleIndex)->name.substr(0, 3);
+      reinterpret_cast<DefinedFunc *>(fn)->dbg_name_ = "f" + std::to_string(ind+getOffsetForAOTFunctionNaming()) + "m" + this->GetModule(moduleIndex)->name.substr(0, 3);
       reinterpret_cast<DefinedModule *>(this->GetModule(moduleIndex))->funcs.emplace_back(fn);
       }
    else
@@ -1815,8 +1810,9 @@ bool Environment::TryAOT(Thread *t, Index ind, DefinedFunc *fn)
    auto func_count = this->GetFuncCount();
    modulee->aot_compiled_functions.reserve(func_count);
    void *function = aotManager->AOTCompileAFunction(this, ind, fn);
+   aot_meta_.find(ind)->second.aot_fn=reinterpret_cast<wabt::jit::AOTedFunction>(fn->aot_fn_);
    modulee->aot_compiled_functions.push_back(function);
-   return true;
+   return Result::Ok;
    }
 
 
@@ -2042,6 +2038,25 @@ Result Thread::Run(int num_instructions) {
 
         CHECK_TRAP(PushCall(pc));
         GOTO(fn->offset);
+        CHECK_TRAP(env_->TryAOT(this, fn, func_index));
+
+        if (fn->aot_fn_) {
+
+    //         if (true == TryAOT(t, ind,fn)){
+    // // printf("TryAOT returned 0\n");
+          wabt::jit::AOTedFunction p = fn->aot_fn_;
+          int q = p();
+          // Value t = Value(q);
+          Push(q);
+  //   printf("%i\n",q);
+  //   return Result::Ok;
+  // }
+
+
+
+          GOTO(PopCall());
+          break;
+        }
         CHECK_TRAP(env_->TryJit(this, fn, func_index));
 
         if (fn->jit_fn_) {

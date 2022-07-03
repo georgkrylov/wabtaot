@@ -502,6 +502,11 @@ class Environment {
   };
 
   bool enable_jit = true;
+  /**
+   * @brief Used to determine if AOT compilation should occur
+   *
+   */
+  bool enable_aot = true;
   bool trap_on_failed_comp = false;
   bool enable_load_from_dlib = false;
   bool enable_load_thunk = false;
@@ -597,18 +602,13 @@ class Environment {
     this->aot_meta_.insert({ index, AOTMeta(index,fn) });
   }
 
-/**
- * @brief This function is called when we are adding an import
- * 
- * @param fn imported_function, offset  to bytecodes is not defined
- * @param index index - signature index, hopefully within environment
- */
-  void AddAOTMetadataForImportAndIncrementThenubmerOfImports(Func* fn, Index index) {
-    assert(fn->offset != kInvalidIstreamOffset);
-    AOTMeta meta = AOTMeta(index,fn);
-    meta.setIsImportAndIncrementNumberOfImports();
-    this->aot_meta_.insert({ index, meta });
-  }
+  void addToOffsetForDefinedFunctions() {
+    AOTMeta::IncrementOffsetForDefinedFunctions();
+    }
+
+  int getOffsetForAOTFunctionNaming() {
+    AOTMeta::getOffsetForNaming();
+    }
 
 /**
  * @brief This function is called when we are adding an import, but not
@@ -710,7 +710,7 @@ class Environment {
     uint32_t num_calls = 0;
 
     bool tried_jit = false;
-    wabt::jit::AOTedFunction jit_fn = nullptr;
+    wabt::jit::AOTedFunction aot_fn = nullptr;
 
     AOTMeta(unsigned int ind, Func* wasm_fn) : wasm_fn(wasm_fn) {
       //wasm_fn->dbg_name_= "func_" + std::to_string(numOfFunction);
@@ -784,14 +784,29 @@ class Environment {
       lastUsedIdxInDependenciesArray++;
     }
     /**
-     * @brief Get the Number Of Imports object
-     * Is used as a main source of offset computation for opcode::Call compilation,
-     * can be used in conjunction with WABTAOTCompilerLib::approximateFirstFunctionInAModule?
+     * @brief Get the offset for naming functions.
+     * Convention for debug names is to match the binary, BUT
+     * this offset might be required in case runtime defines
+     * auxilary functions (like emscripten), but the binary
+     * does not import every one of them
+     * @return int 
+     */
+    static int getOffsetForNaming(){
+            /** If this asserts, it means aot did not register
+             * proper number of imports, and cannot service
+             * all the imports requested by binary wasm file
+             */
+            assert(numOfDeclaredImports<= offsetForDefinedFunctions);
+            return numOfDeclaredImports-offsetForDefinedFunctions;
+    }
+    static void IncrementOffsetForDefinedFunctions() {
+    AOTMeta::offsetForDefinedFunctions++;
+    }
+    /**
+     * @brief Get the Number Of Declared Imports object
+     * Actually, through import statement
      * @return unsigned int 
      */
-    static unsigned int getNumberOfImports(){
-            return numOfImports;
-    }
     static unsigned int getNumberOfDeclaredImports(){
             return AOTMeta::numOfDeclaredImports;
     }
@@ -805,11 +820,7 @@ class Environment {
             return index ; /* This might have been necessary in the case there are actually imports, but for now - no- numOfImports;*/
     }
     int isImport(){ return _isImport;}
-    void setIsImportAndIncrementNumberOfImports() {
-      _isImport = 1;
-      AOTMeta::numOfImports++;
 
-      }
     void setIsImport() {
       _isImport = 1;
       AOTMeta::numOfDeclaredImports++;
@@ -821,11 +832,12 @@ class Environment {
     int _isImport = 0;
     static int numOfFunction;
     /**
-     * @brief This variable is to track the number of imports. Can only work if the number
-     * of imports per module is the same, or if the number of imports is  uniquely
-     * registered per module. The variable is incremented per setImport
+     * @brief This variable is to track the number of functions defined before Defined functions
+     * . Can only work if the number of imports per module is the same, or if the number of imports is  uniquely
+     * registered per module. The variable is incremented in AOT compiler lib
+     * when registering all imports
      */
-    static unsigned int numOfImports;
+    static unsigned int offsetForDefinedFunctions;
     /**
      * @brief an array for tracking dependencies. Allocated dynamically.
      * Will be incremented as a call to an unknown function is encountered.
@@ -847,12 +859,16 @@ class Environment {
      * we want to keep track of the last used index in dependencies array.
      */
     unsigned int lastUsedIdxInDependenciesArray;
-
+    /**
+     * @brief This variable represents the number of imports that
+     * were actually added using the import statement in wasm code
+     * 
+     */
     static unsigned int numOfDeclaredImports;
   };
   Result TryJit(Thread* t, DefinedFunc* fn, Index ind);
+  Result TryAOT(Thread*,  DefinedFunc*, Index);
 
-  bool TryAOT(Thread* t, IstreamOffset offset, DefinedFunc* fn);
 #if defined (unnecessary)
   bool TryAOT(Thread* t, IstreamOffset offset, AOTedFunction* fn,DefinedFunc *&);
 #endif 

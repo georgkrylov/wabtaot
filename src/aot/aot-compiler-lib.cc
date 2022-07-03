@@ -226,8 +226,8 @@ void WABTAOTCompilerLib::registerMethods(wabt::aot::AOTManager &aotManager, inte
 
    auto func_count = env.GetFuncCount();
    env.FillMemories();
-   Index j = 0;
-   for (Index i = 0; i < func_count; ++i)
+   int j = 0;
+   for (int i = 0; i < func_count; ++i)
       {
       auto functionInQuestion = env.GetFunc(i);
       if (functionInQuestion->is_compiled == false && functionInQuestion->is_host == false)
@@ -235,7 +235,7 @@ void WABTAOTCompilerLib::registerMethods(wabt::aot::AOTManager &aotManager, inte
          auto *fn = dynamic_cast<wabt::interp::DefinedFunc *>(env.GetFunc(i));
          AOTTypeDictionary *types = new (PERSISTENT_NEW) AOTTypeDictionary();
          // static AOTTypeDictionary types;
-         std::string name = "f" + std::to_string(i) + "m" + module->name.substr(0, 3);
+         std::string name = "f" + std::to_string(i+env.getOffsetForAOTFunctionNaming()) + "m" + module->name.substr(0, 3);
          AOTFunctionBuilder *builder = new (PERSISTENT_NEW) AOTFunctionBuilder(&thread, fn,
                                                                                std::move(name),
                                                                                types,
@@ -243,9 +243,9 @@ void WABTAOTCompilerLib::registerMethods(wabt::aot::AOTManager &aotManager, inte
 
          aotManager.push_back_FB(fn->offset, builder, types);
 
-         env.GetFunc(i)->dbg_name_ = "f" + std::to_string(i) + "m" + module->name.substr(0, 3);
+         env.GetFunc(i)->dbg_name_ = "f" + std::to_string(i+env.getOffsetForAOTFunctionNaming()) + "m" + module->name.substr(0, 3);
          //** Trying to assign debug name, might be problematic if that's an import **/
-         reinterpret_cast<DefinedFunc *>(env.GetFunc(i))->dbg_name_ = "f" + std::to_string(i) + "m" + module->name.substr(0, 3);
+         reinterpret_cast<DefinedFunc *>(env.GetFunc(i))->dbg_name_ = "f" + std::to_string(i+env.getOffsetForAOTFunctionNaming()) + "m" + module->name.substr(0, 3);
          module->funcs.emplace_back(env.GetFunc(i));
          }
       else
@@ -260,7 +260,13 @@ void WABTAOTCompilerLib::registerMethods(wabt::aot::AOTManager &aotManager, inte
    module->aot_compiled_functions.reserve(func_count);
    auto module_func_count = module->funcs.size();
    }
-
+/**
+ * @brief Now should be called after reading the binary: no matter how many
+ * emscripten entries we support, we want to index only the ones that we actuallly
+ * imported
+ * @param aotManager 
+ * @param env 
+ */
 void WABTAOTCompilerLib::registerAllImports(wabt::aot::AOTManager &aotManager, interp::Environment &env)
    {
    auto func_count = env.GetFuncCount();
@@ -280,7 +286,8 @@ void WABTAOTCompilerLib::registerAllImports(wabt::aot::AOTManager &aotManager, i
                      {
                      env.GetFunc(i)->dbg_name_ = env.GetModule(ii)->exports[j].name;
                      // Consider if this call should only be made on the IMPORT CALLBACK in binary-reader interp
-                     env.AddAOTMetadataForImportAndIncrementThenubmerOfImports(env.GetFunc(i), i);
+                     // AOTMeta::offsetForDefinedFunctions++;
+                     env.addToOffsetForDefinedFunctions();
                      }
                   }
                }

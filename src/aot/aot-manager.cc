@@ -84,10 +84,7 @@ void *wabt::aot::AOTManager::AOTCompileAFunction(wabt::interp::Environment *env,
                assert(function != NULL);
                }
             }
-         else /* The function was loaded */
-            {
-            _loadStoreDriver->relocateRegisteredMethod(const_cast<char *>(fn->dbg_name_.c_str()));
-            }
+         _loadStoreDriver->relocateRegisteredMethod(const_cast<char *>(fn->dbg_name_.c_str()));
          fn->is_compiled = true;
          fn->aot_fn_ = reinterpret_cast<wabt::jit::AOTedFunction>(function);
          }

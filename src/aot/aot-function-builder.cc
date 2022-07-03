@@ -9,9 +9,9 @@
 #include "aot-compiler-lib.hpp"
 #include "ilgen/VirtualMachineState.hpp"
 #include <cmath>
+#include <iostream>
 #include <limits>
 #include <string.h>
-#include <iostream>
 #include <type_traits>
 
 namespace wabt
@@ -40,6 +40,19 @@ namespace aot
 
 Environment *AOTFunctionBuilder::envPointer = 0;
 
+/** This function is used to define external to JIT when compiling AOT
+ * emscripten
+ */
+int32_t clos(int32_t a)
+   {
+   std::cout << a;
+   return 0;
+   };
+
+
+/** This function is used to define external to JIT when compiling AOT
+ * emscripten
+ */
 uint32_t printaa(int32_t a, int32_t b, int32_t c, int32_t d)
    {
    uint32_t bufferLoc = *(uint32_t *)(envPointer->GetMems()[1] + b);
@@ -52,7 +65,11 @@ uint32_t printaa(int32_t a, int32_t b, int32_t c, int32_t d)
    return buffsize;
    }
 
+static void printInt32(int32_t val)
+   {
 
+   printf("%d", val);
+   }
 AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread *thread, interp::DefinedFunc *fn,
                                        std::string &&fn_name, AOTTypeDictionary *types,
                                        Environment &env, AOTManager &aotManager)
@@ -85,6 +102,7 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread *thread, interp::DefinedFu
                   2,
                   Float,
                   Float);
+
    DefineFunction("sqrt", __FILE__, "0",
                   reinterpret_cast<void *>(static_cast<double (*)(double)>(sqrt)),
                   Double,
@@ -124,13 +142,23 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread *thread, interp::DefinedFu
                   Int32,
                   Int32);
    DefineFunction("fd_write", __FILE__, "34",
-               reinterpret_cast<void *>(printaa),
-               Int32,
-               4,
-               Int32,
-               Int32,
-               Int32,
-               Int32);
+                  reinterpret_cast<void *>(printaa),
+                  Int32,
+                  4,
+                  Int32,
+                  Int32,
+                  Int32,
+                  Int32);
+   DefineFunction("emscripten_notify_memory_growth", __FILE__, "34",
+                  reinterpret_cast<void *>((1)),
+                  NoType,
+                  1,
+                  Int32);
+   DefineFunction("fd_close", __FILE__, "34",
+                  reinterpret_cast<void *>(clos),
+                  Int32,
+                  1,
+                  Int32);
    DefineFunction("PrintSt", __FILE__, "34",
                   reinterpret_cast<void *>(PrintSomething),
                   Int32,
@@ -399,11 +427,11 @@ uint32_t AOTFunctionBuilder::CalculateMemorySize(uint32_t index)
 
 uint32_t AOTFunctionBuilder::PrintSomething(uint32_t index)
    {
-   // printf("Grow by: %ud",grow_pages);
-   Memory *memory = envPointer->GetMemory(index);
-   uint32_t old_page_size = memory->page_limits.initial;
+   printf("Grow by: %id",index);
+   // Memory *memory = envPointer->GetMemory(index);
+   // uint32_t old_page_size = memory->page_limits.initial;
    // printf("Hello from index %u, pageSize of memory[0] is%u\n",index,old_page_size);
-   return old_page_size;
+   return 0;
    }
 // Currently the memory is not actually resized, only the data on the number of pages
 uint32_t AOTFunctionBuilder::GrowMemory(uint32_t mem, uint32_t grow_pages)
@@ -1132,7 +1160,11 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder *b,
       return true;
       }
 
-      // case Opcode::BrIf: This opcode is never generated as it's always
+      case Opcode::BrIf: 
+      {
+         assert(false);
+         break;
+      }
       // transformed into a BrUnless. So, there's no need to handle it.
 
    case Opcode::Return:
@@ -1240,7 +1272,9 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder *b,
       {
       // note: to work around JitBuilder's lack of support unions as value types,
       // just copy a field that's the size of the entire union
-      auto *local_addr = Pick(ReadU32(&pc));
+      auto var = ReadU32(&pc);
+      auto *local_addr = Pick(var);
+
       Push(b, "i64", local_addr); // b->LoadIndirect("Value", "i64", local_addr));
 
       break;
@@ -1250,7 +1284,8 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder *b,
       {
       // see note for GetLocal
       auto *value = Pop(b, "i64");
-      auto *local_addr = Pick(ReadU32(&pc));
+      auto var = ReadU32(&pc);
+      auto *local_addr = Pick(var);
       b->StoreOver(local_addr, value);
       // b->StoreIndirect("Value", "i64", local_addr, value);
       break;
@@ -1258,7 +1293,9 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder *b,
 
    case Opcode::LocalTee:
       {
-      auto *local_addr = Pick(ReadU32(&pc));
+      auto var = ReadU32(&pc);
+      auto *local_addr = Pick(var);
+
       b->StoreOver(local_addr, Pick(1));
       break;
       }
@@ -1270,12 +1307,14 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder *b,
       auto offset = ReadU32(&pc);
       // Assumption is that the number of import functions per module
       // is always the same
-      size_t numberOfDeclaredImports = env_.aot_meta_.at(0).getNumberOfDeclaredImports();
-      // if (offset >= numberOfDeclaredImports)
-      size_t numberOfImports = env_.aot_meta_.at(0).getNumberOfImports();
-         
-      offset = offset - numberOfImports +numberOfDeclaredImports;
-      // printf("offset to env is %u,",offset);
+      // size_t numberOfDeclaredImports = env_.aot_meta_.begin()->second.getNumberOfDeclaredImports();
+      // // if (offset >= numberOfDeclaredImports)
+      // size_t numberOfFunctionsInEnvBeforeFunction = env_.aot_meta_.begin()->second.getOffsetForCall();
+      // if (offset > numberOfDeclaredImports)
+      //    offset = offset - (numberOfFunctionsInEnvBeforeFunction - numberOfDeclaredImports);
+      // else
+      //    offset = offset + numberOfImports - numberOfDeclaredImports;
+      // // printf("offset to env is %u,",offset);
 
       auto meta_it = env_.aot_meta_.find(offset);
 
@@ -1285,6 +1324,62 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder *b,
          /* If we are calling the function that is host - do NOTHING */
          if (fn->is_host == true)
             {
+           
+            int size = env_.GetFuncSignature(fn->sig_index)->param_types.size();
+            TR::IlValue **args = new TR::IlValue *[size]();
+
+            // for(const auto& t: env_.GetFuncSignature(fn->sig_index)->param_types) {
+            int i = size;
+            for (auto t = env_.GetFuncSignature(fn->sig_index)->param_types.rbegin();
+                 t != env_.GetFuncSignature(fn->sig_index)->param_types.rend(); t++)
+               {
+               args[--i] = Pop(b, TypeFieldName(*t));
+               }
+            // thread_->CallHost(reinterpret_cast<wabt::interp::HostFunc*>(env_.GetFunc(offset)));
+            // auto tmp = thread_->Pop().i32;
+            for (auto t = env_.GetFuncSignature(fn->sig_index)->result_types.rbegin();
+                 t != env_.GetFuncSignature(fn->sig_index)->result_types.rend(); t++)
+               {
+               TR::IlValue *value = b->ConstInt32(0);
+               pushReturnValue(fn, b, value);
+               }
+
+            // delete args;
+            break;
+            }
+         else
+            {
+            /** TODO will need to iterate among all dependencies and check if they are compiled
+             * and return false if they are not. Dependencies are also added here  **/
+            if (strcmp(fn->dbg_name_.c_str(), "???") == 0 && fn->is_host == false)
+               {
+               int callingFunction = this->aotManager_.getFunctionThatManagerWasCreatedFor();
+               // /** IF GT THAN NUMBER OF IMPORTS?*/
+               // int updatedCallingFunction = callingFunction;
+               // if (callingFunction >= numberOfFunctionsInEnvBeforeFunction)
+               //    updatedCallingFunction = updatedCallingFunction - numberOfFunctionsInEnvBeforeFunction+numberOfDeclaredImports;
+               auto callingAOTMeta = env_.aot_meta_.find(callingFunction);
+               if (callingAOTMeta != env_.aot_meta_.end())
+                  {
+                  callingAOTMeta->second.addDependency(offset);
+                  return false;
+                  }
+               else
+                  {
+                  /* Cannot find function that started compilation,
+                  it is either the exported function or something
+                  is wrong
+                  */
+                  //  assert(false);
+                  }
+               }
+            // printf("sig index within module is %u",fn->sig_index);
+            // printf("offset is %u\n",reinterpret_cast<DefinedFunc*>(fn)->offset);
+            // auto *fn = env_.GetFunc(offset);
+
+            // This line retrieves the function we want to call.
+            auto &builder = aotManager_.getFB(fn->offset);
+            // std::vector<TR::IlValue*> args;
             int size = env_.GetFuncSignature(fn->sig_index)->param_types.size();
             // TR::IlValue **args1 = new TR::IlValue*[size]();
 
@@ -1299,68 +1394,16 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder *b,
             // for(const auto& t: env_.GetFuncSignature(fn->sig_index)->param_types) {
             int i = size;
             for (auto t = env_.GetFuncSignature(fn->sig_index)->param_types.rbegin();
-            t != env_.GetFuncSignature(fn->sig_index)->param_types.rend(); t++)
-            {
-            args[--i] = Pop(b, TypeFieldName(*t));
-            }
+                 t != env_.GetFuncSignature(fn->sig_index)->param_types.rend(); t++)
+               {
+               args[--i] = Pop(b, TypeFieldName(*t));
+               }
 
             auto *value = b->Call(fn->dbg_name_.c_str(), size, args);
             pushReturnValue(fn, b, value);
             delete args;
-            break;
+            //	aotManager_.addCallToRegistry(fn_name_,builder.fn_name_);
             }
-         /** TODO will need to iterate among all dependencies and check if they are compiled
-          * and return false if they are not. Dependencies are also added here  **/
-         if (strcmp(fn->dbg_name_.c_str(), "???") == 0 && fn->is_host == false)
-            {
-            int callingFunction = this->aotManager_.getFunctionThatManagerWasCreatedFor();
-            int updatedCallingFunction = callingFunction - env_.aot_meta_.at(0).getNumberOfImports();
-            auto callingAOTMeta = env_.aot_meta_.find(updatedCallingFunction);
-            if (callingAOTMeta != env_.aot_meta_.end())
-               {
-               callingAOTMeta->second.addDependency(offset);
-               return false;
-               }
-            else
-               {
-               /* Cannot find function that started compilation,
-               it is either the exported function or something
-               is wrong
-               */
-              //  assert(false);
-
-               }
-            }
-         // printf("sig index within module is %u",fn->sig_index);
-         // printf("offset is %u\n",reinterpret_cast<DefinedFunc*>(fn)->offset);
-         // auto *fn = env_.GetFunc(offset);
-
-         // This line retrieves the function we want to call.
-         auto &builder = aotManager_.getFB(fn->offset);
-         // std::vector<TR::IlValue*> args;
-         int size = env_.GetFuncSignature(fn->sig_index)->param_types.size();
-         // TR::IlValue **args1 = new TR::IlValue*[size]();
-
-         // uint64_t namee = 0;
-         // memcpy(&namee, fn->dbg_name_.c_str(), 3);
-         // auto ilname = b->ConstInt64(namee);
-         // args1[0] = ilname;
-
-         // b->Call("funpr",1,args1);
-         TR::IlValue **args = new TR::IlValue *[size]();
-
-         // for(const auto& t: env_.GetFuncSignature(fn->sig_index)->param_types) {
-         int i = size;
-         for (auto t = env_.GetFuncSignature(fn->sig_index)->param_types.rbegin();
-              t != env_.GetFuncSignature(fn->sig_index)->param_types.rend(); t++)
-            {
-            args[--i] = Pop(b, TypeFieldName(*t));
-            }
-
-         auto *value = b->Call(fn->dbg_name_.c_str(), size, args);
-         pushReturnValue(fn, b, value);
-         delete args;
-         //	aotManager_.addCallToRegistry(fn_name_,builder.fn_name_);
          }
       else
          {

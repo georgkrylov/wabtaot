@@ -31,7 +31,74 @@
 
 
 extern void getCompiledFunction(const char *,void (**)());
+#include <cstdio>
 
+#include <IlValue.hpp>
+#include <IlBuilder.hpp>
+
+namespace JB = OMR::JitBuilder;
+
+/** 
+ * constant: Helper for defining constants from any C type.
+ */
+
+template <typename T>
+TR::IlValue* constant(TR::IlBuilder* b, T value) {
+	return b->Const(value);
+}
+
+template <typename T>
+TR::IlValue* constant(TR::IlBuilder* b, T* value) {
+	return b->ConstAddress((void*)value);
+}
+
+inline TR::IlValue* constant(TR::IlBuilder* b, int value) {
+	return b->ConstInt32(value);
+}
+
+inline TR::IlValue* constant(TR::IlBuilder* b, unsigned int value) {
+	return b->ConstInt32(value);
+}
+
+inline TR::IlValue* constant(TR::IlBuilder* b, long value) {
+	return b->ConstInt64(value);
+}
+
+inline TR::IlValue* constant(TR::IlBuilder* b, unsigned long value) {
+	return b->ConstInt64(value);
+}
+
+/**
+ * to_il: coerce value to an IlValue.
+ *
+ * When the input is already an IlValue, return the unmodified input.
+ * If the input is a c-type, return an IlValue representing the input as a compile-time constant.
+ */
+
+template <typename T>
+TR::IlValue* to_il(TR::IlBuilder* b, T x) {
+	return constant(b, x);
+}
+
+inline TR::IlValue* to_il(TR::IlBuilder* b, TR::IlValue* x) {
+	return x;
+}
+
+/**
+ * call: Helper for building call expressions. call will coerce it's arguments to IL values.
+ * 
+ * usage:
+ *  call(b, "target-func", args...);
+ */
+template <typename... Args>
+TR::IlValue* call(TR::IlBuilder* b, const char* target, Args... args) {
+	return b->Call(target, sizeof...(args), to_il(b, args)...);
+}
+
+template <typename... Args>
+TR::IlValue* call_eprintf(TR::IlBuilder* b, Args... args) {
+	return call(b, "printInt32", stderr, args...);
+}
 static  wabt::interp::Environment *envPointer;
 namespace wabt {
 namespace aot {
