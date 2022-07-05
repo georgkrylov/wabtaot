@@ -46,6 +46,12 @@ int WABTAOTCompilerLib::approximateFirstFunctionInAModule(interp::Environment &e
    return result;
    }
 
+
+void WABTAOTCompilerLib::preSetCodeEntries(){
+   setCodeEntry("trapWith", reinterpret_cast<void *>(trapWith));
+
+}
+
 int WABTAOTCompilerLib::getModuleIndexByFunctionIndex(interp::Environment &env, unsigned int Index)
    {
    unsigned int moduleIndex = 0;

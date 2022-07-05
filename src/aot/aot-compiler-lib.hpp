@@ -54,7 +54,10 @@ public:
      * @param env
      */
     static void registerAllImports(wabt::aot::AOTManager& aotManager,interp::Environment& env);
-
+    /**
+     * @brief To define some necessary methods for Emscripten functionality.
+     */
+    static void preSetCodeEntries();
     /**
      * @brief Computes (hopefully correctly, still need to verify) the offset to index in the compiling environment to
      * be able to use while compilng Opcode::Call. This offset is due to other modules loaded.
