@@ -39,7 +39,6 @@ namespace aot
       } while (0)
 
 Environment *AOTFunctionBuilder::envPointer = 0;
-
 /** This function is used to define external to JIT when compiling AOT
  * emscripten
  */
@@ -65,6 +64,121 @@ uint32_t printaa(int32_t a, int32_t b, int32_t c, int32_t d)
    return buffsize;
    }
 
+bool AOTFunctionBuilder::generateCallFromInterpToAOT(TR::IlBuilder *b, Index ind)
+   {
+   DefinedFunc *fn = dynamic_cast<DefinedFunc *>(envPointer->GetFunc(ind));
+
+   auto interpFunctionCallParametersTypesArray = envPointer->GetFuncSignature(fn->sig_index)->param_types;
+   auto returnParametersTypesArray = envPointer->GetFuncSignature(fn->sig_index)->result_types;
+   unsigned int numberOfParameters = interpFunctionCallParametersTypesArray.size();
+
+   /**
+    * @brief Types to load from interpreter stack
+    *
+    */
+   TR::IlType *pInt32Type = types_->PointerTo(Int32);
+   TR::IlType *pInt64Type = types_->PointerTo(Int64);
+   TR::IlType *pFloatType = types_->PointerTo(Float);
+   TR::IlType *pDoubleType = types_->PointerTo(Double);
+
+   TR::IlValue **params_array = new TR::IlValue *[numberOfParameters]();
+   auto *addres_of_index_of_value_stack_top = b->Load("vstop");
+   auto *value_stack_base_addr = b->Load("vsdata");
+   auto *value_stack_top_index = b->LoadAt(pInt32Type, addres_of_index_of_value_stack_top);
+
+
+   /**
+    * @brief Effectively, equal to sizeof (union Value) described in interp.h
+    * also assumes that vector.data() is contiguous and little-endian
+    */
+   auto *size_of_value_stack_type = b->Mul(b->ConstInt32(sizeof(uint32_t)), b->ConstInt32(4));
+   auto *one = b->ConstInt32(1);
+
+   for (int32_t i = 0; i < numberOfParameters; i++)
+      {
+
+      auto *updated_value_stack_top_index = b->Sub(value_stack_top_index, one);
+      b->StoreAt(addres_of_index_of_value_stack_top, updated_value_stack_top_index);
+      value_stack_top_index = b->LoadAt(pInt32Type, addres_of_index_of_value_stack_top);
+      // Since we are working with stack, we'd need to flip them?
+      int32_t invertedIndex = numberOfParameters - i - 1;
+      switch (interpFunctionCallParametersTypesArray[invertedIndex])
+         {
+      case Type::I32:
+         {
+         params_array[invertedIndex] = b->UnsignedConvertTo(Int64, b->LoadAt(pInt32Type, b->Add(value_stack_base_addr, b->Mul(value_stack_top_index, size_of_value_stack_type))));
+         break;
+         };
+      case Type::I64:
+         {
+         params_array[invertedIndex] = b->LoadAt(pInt64Type, b->Add(value_stack_base_addr, b->Mul(value_stack_top_index, size_of_value_stack_type)));
+         break;
+         };
+      case Type::F32:
+         {
+         params_array[invertedIndex] = b->LoadAt(pFloatType, b->Add(value_stack_base_addr, b->Mul(value_stack_top_index, size_of_value_stack_type)));
+         break;
+         };
+      case Type::F64:
+         {
+         params_array[invertedIndex] = b->LoadAt(pDoubleType, b->Add(value_stack_base_addr, b->Mul(value_stack_top_index, size_of_value_stack_type)));
+         break;
+         };
+      default:
+         // Type is not supported yet
+         return false;
+         }
+      }
+   /**
+    * @brief For JitBuilder to not throw errors
+    */
+   defineFunction(fn->dbg_name_, fn);
+   auto *value = b->Call(fn->dbg_name_.c_str(), numberOfParameters, params_array);
+   value_stack_top_index = b->LoadAt(pInt32Type, addres_of_index_of_value_stack_top);
+   /** TODO: Multi-value return, current WebAssembly spec allows for only one type.*/
+   if (returnParametersTypesArray.size() > 0)
+      {
+      /** TODO introduce a for loop here to allow for multi-value return */
+      switch (returnParametersTypesArray[0])
+         {
+      case Type::I32:
+         {
+         value = b->ConvertTo(Int32, value);
+         break;
+         };
+      case Type::I64:
+         {
+         value = b->ConvertTo(Int64, value);
+         break;
+         };
+      case Type::F32:
+         {
+         value = b->ConvertTo(Float, value);
+         break;
+         };
+      case Type::F64:
+         {
+         value = b->ConvertTo(Double, value);
+         break;
+         };
+      default:
+         // Type is not supported yet
+         return false;
+         }
+      b->StoreAt(b->Add(value_stack_base_addr, b->Mul(value_stack_top_index, size_of_value_stack_type)), value);
+
+      auto *updated_value_stack_top_index = b->Add(value_stack_top_index, one);
+      b->StoreAt(addres_of_index_of_value_stack_top, updated_value_stack_top_index);
+      }
+
+   /**
+    * TODO: Send actual results to the interpreter
+    */
+   b->Return(b->ConstInt32(0));
+   delete[] params_array;
+   return true;
+   }
+
 static void printInt32(int32_t val)
    {
 
@@ -72,7 +186,7 @@ static void printInt32(int32_t val)
    }
 AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread *thread, interp::DefinedFunc *fn,
                                        std::string &&fn_name, AOTTypeDictionary *types,
-                                       Environment &env, AOTManager &aotManager)
+                                       Environment &env, AOTManager &aotManager, bool thunk)
     : TR::MethodBuilder(types),
       types_(types),
       thread_(thread),
@@ -84,10 +198,12 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread *thread, interp::DefinedFu
       pValueType_(types_->PointerTo(Int64)),
       ppValueType_(types_->PointerTo(pValueType_))
    {
-
+   _isThunk = thunk;
    DefineLine(__LINE__);
    DefineFile(__FILE__);
-   DefineName(fn->dbg_name_.c_str());
+   /** Temporarily changing from this, to use the fn_name*/
+   // DefineName(fn->dbg_name_.c_str());
+   DefineName(fn_name_.c_str());
 
    DefineReturnType(wabt::jit::toIlType<Result_t>(types));
 
@@ -232,7 +348,8 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread *thread, interp::DefinedFu
       DefineGlobal("Params", types_->PointerTo(Int64), reinterpret_cast<void *>(env_.indirectCallParams));
       }
    DefineLocal("SelectionVar", Int32);
-
+   DefineGlobal("vstop", types_->Address, reinterpret_cast<void *>(&(thread_->value_stack_top_)));
+   DefineGlobal("vsdata", types_->Address, reinterpret_cast<void *>(thread_->value_stack_.data()));
    DefineReturnType(returnType_);
    }
 
@@ -271,7 +388,7 @@ void AOTFunctionBuilder::defineFunction(const std::string &name, interp::Defined
    /** Presumably, if the function we are trying to define in JitBuilder is the function
     * this AOTMethodBuilder describes, do nothing
     */
-   if (fn == fn_)
+   if (fn == fn_ && _isThunk == false)
       return;
    /** If the function is the function this AOTMethodBuilder describes somehow (not sure
     *  it can possibly evaluate to true, but I will leave it be), then the return type
@@ -465,6 +582,10 @@ bool AOTFunctionBuilder::buildIL()
                            &istream[fn_->offset], stack_, stackCount_);
    AppendBuilder(workItems_[0].builder);
 
+   if (_isThunk)
+      {
+      return generateCallFromInterpToAOT(this, aotManager_.getFunctionThatManagerWasCreatedFor());
+      }
    int32_t next_index;
    for (;;)
       {

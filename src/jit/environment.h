@@ -34,7 +34,7 @@ using JITedFunction = Result_t (*)(ThreadInfo*, Index);
 /** Can't decide which one of the three to use now,
  *  second one was never tested
  */
-using AOTedFunction = Result_t (*)();
+using AOTedFunction = Result_t (*)(...);
 // using AOTedFunction = JITedFunction;
 // using AOTedFunction = interp::DefinedFunc*;
 

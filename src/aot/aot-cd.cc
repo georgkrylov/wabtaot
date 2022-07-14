@@ -541,7 +541,7 @@ int main(int argc, char **argv)
       registerModules(module_names[i], &env);
       }
    envPointer = &env;
-   WABTAOTCompilerLib compilerLib = WABTAOTCompilerLib();
+   wabt::aot::WABTAOTCompilerLib compilerLib = wabt::aot::WABTAOTCompilerLib();
    char *src_filename;
 
    uint32_t build_type = 0;
@@ -556,7 +556,7 @@ int main(int argc, char **argv)
          /** The load wasmaot.so (multiple files into memory)
           * was not tested after introducing WABTAOTCompilerLib
           */
-         WABTAOTCompilerLib::loadELFToMemory(soFilename);
+         wabt::aot::WABTAOTCompilerLib::loadELFToMemory(soFilename);
          build_type = 1;
          }
       }
@@ -569,8 +569,8 @@ int main(int argc, char **argv)
 #ifndef WASM_SHARED_CACHE
       if (no_of_modules == 3) /* One plus two added by including emscripten */
          {
-         WABTAOTCompilerLib::getSOFilename(src_filename);
-         WABTAOTCompilerLib::loadELFToMemory(src_filename);
+         wabt::aot::WABTAOTCompilerLib::getSOFilename(src_filename);
+         wabt::aot::WABTAOTCompilerLib::loadELFToMemory(src_filename);
          }
 #endif
 
@@ -584,9 +584,9 @@ int main(int argc, char **argv)
          {
          wabt::aot::AOTManager aotManager;
          interp::Thread thread(&env);
-         WABTAOTCompilerLib::registerMethods(aotManager, env, module, const_cast<char *>(src_filename), thread);
+         wabt::aot::WABTAOTCompilerLib::registerMethods(aotManager, env, module, const_cast<char *>(src_filename), thread);
          preSetCodeEntries();
-         WABTAOTCompilerLib::compileEverything(env, aotManager, module);
+         wabt::aot::WABTAOTCompilerLib::compileEverything(env, aotManager, module);
          }
       else
          {
@@ -596,7 +596,7 @@ int main(int argc, char **argv)
    /** Adding emscripten adds two modules, hence affects value of i */
    for (uint32_t i = 2; i < no_of_modules; i++)
       {
-      WABTAOTCompilerLib::relocateAOT(env, dynamic_cast<DefinedModule *>(env.GetModule(i)));
+      wabt::aot::WABTAOTCompilerLib::relocateAOT(env, dynamic_cast<DefinedModule *>(env.GetModule(i)));
       }
    /** Adding emscripten adds two modules, hence affects value of i */
    for (uint32_t i = 2; i < no_of_modules; i++)
@@ -605,6 +605,6 @@ int main(int argc, char **argv)
       }
 
 #ifndef WASM_SHARED_CACHE
-   WABTAOTCompilerLib::createELFFile(src_filename);
+   wabt::aot::WABTAOTCompilerLib::createELFFile(src_filename);
 #endif
    }

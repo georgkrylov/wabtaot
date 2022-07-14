@@ -4,7 +4,7 @@
 	url = git@gitlab.casa.cs.unb.ca:gkrylov/omr.git
 [submodule "em-interp"]
 	path = em-interp
-	branch = "development"
+	branch = "dev-jit-thunks"
 	url = git@gitlab.casa.cs.unb.ca:pjelenko/em-interp.git
 [submodule "polybench"]
 	path = polybench

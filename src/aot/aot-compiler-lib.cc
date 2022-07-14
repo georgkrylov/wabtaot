@@ -7,11 +7,12 @@
 #include <unistd.h> // F_OK, access
 
 #ifndef WASM_SHARED_CACHE // This basically is only used in ELF-enabled runtime
-int WABTAOTCompilerLib::build_type = 0;
-int WABTAOTCompilerLib::no_of_modules = 1;
-int WABTAOTCompilerLib::shouldReEmitELF = 0;
+int wabt::aot::WABTAOTCompilerLib::build_type = 0;
+int wabt::aot::WABTAOTCompilerLib::no_of_modules = 1;
+int wabt::aot::WABTAOTCompilerLib::shouldReEmitELF = 0;
 #endif
-
+namespace wabt{
+   namespace aot{
 int WABTAOTCompilerLib::registeredImportsOnce = 0;
 void WABTAOTCompilerLib::getCompiledFunction(const char *name, void (**fn)())
    {
@@ -47,12 +48,24 @@ int WABTAOTCompilerLib::approximateFirstFunctionInAModule(interp::Environment &e
    }
 
 
-void WABTAOTCompilerLib::preSetCodeEntries(){
+void WABTAOTCompilerLib::preSetCodeEntries(wabt::interp::Executor* executor){
+   wabt::interp::Thread* thread = &(executor->thread_);
    setCodeEntry("trapWith", reinterpret_cast<void *>(trapWith));
+
+   uint8_t* ptr = reinterpret_cast<uint8_t*>(&(thread->value_stack_top_));
+   uint8_t* pptr =reinterpret_cast<uint8_t*>(malloc(sizeof(void*)));
+   memcpy(pptr,&ptr,sizeof(void*));
+
+   setCodeEntry("vstop", pptr);
+   ptr = reinterpret_cast<uint8_t*>(thread->value_stack_.data());
+   pptr =reinterpret_cast<uint8_t*>(malloc(sizeof(void*)));
+   memcpy(pptr,&ptr,sizeof(void*));
+
+   setCodeEntry("vsdata",pptr);
 
 }
 
-int WABTAOTCompilerLib::getModuleIndexByFunctionIndex(interp::Environment &env, unsigned int Index)
+int WABTAOTCompilerLib::getModuleIndexByFunctionIndex(wabt::interp::Environment &env, unsigned int Index)
    {
    unsigned int moduleIndex = 0;
    unsigned int exportsSoFar = -1;
@@ -381,3 +394,5 @@ char *WABTAOTCompilerLib::getSOFilename(char *filename)
    return slashFilename;
    }
 #endif // ifndef WASM_SHARED_CACHE
+   }
+   }

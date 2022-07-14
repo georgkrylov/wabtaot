@@ -1754,6 +1754,7 @@ Result Environment::TryAOT(Thread* t,  DefinedFunc* func, Index ind){
    //  }
    aotManager->setFunctionThatManagerWasCreatedFor(ind);
    this->FillMemories();
+
    WABTAOTCompilerLib::registerAllImports(*aotManager, *this);
    DefinedModule *modulee;
    Index moduleIndex = WABTAOTCompilerLib::getModuleIndexByFunctionIndex(*this, ind);
@@ -1773,7 +1774,9 @@ Result Environment::TryAOT(Thread* t,  DefinedFunc* func, Index ind){
                                                                             types,
                                                                             *this, *aotManager);
 
+      // builder->pu
       aotManager->push_back_FB(fn->offset, builder, types);
+      aotManager->setNeedsEntry(true);
 
       // This line is used to construct debug name, limited to 8 symbols as relocation infrastructure does not
       // support longer names
@@ -1809,7 +1812,7 @@ Result Environment::TryAOT(Thread* t,  DefinedFunc* func, Index ind){
    // aotManager->broadcastImports();
    auto func_count = this->GetFuncCount();
    modulee->aot_compiled_functions.reserve(func_count);
-   void *function = aotManager->AOTCompileAFunction(this, ind, fn);
+   void *function = aotManager->AOTCompileAFunction(this, ind, fn,t);
    aot_meta_.find(ind)->second.aot_fn=reinterpret_cast<wabt::jit::AOTedFunction>(fn->aot_fn_);
    modulee->aot_compiled_functions.push_back(function);
    return Result::Ok;
@@ -2044,10 +2047,15 @@ Result Thread::Run(int num_instructions) {
 
     //         if (true == TryAOT(t, ind,fn)){
     // // printf("TryAOT returned 0\n");
+          // unsigned int numberOfParameters = env_->GetFuncSignature(func_index)->param_types.size();
+          // int params_array[numberOfParameters];
+          // for (int i = 0; i < numberOfParameters; i++){
+          //   params_array[i] = Pop().i32;
+          // }
           wabt::jit::AOTedFunction p = fn->aot_fn_;
-          int q = p();
+          long q = p();
           // Value t = Value(q);
-          Push(q);
+          // Push(q);
   //   printf("%i\n",q);
   //   return Result::Ok;
   // }
