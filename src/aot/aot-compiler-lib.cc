@@ -11,8 +11,10 @@ int wabt::aot::WABTAOTCompilerLib::build_type = 0;
 int wabt::aot::WABTAOTCompilerLib::no_of_modules = 1;
 int wabt::aot::WABTAOTCompilerLib::shouldReEmitELF = 0;
 #endif
-namespace wabt{
-   namespace aot{
+namespace wabt
+   {
+namespace aot
+   {
 int WABTAOTCompilerLib::registeredImportsOnce = 0;
 void WABTAOTCompilerLib::getCompiledFunction(const char *name, void (**fn)())
    {
@@ -47,23 +49,68 @@ int WABTAOTCompilerLib::approximateFirstFunctionInAModule(interp::Environment &e
    return result;
    }
 
+void WABTAOTCompilerLib::preSetCodeEntries(wabt::interp::Executor *executor, wabt::interp::Thread *thread)
+   {
 
-void WABTAOTCompilerLib::preSetCodeEntries(wabt::interp::Executor* executor){
-   wabt::interp::Thread* thread = &(executor->thread_);
+   if (thread == nullptr)
+      {
+      if (executor != nullptr)
+         {
+         thread = &(executor->thread_);
+         }
+      else
+         {
+         printf("Both thread and executor are null\n");
+         exit(-1);
+         }
+      }
+   wabt::interp::Environment &env(*thread->env_);
+   /** Setting utility functions */
    setCodeEntry("trapWith", reinterpret_cast<void *>(trapWith));
+   double (*sqr)(double) = sqrt;
+   setCodeEntry("sqrt", reinterpret_cast<void *>(sqr));
+   setCodeEntry("sqrtf", reinterpret_cast<void *>(sqrtf));
+   double (*cpsign)(double, double) = copysign;
+   setCodeEntry("copysign", reinterpret_cast<void *>(cpsign));
+   setCodeEntry("copysignf", reinterpret_cast<void *>(copysignf));
 
-   uint8_t* ptr = reinterpret_cast<uint8_t*>(&(thread->value_stack_top_));
-   uint8_t* pptr =reinterpret_cast<uint8_t*>(malloc(sizeof(void*)));
-   memcpy(pptr,&ptr,sizeof(void*));
+   uint8_t *ptr = reinterpret_cast<uint8_t *>(&(thread->value_stack_top_));
+   uint8_t *pptr = reinterpret_cast<uint8_t *>(malloc(sizeof(void *)));
+   memcpy(pptr, &ptr, sizeof(void *));
 
    setCodeEntry("vstop", pptr);
-   ptr = reinterpret_cast<uint8_t*>(thread->value_stack_.data());
-   pptr =reinterpret_cast<uint8_t*>(malloc(sizeof(void*)));
-   memcpy(pptr,&ptr,sizeof(void*));
+   ptr = reinterpret_cast<uint8_t *>(thread->value_stack_.data());
+   pptr = reinterpret_cast<uint8_t *>(malloc(sizeof(void *)));
+   memcpy(pptr, &ptr, sizeof(void *));
+   setCodeEntry("vsdata", pptr);
 
-   setCodeEntry("vsdata",pptr);
+   // Setting up global variables to be available for relocations
+   Value *globals = new Value[env.GetGlobalCount()]();
+   std::vector<std::string> global_names;
+   for (int i = 0; i < env.GetGlobalCount(); i++)
+      {
+      globals[i] = (env.GetGlobal(i)->typed_value.value);
+      char *global_name = (char *)calloc(6, sizeof(char));
+      sprintf(global_name, "g%d", i);
+      global_names.emplace_back(global_name);
+      setCodeEntry(global_name, reinterpret_cast<void *>(globals + i));
+      global_name = NULL;
+      }
 
-}
+   // Setting up memories to be avaliable for relocations
+   env.FillMemories();
+   char *memory_name;
+   for (unsigned int i = 0; i < env.GetMemoryCount(); i++)
+      {
+      memory_name = (char *)calloc(6, sizeof(char));
+      sprintf(memory_name, "m%d", i);
+      // global_names.emplace_back(global_name);
+      setCodeEntry(memory_name, reinterpret_cast<void *>(env.GetMems() + i));
+      memory_name = NULL;
+      }
+
+   setCodeEntry(const_cast<char *>("Params"), reinterpret_cast<void *>(&env.indirectCallParams));
+   }
 
 int WABTAOTCompilerLib::getModuleIndexByFunctionIndex(wabt::interp::Environment &env, unsigned int Index)
    {
@@ -109,12 +156,6 @@ int WABTAOTCompilerLib::getModuleIndexByFunctionIndex(wabt::interp::Environment 
 void WABTAOTCompilerLib::relocateAOT(interp::Environment &env, DefinedModule *module)
    {
    setCodeEntry("trapWith", reinterpret_cast<void *>(trapWith));
-   double (*sqr)(double) = sqrt;
-   setCodeEntry("sqrt", reinterpret_cast<void *>(sqr));
-   double (*cpsign)(double, double) = copysign;
-   setCodeEntry("copysign", reinterpret_cast<void *>(cpsign));
-   setCodeEntry("sqrtf", reinterpret_cast<void *>(sqrtf));
-   setCodeEntry("copysignf", reinterpret_cast<void *>(copysignf));
    setCodeEntry("CallIndi", reinterpret_cast<void *>(wabt::aot::AOTFunctionBuilder::AOTCallIndirectHelper));
    setCodeEntry("GrowMem", reinterpret_cast<void *>(wabt::aot::AOTFunctionBuilder::GrowMemory));
    setCodeEntry("MemSize", reinterpret_cast<void *>(wabt::aot::AOTFunctionBuilder::CalculateMemorySize));
@@ -162,28 +203,7 @@ void WABTAOTCompilerLib::relocateAOT(interp::Environment &env, DefinedModule *mo
        setCodeEntry(const_cast<char*>(func->dbg_name_.data()),cfunc);
      }
      }*/
-   Value *globals = new Value[env.GetGlobalCount()]();
-   std::vector<std::string> global_names;
-   for (int i = 0; i < env.GetGlobalCount(); i++)
-      {
-      globals[i] = env.GetGlobal(i)->typed_value.value;
-      char *global_name = (char *)calloc(6, sizeof(char));
-      sprintf(global_name, "g%d", i);
-      global_names.emplace_back(global_name);
-      setCodeEntry(global_name, reinterpret_cast<void *>(globals + i));
-      global_name = NULL;
-      }
-   env.FillMemories();
-   char *memory_name;
-   for (unsigned int i = 0; i < env.GetMemoryCount(); i++)
-      {
-      memory_name =  (char *)calloc(6, sizeof(char));
-      sprintf(memory_name, "m%d", i);
-      // global_names.emplace_back(global_name);
-      setCodeEntry(memory_name, reinterpret_cast<void *>(env.GetMems() + i));
-      memory_name = NULL;
-      }
-   setCodeEntry(const_cast<char *>("Params"), reinterpret_cast<void *>(&env.indirectCallParams));
+
    // uint16_t compiled_function_index = 0;
    for (Index i = 0; i < module->aot_compiled_functions.size(); ++i)
       {
@@ -254,7 +274,7 @@ void WABTAOTCompilerLib::registerMethods(wabt::aot::AOTManager &aotManager, inte
          auto *fn = dynamic_cast<wabt::interp::DefinedFunc *>(env.GetFunc(i));
          AOTTypeDictionary *types = new (PERSISTENT_NEW) AOTTypeDictionary();
          // static AOTTypeDictionary types;
-         std::string name = "f" + std::to_string(i+env.getOffsetForAOTFunctionNaming()) + "m" + module->name.substr(0, 3);
+         std::string name = "f" + std::to_string(i + env.getOffsetForAOTFunctionNaming()) + "m" + module->name.substr(0, 3);
          AOTFunctionBuilder *builder = new (PERSISTENT_NEW) AOTFunctionBuilder(&thread, fn,
                                                                                std::move(name),
                                                                                types,
@@ -262,9 +282,9 @@ void WABTAOTCompilerLib::registerMethods(wabt::aot::AOTManager &aotManager, inte
 
          aotManager.push_back_FB(fn->offset, builder, types);
 
-         env.GetFunc(i)->dbg_name_ = "f" + std::to_string(i+env.getOffsetForAOTFunctionNaming()) + "m" + module->name.substr(0, 3);
+         env.GetFunc(i)->dbg_name_ = "f" + std::to_string(i + env.getOffsetForAOTFunctionNaming()) + "m" + module->name.substr(0, 3);
          //** Trying to assign debug name, might be problematic if that's an import **/
-         reinterpret_cast<DefinedFunc *>(env.GetFunc(i))->dbg_name_ = "f" + std::to_string(i+env.getOffsetForAOTFunctionNaming()) + "m" + module->name.substr(0, 3);
+         reinterpret_cast<DefinedFunc *>(env.GetFunc(i))->dbg_name_ = "f" + std::to_string(i + env.getOffsetForAOTFunctionNaming()) + "m" + module->name.substr(0, 3);
          module->funcs.emplace_back(env.GetFunc(i));
          }
       else
@@ -283,8 +303,8 @@ void WABTAOTCompilerLib::registerMethods(wabt::aot::AOTManager &aotManager, inte
  * @brief Now should be called after reading the binary: no matter how many
  * emscripten entries we support, we want to index only the ones that we actuallly
  * imported
- * @param aotManager 
- * @param env 
+ * @param aotManager
+ * @param env
  */
 void WABTAOTCompilerLib::registerAllImports(wabt::aot::AOTManager &aotManager, interp::Environment &env)
    {
@@ -394,5 +414,5 @@ char *WABTAOTCompilerLib::getSOFilename(char *filename)
    return slashFilename;
    }
 #endif // ifndef WASM_SHARED_CACHE
-   }
-   }
+   }   // namespace aot
+   }   // namespace wabt

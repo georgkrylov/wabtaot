@@ -20,7 +20,8 @@ class WABTAOTCompilerLib
    WABTAOTCompilerLib(){};
    /**
     * @brief This method should be used after the module is read to generate method representations
-    * (MethodBuilders) and make JitBuilder aware of the methods
+    * (MethodBuilders) and make JitBuilder aware of the methods. Applicable for the full-aot runtime
+    * aot-cd.cc only
     * @param aotManager the more internal class that is concerned with compilation
     * @param env the runtime environment
     * @param module the module/class description
@@ -31,11 +32,12 @@ class WABTAOTCompilerLib
    static void registerMethods(wabt::aot::AOTManager &aotManager, interp::Environment &env, DefinedModule *module, char *filename, interp::Thread &thread);
 
    /**
-    * @brief Method that allows compiling all methods.
-    *
+    * @brief Method that allows compiling all methods.Applicable for the full-aot runtime
+    * aot-cd.cc only
     * @param env - reference to the environment
     */
    static void compileEverything(interp::Environment &env, wabt::aot::AOTManager &aotManager, DefinedModule *module);
+
    /**
     * @brief Module filename is needed for distinguishing between functions loaded,
     * when doing aot compilation, as we cannot guarantee the module name is always
@@ -45,6 +47,7 @@ class WABTAOTCompilerLib
     * @param module to update the name
     */
    static void registerModuleNameForAOT(const char *module_filename, DefinedModule *module);
+
    /**
     * @brief To account with imports and externally defined functions and be able to properly
     * calculate function indexes and offsets, we need to register imports. Potentailly it needs to
@@ -57,11 +60,16 @@ class WABTAOTCompilerLib
     * @param env
     */
    static void registerAllImports(wabt::aot::AOTManager &aotManager, interp::Environment &env);
-   // /**
-   //  * @brief To define some necessary methods for Emscripten functionality.
-   //  */
-   static void preSetCodeEntries(wabt::interp::Executor* executor);
-      // static void preSetCodeEntries();
+
+   /**
+    * @brief To define some necessary methods for Emscripten functionality, as well as memories
+    * and globals when using relocation infrastructure. As aot-cd.cc does not define executor,
+    * a special case is created for it.
+    * @param executor  - parameter that is passed from the em-interp
+    * @param thread  - parameter that is passed from aot-cd.cc
+    */
+   static void preSetCodeEntries(wabt::interp::Executor* executor = nullptr, wabt::interp::Thread* thread = nullptr);
+
    /**
     * @brief Computes (hopefully correctly, still need to verify) the offset to index in the compiling environment to
     * be able to use while compilng Opcode::Call. This offset is due to other modules loaded.
@@ -71,6 +79,7 @@ class WABTAOTCompilerLib
     * through the AppendExport).
     */
    static int approximateFirstFunctionInAModule(interp::Environment &env, unsigned int Index);
+
    /**
     * @brief This function is to be used when interpreter calls AOT function
     * the goal is to get a memory containing list of arguments and turn them
@@ -90,8 +99,6 @@ class WABTAOTCompilerLib
     */
    static void prepareAOTCall(long numOfArgs, long *args, unsigned int index, void *env);
 
-
-
    static void getCompiledFunction(const char *name, void (**fn)());
 
    /**
@@ -105,9 +112,10 @@ class WABTAOTCompilerLib
     * @return unsigned int - computed index of the module
     */
    static int getModuleIndexByFunctionIndex(interp::Environment &env, unsigned int Index);
+
    /**
     * @brief This function currently serves double purpose, first it defines
-    * math functions and globals, and memories and alike, second it runs relocations using OMR
+    * emscripten counterparts to be used in full-aot, second it runs relocations using OMR
     * relocation infrastructure
     * @param env: pointer to the environment
     * @param module: Defined module
@@ -136,6 +144,7 @@ class WABTAOTCompilerLib
     * @return char* -  newly-allocated string containing the filename
     */
    static char *getSOFilename(char *filename);
+
    /**
     * @brief Three variables controlling ELF compilation
     * and loading

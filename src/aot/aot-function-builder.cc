@@ -48,7 +48,6 @@ int32_t clos(int32_t a)
    return 0;
    };
 
-
 /** This function is used to define external to JIT when compiling AOT
  * emscripten
  */
@@ -544,7 +543,7 @@ uint32_t AOTFunctionBuilder::CalculateMemorySize(uint32_t index)
 
 uint32_t AOTFunctionBuilder::PrintSomething(uint32_t index)
    {
-   printf("Grow by: %id",index);
+   printf("Grow by: %id", index);
    // Memory *memory = envPointer->GetMemory(index);
    // uint32_t old_page_size = memory->page_limits.initial;
    // printf("Hello from index %u, pageSize of memory[0] is%u\n",index,old_page_size);
@@ -1281,10 +1280,10 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder *b,
       return true;
       }
 
-      case Opcode::BrIf: 
+   case Opcode::BrIf:
       {
-         assert(false);
-         break;
+      assert(false);
+      break;
       }
       // transformed into a BrUnless. So, there's no need to handle it.
 
@@ -1445,7 +1444,6 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder *b,
          /* If we are calling the function that is host - do NOTHING */
          if (fn->is_host == true)
             {
-           
             int size = env_.GetFuncSignature(fn->sig_index)->param_types.size();
             TR::IlValue **args = new TR::IlValue *[size]();
 

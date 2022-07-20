@@ -584,8 +584,8 @@ int main(int argc, char **argv)
          {
          wabt::aot::AOTManager aotManager;
          interp::Thread thread(&env);
+         wabt::aot::WABTAOTCompilerLib::preSetCodeEntries(nullptr,&thread);
          wabt::aot::WABTAOTCompilerLib::registerMethods(aotManager, env, module, const_cast<char *>(src_filename), thread);
-         preSetCodeEntries();
          wabt::aot::WABTAOTCompilerLib::compileEverything(env, aotManager, module);
          }
       else
