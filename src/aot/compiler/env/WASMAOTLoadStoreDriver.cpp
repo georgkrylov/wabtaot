@@ -18,24 +18,35 @@
  *
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
-#ifndef TR_AOT_METHOD_HEADER_INCL
-#define TR_AOT_METHOD_HEADER_INCL
 
-#include "env/WASMAOTMethodHeader.hpp"
-
-namespace TR
-{
-class OMR_EXTENSIBLE AOTMethodHeader : public WASM::AOTMethodHeaderConnector
+#include "env/AOTLoadStoreDriver.hpp"
+#include "env/AOTMethodHeader.hpp"
+TR::AOTLoadStoreDriver *
+WASM::AOTLoadStoreDriver::self()
    {
-public:
+   return reinterpret_cast<TR::AOTLoadStoreDriver *>(this);
+   }
 
-   AOTMethodHeader(uint8_t *compiledCodeStart, uint32_t compiledCodeSize, TR::RelocationRecordBinaryTemplate *relocationBinaryTemplate, uint32_t relocationsSize)
-   : WASM::AOTMethodHeaderConnector(compiledCodeStart,compiledCodeSize,relocationBinaryTemplate,relocationsSize)
-      { };
-
-   AOTMethodHeader(uint8_t *serializedMethodData)
-   : WASM::AOTMethodHeaderConnector(serializedMethodData)
-      { };
-   };
-}
-#endif
+TR::AOTMethodHeader *
+WASM::AOTLoadStoreDriver::createAndRegisterAOTMethodHeader(const char *methodName, uint8_t *codeStart,
+                                                           uint32_t codeSize, TR::RelocationRecordBinaryTemplate *dataStart, uint32_t dataSize)
+   {
+   TR::AOTMethodHeader *hdr = getRegisteredAOTMethodHeader(methodName);
+   if (hdr == NULL)
+      {
+      hdr = new TR::AOTMethodHeader(codeStart, codeSize, dataStart, dataSize);
+      }
+   else if (codeStart != NULL && codeSize != 0) /** There might be code without relocations, but code without code makes little sense */
+      {
+      hdr->setCompiledCodeStart(codeStart);
+      hdr->setCompiledCodeSize(codeSize);
+      hdr->setRelocationsStart(dataStart);
+      hdr->setRelocationsSize(dataSize);
+      }
+   else
+      {
+      TR_ASSERT(false, "Error creating header");
+      }
+   self()->registerAOTMethodHeader(methodName, hdr);
+   return hdr;
+   }

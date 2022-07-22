@@ -23,17 +23,27 @@
 
 #ifndef WASM_AOTMETHODHEADER_CONNECTOR
 #define WASM_AOTMETHODHEADER_CONNECTOR
-namespace WASM { class AOTMethodHeader; }
-namespace WASM { typedef WASM::AOTMethodHeader AOTMethodHeaderConnector; }
+namespace WASM
+   {
+class AOTMethodHeader;
+   }
+namespace WASM
+   {
+typedef WASM::AOTMethodHeader AOTMethodHeaderConnector;
+   }
 #endif
 #include "env/OMRAOTMethodHeader.hpp"
+/** Probably, needs to be moved to env*/
+#include "env/aot-meta.hpp"
 
-namespace TR {
-   class AOTMethodHeader;
-   class RelocationRecordBinaryTemplate;
-   }
+namespace TR
+   {
+class AOTMethodHeader;
+class RelocationRecordBinaryTemplate;
+   } // namespace TR
 
-namespace WASM{
+namespace WASM
+   {
 
 /**
  * @brief  The AOTMethodHeader files
@@ -46,11 +56,17 @@ namespace WASM{
 class OMR_EXTENSIBLE AOTMethodHeader : public OMR::AOTMethodHeaderConnector
    {
 public:
+   AOTMethodHeader(uint8_t *compiledCodeStart, uint32_t compiledCodeSize, TR::RelocationRecordBinaryTemplate *relocationsBinaryTemplate, uint32_t relocationsSize)
+       : OMR::AOTMethodHeaderConnector(compiledCodeStart, compiledCodeSize, relocationsBinaryTemplate, relocationsSize)
+      {
+      dependencies = NULL;
+      dependenciesMaxSize = 0;
+      lastUsedIdxInDependenciesArray = 0;
+      };
 
-   AOTMethodHeader(uint8_t* compiledCodeStart, uint32_t compiledCodeSize, TR::RelocationRecordBinaryTemplate* relocationsBinaryTemplate, uint32_t relocationsSize)
-   : OMR::AOTMethodHeaderConnector(compiledCodeStart,compiledCodeSize,relocationsBinaryTemplate,relocationsSize){};
+   AOTMethodHeader(uint8_t *serializedMethodData);
 
-   AOTMethodHeader(uint8_t* serializedMethodData);
+   ~AOTMethodHeader();
 
    /**
     * @brief Serializes contents of the WASM AOT Method Header
@@ -62,11 +78,67 @@ public:
     * @param bufferSize
     * The memory the size of the buffer allocated for serialization
     */
-   void serializeMethod(uint8_t* buffer,size_t bufferSize);
+   void serializeMethod(uint8_t *buffer, size_t bufferSize);
+
+   /**
+    * @brief Method that computes the size of the WASM header
+    * based on its internal "size" fields
+    *
+    * @return size_t
+    */
+   size_t sizeOfSerializedVersion();
+
+   /**
+    * @brief Set the Additional Data : a prototype
+    * method to store an int to later load it
+    * @param q - the int to store
+    */
+   void setAdditionalData(wabt::aot::AOTMeta *meta);
+
+   /**
+    * @brief get the Additional Data : a prototype
+    * method to load a previously stored int
+    * @return the wabt::aot::AOTMeta*
+    */
+   wabt::aot::AOTMeta *getAdditionalData();
+
+   /**
+    * @brief To build a graph, adds a dependency to the calling AOT Meta.
+    *
+    * @param dep - callee
+    */
+   void addDependency(unsigned int dep);
+
+   /**
+    * @brief Get the Dependencies Array Size
+    *
+    */
+   unsigned int getDependenciesArraySize(){return lastUsedIdxInDependenciesArray;}
+
+   unsigned int *getDependenciesArray(){return dependencies;}
 
 protected:
-      TR::AOTMethodHeader* self();
 
+   TR::AOTMethodHeader *self();
+   wabt::aot::AOTMeta *additionalData;
+
+   unsigned int *dependencies = NULL;
+   /**
+    * @brief As we are going to serialize and deserialize the dependencies array,
+    * we want to keep track of the maximum size of the array.
+    */
+   unsigned int dependenciesMaxSize;
+   /**
+    * @brief Index of a function the AOT meta is created for. At the moment of initialization is off by some value
+    * (depending on the number of modules are read and their exports (which are imports to other modules?)).
+    * The proper value (for now) can be computed by subtracting AOTMeta::numberOfImports
+    */
+   unsigned int index;
+   /**
+    * @brief As we are going to serialize and deserialize the dependencies array,
+    * we want to keep track of the last used index in dependencies array.
+    */
+   unsigned int lastUsedIdxInDependenciesArray;
    };
-}
+   } // namespace WASM
 #endif

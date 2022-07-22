@@ -2,6 +2,7 @@
 #include "aot-compiler-lib.hpp"
 #include "../cast.h" // cast
 #include "src/interp/interp.h"
+#include "env/AOTLoadStoreDriver.hpp"
 #include <iostream>
 #include <math.h>   // for relocating math functions
 #include <unistd.h> // F_OK, access
@@ -73,7 +74,9 @@ void WABTAOTCompilerLib::preSetCodeEntries(wabt::interp::Executor *executor, wab
    double (*cpsign)(double, double) = copysign;
    setCodeEntry("copysign", reinterpret_cast<void *>(cpsign));
    setCodeEntry("copysignf", reinterpret_cast<void *>(copysignf));
-
+   setCodeEntry("GrowMem", reinterpret_cast<void *>(wabt::aot::AOTFunctionBuilder::GrowMemory));
+   setCodeEntry("MemSize", reinterpret_cast<void *>(wabt::aot::AOTFunctionBuilder::CalculateMemorySize));
+   setCodeEntry("CallIndi", reinterpret_cast<void *>(wabt::aot::AOTFunctionBuilder::AOTCallIndirectHelper));
    uint8_t *ptr = reinterpret_cast<uint8_t *>(&(thread->value_stack_top_));
    uint8_t *pptr = reinterpret_cast<uint8_t *>(malloc(sizeof(void *)));
    memcpy(pptr, &ptr, sizeof(void *));
@@ -85,15 +88,18 @@ void WABTAOTCompilerLib::preSetCodeEntries(wabt::interp::Executor *executor, wab
    setCodeEntry("vsdata", pptr);
 
    // Setting up global variables to be available for relocations
-   Value *globals = new Value[env.GetGlobalCount()]();
+   Value **globals = (Value**)malloc(sizeof(Value*)*env.GetGlobalCount());
    std::vector<std::string> global_names;
    for (int i = 0; i < env.GetGlobalCount(); i++)
       {
-      globals[i] = (env.GetGlobal(i)->typed_value.value);
+      globals[i] = (Value*)malloc(sizeof(Value*));
+      auto tmp = &env.GetGlobal(i)->typed_value.value;
+      memcpy(globals+i,&tmp,sizeof(Value*));
+
       char *global_name = (char *)calloc(6, sizeof(char));
       sprintf(global_name, "g%d", i);
       global_names.emplace_back(global_name);
-      setCodeEntry(global_name, reinterpret_cast<void *>(globals + i));
+      setCodeEntry(global_name, reinterpret_cast<void *>(globals[i]));
       global_name = NULL;
       }
 
@@ -111,6 +117,16 @@ void WABTAOTCompilerLib::preSetCodeEntries(wabt::interp::Executor *executor, wab
 
    setCodeEntry(const_cast<char *>("Params"), reinterpret_cast<void *>(&env.indirectCallParams));
    }
+
+TR::AOTLoadStoreDriver* WABTAOTCompilerLib::_loadStoreDriver = NULL;
+
+void WABTAOTCompilerLib::setLoadStoreDriver(TR::AOTLoadStoreDriver* driver){
+   WABTAOTCompilerLib::_loadStoreDriver = driver;
+}
+
+TR::AOTLoadStoreDriver* WABTAOTCompilerLib::getLoadStoreDriver(){
+   return WABTAOTCompilerLib::_loadStoreDriver;
+}
 
 int WABTAOTCompilerLib::getModuleIndexByFunctionIndex(wabt::interp::Environment &env, unsigned int Index)
    {

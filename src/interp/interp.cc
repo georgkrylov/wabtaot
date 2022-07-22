@@ -155,9 +155,7 @@ Environment::~Environment() {
   jit_env_.offsets = offsets;
   delete [] indirectCallParams;
 }
-int Environment::AOTMeta::numOfFunction = 0;
-unsigned int Environment::AOTMeta::offsetForDefinedFunctions = 0;
-unsigned int Environment::AOTMeta::numOfDeclaredImports = 0;
+
 
 Index Environment::FindModuleIndex(string_view name) const {
   auto iter = module_bindings_.find(name.to_string());
@@ -1813,8 +1811,10 @@ Result Environment::TryAOT(Thread* t,  DefinedFunc* func, Index ind){
    auto func_count = this->GetFuncCount();
    modulee->aot_compiled_functions.reserve(func_count);
    void *function = aotManager->AOTCompileAFunction(this, ind, fn,t);
-   aot_meta_.find(ind)->second.aot_fn=reinterpret_cast<wabt::jit::AOTedFunction>(fn->aot_fn_);
-   modulee->aot_compiled_functions.push_back(function);
+   if (function != NULL)
+    {
+    modulee->aot_compiled_functions.push_back(function);
+    }
    return Result::Ok;
    }
 

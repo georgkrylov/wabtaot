@@ -18,24 +18,21 @@
  *
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
-#ifndef TR_AOT_METHOD_HEADER_INCL
-#define TR_AOT_METHOD_HEADER_INCL
+#ifndef TR_AOT_LOAD_STORE_DRIVER_INCL
+#define TR_AOT_LOAD_STORE_DRIVER_INCL
 
-#include "env/WASMAOTMethodHeader.hpp"
+#include "env/WASMAOTLoadStoreDriver.hpp"
 
 namespace TR
 {
-class OMR_EXTENSIBLE AOTMethodHeader : public WASM::AOTMethodHeaderConnector
+class OMR_EXTENSIBLE AOTLoadStoreDriver : public WASM::AOTLoadStoreDriverConnector
    {
 public:
-
-   AOTMethodHeader(uint8_t *compiledCodeStart, uint32_t compiledCodeSize, TR::RelocationRecordBinaryTemplate *relocationBinaryTemplate, uint32_t relocationsSize)
-   : WASM::AOTMethodHeaderConnector(compiledCodeStart,compiledCodeSize,relocationBinaryTemplate,relocationsSize)
+   AOTLoadStoreDriver() : WASM::AOTLoadStoreDriverConnector()
       { };
 
-   AOTMethodHeader(uint8_t *serializedMethodData)
-   : WASM::AOTMethodHeaderConnector(serializedMethodData)
-      { };
    };
+
 }
+
 #endif

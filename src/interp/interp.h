@@ -38,6 +38,7 @@
 #include "src/opcode.h"
 #include "src/stream.h"
 
+#include "../aot/compiler/env/aot-meta.hpp"
 
 namespace wabt {
 
@@ -601,15 +602,15 @@ class Environment {
  */
   void AddAOTMetadata(DefinedFunc* fn, Index index) {
     assert(fn->offset != kInvalidIstreamOffset);
-    this->aot_meta_.insert({ index, AOTMeta(index,fn) });
+    this->aot_meta_.insert({ index, wabt::aot::AOTMeta(index,fn) });
   }
 
   void addToOffsetForDefinedFunctions() {
-    AOTMeta::IncrementOffsetForDefinedFunctions();
+    wabt::aot::AOTMeta::IncrementOffsetForDefinedFunctions();
     }
 
   int getOffsetForAOTFunctionNaming() {
-    return AOTMeta::getOffsetForNaming();
+    return wabt::aot::AOTMeta::getOffsetForNaming();
     }
 
 /**
@@ -620,7 +621,7 @@ class Environment {
  */
   void AddAOTMetadataForImport(Func* fn, Index index) {
     assert(fn->offset != kInvalidIstreamOffset);
-    AOTMeta meta = AOTMeta(index,fn);
+    wabt::aot::AOTMeta meta = wabt::aot::AOTMeta(index,fn);
     meta.setIsImport();
     this->aot_meta_.insert({ index, meta });
   }
@@ -703,171 +704,8 @@ class Environment {
   friend jit::Result_t jit::InterpThunk(jit::ThreadInfo*, Index);
   friend jit::Result_t jit::HostCallThunk(jit::ThreadInfo*, Index);
   friend class wabt::aot::AOTFunctionBuilder;
+  friend class wabt::aot::AOTManager;
 
-
-
-
-  struct AOTMeta {
-    Func* wasm_fn;
-    uint32_t num_calls = 0;
-
-    bool tried_jit = false;
-    wabt::jit::AOTedFunction aot_fn = nullptr;
-
-    AOTMeta(unsigned int ind, Func* wasm_fn) : wasm_fn(wasm_fn) {
-      //wasm_fn->dbg_name_= "func_" + std::to_string(numOfFunction);
-      // wasm_fn->dbg_name_= "f" + wasm_fn-> +"m"+modules_[0]->name.substr(0,3);
-      dependencies = NULL;
-      index = ind;
-      numOfFunction++;
-      dependenciesMaxSize = 0;
-      lastUsedIdxInDependenciesArray = 0;
-    }
-      /**
-       * @brief Destroy the AOTMeta object
-       * To avoid memory leaks, freeing the dependencies object, if it is not NULL.
-       */
-    ~AOTMeta(){
-      //wasm_fn->dbg_name_= "func_" + std::to_string(numOfFunction);
-      // wasm_fn->dbg_name_= "f" + wasm_fn-> +"m"+modules_[0]->name.substr(0,3);
-
-      /** Ideally, this dynamically allocated memory should be free
-       * but it generates a segfault, so I will let it leak hoping destructors
-       * will pick it up themselves?
-      if (dependencies != NULL &&  dependenciesMaxSize!= 0)
-        {
-        delete [] dependencies;
-        dependencies = NULL;
-        dependenciesMaxSize = 0;
-        lastUsedIdxInDependenciesArray = 0;
-        }
-        */
-    }
-    /**
-     * @brief To build a graph, adds a dependency to the calling AOT Meta.
-     *
-     * @param dep - callee
-     */
-    void addDependency(unsigned int dep){
-      unsigned int thisFunction = getIndexOfAFunctionWithinModule();
-      if (dependenciesMaxSize == lastUsedIdxInDependenciesArray){
-        /* We have used up all the space in our dependencies array*/
-        if (dependenciesMaxSize  == 0){
-          /* Very first entry, will allocate space for 5 */
-          dependenciesMaxSize = 5;
-          dependencies = new unsigned int [dependenciesMaxSize];
-        }else if (lastUsedIdxInDependenciesArray <= 20)
-        {
-          /* we assume that if there aren't that many dependencies we can
-          increment array size by 5, otherwise we will grow it by doubling.*/
-          dependenciesMaxSize  = dependenciesMaxSize + 5;
-          unsigned int *temp = new unsigned int [dependenciesMaxSize];
-          for (int i = 0 ;  i< lastUsedIdxInDependenciesArray; i++){
-            temp[i] = dependencies[i];
-          }
-          delete [] dependencies;
-          dependencies = temp;
-          /*Does realloc automatically copy?*/
-          /* realloc(dependencies,(dependenciesMaxSize)*sizeof(unsigned int));*/
-        }else{
-          /* Unimplemented, more than 20 dependencies */
-          dependenciesMaxSize  = dependenciesMaxSize * 2;
-          unsigned int *temp = new unsigned int [dependenciesMaxSize];
-          for (int i = 0 ;  i< lastUsedIdxInDependenciesArray; i++){
-            temp[i] = dependencies[i];
-          }
-          delete [] dependencies;
-          dependencies = temp;
-          // fprintf(stderr,"More than 20 dependencies encountered, need to fix in %s,%d\n",__FILE__,__LINE__);
-          // assert(false);
-        }
-      }
-      dependencies[lastUsedIdxInDependenciesArray]=dep;
-      lastUsedIdxInDependenciesArray++;
-    }
-    /**
-     * @brief Get the offset for naming functions.
-     * Convention for debug names is to match the binary, BUT
-     * this offset might be required in case runtime defines
-     * auxilary functions (like emscripten), but the binary
-     * does not import every one of them
-     * @return int 
-     */
-    static int getOffsetForNaming(){
-            /** If this asserts, it means aot did not register
-             * proper number of imports, and cannot service
-             * all the imports requested by binary wasm file
-             */
-            assert(numOfDeclaredImports<= offsetForDefinedFunctions);
-            return numOfDeclaredImports-offsetForDefinedFunctions;
-    }
-    static void IncrementOffsetForDefinedFunctions() {
-    AOTMeta::offsetForDefinedFunctions++;
-    }
-    /**
-     * @brief Get the Number Of Declared Imports object
-     * Actually, through import statement
-     * @return unsigned int 
-     */
-    static unsigned int getNumberOfDeclaredImports(){
-            return AOTMeta::numOfDeclaredImports;
-    }
-    /**
-     * @brief Get the Index Of A Function Within Module
-     * This function should be used to fetch index of the function within its module, regardless of the environment state
-     * Was not tested for the case of multiple active modules.
-     * @return unsigned int - an index updated by the number of already loaded functions (from the previous modules)
-     */
-    unsigned int getIndexOfAFunctionWithinModule(){
-            return index ; /* This might have been necessary in the case there are actually imports, but for now - no- numOfImports;*/
-    }
-    int isImport(){ return _isImport;}
-
-    void setIsImport() {
-      _isImport = 1;
-      AOTMeta::numOfDeclaredImports++;
-      }
-    private:
-    /**
-     * @brief if _isImport = 1 then it is import
-     */
-    int _isImport = 0;
-    static int numOfFunction;
-    /**
-     * @brief This variable is to track the number of functions defined before Defined functions
-     * . Can only work if the number of imports per module is the same, or if the number of imports is  uniquely
-     * registered per module. The variable is incremented in AOT compiler lib
-     * when registering all imports
-     */
-    static unsigned int offsetForDefinedFunctions;
-    /**
-     * @brief an array for tracking dependencies. Allocated dynamically.
-     * Will be incremented as a call to an unknown function is encountered.
-     */
-    unsigned int * dependencies = NULL;
-    /**
-     * @brief As we are going to serialize and deserialize the dependencies array,
-     * we want to keep track of the maximum size of the array.
-     */
-    unsigned int dependenciesMaxSize;
-    /**
-     * @brief Index of a function the AOT meta is created for. At the moment of initialization is off by some value
-     * (depending on the number of modules are read and their exports (which are imports to other modules?)).
-     * The proper value (for now) can be computed by subtracting AOTMeta::numberOfImports
-     */
-    unsigned int index;
-    /**
-     * @brief As we are going to serialize and deserialize the dependencies array,
-     * we want to keep track of the last used index in dependencies array.
-     */
-    unsigned int lastUsedIdxInDependenciesArray;
-    /**
-     * @brief This variable represents the number of imports that
-     * were actually added using the import statement in wasm code
-     * 
-     */
-    static unsigned int numOfDeclaredImports;
-  };
   Result TryJit(Thread* t, DefinedFunc* fn, Index ind);
   Result TryAOT(Thread*,  DefinedFunc*, Index);
 
@@ -897,7 +735,7 @@ class Environment {
   /** Could be later turned into methodHeader, or tied
    * with it.
    */
-  std::unordered_map<IstreamOffset, AOTMeta> aot_meta_;
+  std::unordered_map<IstreamOffset, wabt::aot::AOTMeta> aot_meta_;
   /**
    * @brief memories for AOT compiler, set in env.FillMemories()
    *

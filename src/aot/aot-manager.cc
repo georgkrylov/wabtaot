@@ -1,7 +1,8 @@
 #include "aot-manager.h"
 #include "aot-compiler-lib.hpp"
 #include "aot-function-builder.h"
-#include "compiler/env/AOTLoadStoreDriver.hpp"
+#include "env/AOTLoadStoreDriver.hpp"
+#include "env/AOTMethodHeader.hpp"
 #include "src/jit/environment.h"
 void wabt::aot::AOTManager::broadcastNames()
    {
@@ -49,25 +50,58 @@ void wabt::aot::AOTManager::broadcastImports()
    }
 int wabt::aot::AOTManager::CheckDependenciesCompiled(wabt::interp::Environment *env, wabt::Index ind, wabt::interp::DefinedFunc *func)
    {
-   TR::AOTMethodHeader *header = _loadStoreDriver->getRegisteredAOTMethodHeader(const_cast<char *>(func->dbg_name_.c_str()));
-   return 1;
+   TR::AOTMethodHeader *header = _loadStoreDriver->getRegisteredAOTMethodHeader(func->dbg_name_.c_str());
+   /** 0 -yes, should fail, 1 - we're good to compile */
+   int shouldFailCompilation = 0;
+   if (header != NULL)
+      {
+      /** Naively trying to check if dependencies are compiled */
+      unsigned int dependenciesMaxSize = header->getDependenciesArraySize();
+      unsigned int *dependenciesArray = header->getDependenciesArray();
+      shouldFailCompilation = 1;
+      for (unsigned int i = 0; i < dependenciesMaxSize; i++)
+         {
+         if (env->aot_meta_.at(dependenciesArray[i]).wasm_fn->is_compiled == false)
+            {
+            shouldFailCompilation = 0;
+            }
+         }
+      }
+   else
+      {
+      // printf("Created  additional data with for the method %s\n", func->dbg_name_.c_str());
+      /**
+       * @brief When created a header - never compile, don't have enough info
+       * When method was created - look up
+       */
+      _loadStoreDriver->createAndRegisterAOTMethodHeader(func->dbg_name_.c_str(), NULL, 0, NULL, 0);
+      shouldFailCompilation = 0;
+      }
+#ifndef WASM_SHARED_CACHE // This is an ELF-enabled runtime
+   if (shouldFailCompilation == 1)
+      {
+      WABTAOTCompilerLib::shouldReEmitELF = 1;
+      }
+#endif
+
+   return shouldFailCompilation;
    }
 
-char* wabt::aot::AOTManager::generateEntryPointName( wabt::interp::DefinedFunc *func)
+char *wabt::aot::AOTManager::generateEntryPointName(wabt::interp::DefinedFunc *func)
    {
-   char* result = (char*) calloc(1,8);
-   result = strncpy(result,func->dbg_name_.c_str(),8);
-   result[0]='e';
+   char *result = (char *)calloc(1, 8);
+   result = strncpy(result, func->dbg_name_.c_str(), 8);
+   result[0] = 'e';
    return result;
    }
 
-
-void *wabt::aot::AOTManager::AOTCompileAFunction(wabt::interp::Environment *env, wabt::Index ind, wabt::interp::DefinedFunc *fn, wabt::interp::Thread* t)
+void *wabt::aot::AOTManager::AOTCompileAFunction(wabt::interp::Environment *env, wabt::Index ind, wabt::interp::DefinedFunc *fn, wabt::interp::Thread *t)
    {
    /** If we haven't acquired a LoadStoreDriver yet */
    if (_loadStoreDriver == NULL)
       {
       _loadStoreDriver = reinterpret_cast<TR::AOTLoadStoreDriver *>(getLoadStoreDriver());
+      WABTAOTCompilerLib::setLoadStoreDriver(_loadStoreDriver);
       }
    if (!env->GetFunc(ind)->is_compiled)
       {
@@ -108,8 +142,8 @@ void *wabt::aot::AOTManager::AOTCompileAFunction(wabt::interp::Environment *env,
          if (this->needsEntryPointGeneration == true)
             {
             void *entryFunction = nullptr;
-            char* entryPointName = generateEntryPointName(fn);
-            char* entryPointNameForString =  strdup(entryPointName);
+            char *entryPointName = generateEntryPointName(fn);
+            char *entryPointNameForString = strdup(entryPointName);
             std::string entryFunctionNameForBuilder = std::string(entryPointNameForString);
             entryFunction = getCodeEntry(entryPointName);
             if (!entryFunction) /* was not able to load the function */
@@ -121,9 +155,9 @@ void *wabt::aot::AOTManager::AOTCompileAFunction(wabt::interp::Environment *env,
                 */
                AOTTypeDictionary *types = new (PERSISTENT_NEW) AOTTypeDictionary();
                AOTFunctionBuilder *entryBuilder = new (PERSISTENT_NEW) AOTFunctionBuilder(t, fn,
-                                                                           std::move(entryFunctionNameForBuilder),
-                                                                            types,
-                                                                            *env, *this,true);
+                                                                                          std::move(entryFunctionNameForBuilder),
+                                                                                          types,
+                                                                                          *env, *this, true);
                internal_compileMethodBuilder(entryBuilder, &entryFunction);
                if (entryFunction == NULL)
                   { /* was not able to compile the entry point, for example the dependencies were not resolved */

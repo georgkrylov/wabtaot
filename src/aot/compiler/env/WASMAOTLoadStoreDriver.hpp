@@ -18,24 +18,39 @@
  *
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
-#ifndef TR_AOT_METHOD_HEADER_INCL
-#define TR_AOT_METHOD_HEADER_INCL
+#ifndef WASM_AOT_LOAD_STORE_DRIVER
+#define WASM_AOT_LOAD_STORE_DRIVER
 
-#include "env/WASMAOTMethodHeader.hpp"
+#ifndef WASM_AOT_LOAD_STORE_DRIVER_CONNECTOR
+#define WASM_AOT_LOAD_STORE_DRIVER_CONNECTOR
+namespace WASM { class AOTLoadStoreDriver;}
+namespace WASM { typedef WASM::AOTLoadStoreDriver AOTLoadStoreDriverConnector;}
+#endif
+#include "env/OMRAOTLoadStoreDriver.hpp"
 
 namespace TR
-{
-class OMR_EXTENSIBLE AOTMethodHeader : public WASM::AOTMethodHeaderConnector
    {
-public:
+   class AOTLoadStoreDriver;
+   class AOTMethodHeader;
+   }
+namespace WASM
+   {
 
-   AOTMethodHeader(uint8_t *compiledCodeStart, uint32_t compiledCodeSize, TR::RelocationRecordBinaryTemplate *relocationBinaryTemplate, uint32_t relocationsSize)
-   : WASM::AOTMethodHeaderConnector(compiledCodeStart,compiledCodeSize,relocationBinaryTemplate,relocationsSize)
-      { };
+/**
+ * @brief  AOTLoadStoreDriver to be extended to WASM, as storing methodHeaders
+ * is a different process
+ */
+class OMR_EXTENSIBLE AOTLoadStoreDriver : public OMR::AOTLoadStoreDriverConnector
+   {
+ public:
+   AOTLoadStoreDriver()
+       : OMR::AOTLoadStoreDriverConnector(){};
 
-   AOTMethodHeader(uint8_t *serializedMethodData)
-   : WASM::AOTMethodHeaderConnector(serializedMethodData)
-      { };
+   TR::AOTMethodHeader *createAndRegisterAOTMethodHeader(const char *methodName, uint8_t *codeStart,
+                                                         uint32_t codeSize, TR::RelocationRecordBinaryTemplate *dataStart, uint32_t dataSize);
+
+ protected:
+   TR::AOTLoadStoreDriver *self();
    };
-}
-#endif
+   }   // namespace WASM
+#endif // ifndef WASM_AOT_LOAD_STORE_DRIVER

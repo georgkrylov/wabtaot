@@ -47,6 +47,9 @@ if (WASM_SHARED_CACHE)
 		${omr_SOURCE_DIR}
 		${WABTAOT_EXTRA_INCLUDES}
 		CACHE INTERNAL "Include header list for ${COMPILER}")
+	# Propagates the definitions to the CMakeLists.txt that adds this
+	# as a subdirectory
+	set(WABTAOT_SC_INCLUDES ${WABTAOT_SC_INCLUDES} PARENT_SCOPE)
 endif ()
 
 if(OMR_ELF_SHARED_OBJECT)
@@ -66,6 +69,9 @@ if(OMR_ELF_SHARED_OBJECT)
 		${WABTAOT_SOURCE_DIR}/compiler
 		${WABTAOT_SOURCE_DIR}/
 		CACHE INTERNAL "Include header list for ${COMPILER}")
+	# Propagates the definitions to the CMakeLists.txt that adds this
+	# as a subdirectory
+	set(WABTAOT_ELF_INCLUDES ${WABTAOT_ELF_INCLUDES} PARENT_SCOPE)
 endif()
 
 target_compile_definitions(jitbuilder PUBLIC OMR_AOT)
@@ -80,6 +86,11 @@ if (WASM_SHARED_CACHE)
 	target_sources(wasm_shared_cache
 		PRIVATE
 		${WABTAOT_SC_FILES})
+
+	# With extending AOTMethodHeader with additional fields,
+	# it became crucial to provide compile definitions required
+	# by TR to this target too.
+	make_compiler_target(wasm_shared_cache PUBLIC COMPILER jitbuilder)
 
 	# As we've just added several source files to the wasm_shared_cache
 	# target, we need to update the include directories to "shadow"
@@ -117,11 +128,11 @@ if(OMR_ELF_SHARED_OBJECT)
 	make_compiler_target(aotelfcomp PUBLIC COMPILER jitbuilder)
 
 	# This line should re-introduce include directories before jitbuilder includes,
-	# hence re-enabling extensible classes. CRUCIAL: BEFORE, to modify the include 
+	# hence re-enabling extensible classes. CRUCIAL: BEFORE, to modify the include
 	# path and properly follow extensible classes. PUBLIC is also important
 	# to let every other target linking with jitbuilder to use these headers
 	# targets linking with jitbuilder will also need to link with aotelfcomp
-	# (probably handled by target_link_libraries jitbuilder aotelfcomp and 
+	# (probably handled by target_link_libraries jitbuilder aotelfcomp and
 	# target_link_libraries  aotelfcomp jitbuilder  combo that follows a bit later)
 	target_include_directories(aotelfcomp BEFORE PUBLIC ${WABTAOT_ELF_INCLUDES})
 	# This line makes jitbuilder look for our extensible classes headers when compiled

@@ -3,7 +3,9 @@
 #include "aot-type-dictionary.h"
 #include "aot-function-builder.h"
 #include "trap-with.h"
+#include "env/aot-meta.hpp"
 
+namespace TR {class AOTLoadStoreDriver;}
 using namespace wabt;
 using namespace wabt::interp;
 extern int32_t internal_compileMethodBuilder(TR::MethodBuilder *methodBuilder, void **entryPoint);
@@ -122,6 +124,8 @@ class WABTAOTCompilerLib
     */
    static void relocateAOT(interp::Environment &env, DefinedModule *module);
 
+   static void setLoadStoreDriver(TR::AOTLoadStoreDriver* driver);
+   static TR::AOTLoadStoreDriver* getLoadStoreDriver();
 #ifndef WASM_SHARED_CACHE // This basically is only used in ELF-enabled runtime
    /**
     * @brief Attempt to load an SO file by filename
@@ -158,6 +162,7 @@ class WABTAOTCompilerLib
    static int shouldReEmitELF;
 #endif
    static int registeredImportsOnce;
+   static TR::AOTLoadStoreDriver* _loadStoreDriver;
    };
 }
 }

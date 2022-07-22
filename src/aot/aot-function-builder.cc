@@ -7,6 +7,8 @@
 //#include "/home/petar/wasmjit-omr/third_party/omr/compiler/ilgen/VirtualMachineOperandStack.hpp"
 //#include "infra/Assert.hpp"
 #include "aot-compiler-lib.hpp"
+#include "env/AOTLoadStoreDriver.hpp"
+#include "env/AOTMethodHeader.hpp"
 #include "ilgen/VirtualMachineState.hpp"
 #include <cmath>
 #include <iostream>
@@ -1480,7 +1482,13 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder *b,
                auto callingAOTMeta = env_.aot_meta_.find(callingFunction);
                if (callingAOTMeta != env_.aot_meta_.end())
                   {
-                  callingAOTMeta->second.addDependency(offset);
+                  TR::AOTMethodHeader* hdr =  WABTAOTCompilerLib::getLoadStoreDriver()->getRegisteredAOTMethodHeader(callingAOTMeta->second.wasm_fn->dbg_name_.c_str());
+                  if (hdr==NULL){
+                     
+                  }else{
+                     printf("Found a header for the calling function");
+                     hdr->addDependency(meta_it->second.index);
+                  }
                   return false;
                   }
                else
@@ -1585,8 +1593,6 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder *b,
       // }
 
    case Opcode::I32Load8S:
-
-   case Opcode::I32Load8U:
       {
       auto index = ReadU32(&pc);
       auto *mem = b->Load(mem_names_[index].data());
@@ -1604,9 +1610,25 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder *b,
       break;
       }
 
-   case Opcode::I32Load16S:
+   case Opcode::I32Load8U:
+      {
+      auto index = ReadU32(&pc);
+      auto *mem = b->Load(mem_names_[index].data());
+      // auto memsize = b->ConstInt64(64*1024);
+      auto offset = b->ConstInt64(static_cast<uint64_t>(ReadU32(&pc)));
+      auto dynamicAddr = Pop(b, "i64");
+      // EmitTrapIf(b,b->UnsignedGreaterThan(dynamicAddr,
+      //	 b->Sub(b->Sub(memsize,offset),b->ConstInt64(4))),
+      //    interp::Result::TrapMemoryAccessOutOfBounds);//pValueType is always 64-bit...
+      auto address = b->Add(dynamicAddr, offset);
 
-   case Opcode::I32Load16U:
+      auto location = b->IndexAt(types_->PointerTo(Int8), mem, address);
+      TR::IlValue *value = b->LoadAt(types_->PointerTo(Int8), location);
+      Push(b, "i32", b->UnsignedConvertTo(Int32, value));
+      break;
+      }
+
+   case Opcode::I32Load16S:
       {
       auto index = ReadU32(&pc);
       auto *mem = b->Load(mem_names_[index].data());
@@ -1621,6 +1643,23 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder *b,
       auto location = b->IndexAt(types_->PointerTo(Int8), mem, address);
       TR::IlValue *value = b->LoadAt(types_->PointerTo(Int16), location);
       Push(b, "i32", b->ConvertTo(Int32, value));
+      break;
+      }
+   case Opcode::I32Load16U:
+      {
+      auto index = ReadU32(&pc);
+      auto *mem = b->Load(mem_names_[index].data());
+      // auto memsize = b->ConstInt64(64*1024);
+      auto offset = b->ConstInt64(static_cast<uint64_t>(ReadU32(&pc)));
+      auto dynamicAddr = Pop(b, "i64");
+      // EmitTrapIf(b,b->UnsignedGreaterThan(dynamicAddr,
+      //	 b->Sub(b->Sub(memsize,offset),b->ConstInt64(4))),
+      //    interp::Result::TrapMemoryAccessOutOfBounds);//pValueType is always 64-bit...
+      auto address = b->Add(dynamicAddr, offset);
+
+      auto location = b->IndexAt(types_->PointerTo(Int8), mem, address);
+      TR::IlValue *value = b->LoadAt(types_->PointerTo(Int16), location);
+      Push(b, "i32", b->UnsignedConvertTo(Int32, value));
       break;
       }
 
@@ -1644,8 +1683,6 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder *b,
       }
 
    case Opcode::I64Load8S:
-
-   case Opcode::I64Load8U:
       {
       auto index = ReadU32(&pc);
       auto *mem = b->Load(mem_names_[index].data());
@@ -1663,9 +1700,25 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder *b,
       break;
       }
 
-   case Opcode::I64Load16S:
+   case Opcode::I64Load8U:
+      {
+      auto index = ReadU32(&pc);
+      auto *mem = b->Load(mem_names_[index].data());
+      // auto memsize = b->ConstInt64(64*1024);
+      auto offset = b->ConstInt64(static_cast<uint64_t>(ReadU32(&pc)));
+      auto dynamicAddr = Pop(b, "i64");
+      // EmitTrapIf(b,b->UnsignedGreaterThan(dynamicAddr,
+      //	 b->Sub(b->Sub(memsize,offset),b->ConstInt64(4))),
+      //    interp::Result::TrapMemoryAccessOutOfBounds);//pValueType is always 64-bit...
+      auto address = b->Add(dynamicAddr, offset);
 
-   case Opcode::I64Load16U:
+      auto location = b->IndexAt(types_->PointerTo(Int8), mem, address);
+      TR::IlValue *value = b->LoadAt(types_->PointerTo(Int8), location);
+      Push(b, "i64", b->UnsignedConvertTo(Int64, value));
+      break;
+      }
+
+   case Opcode::I64Load16S:
       {
       auto index = ReadU32(&pc);
       auto *mem = b->Load(mem_names_[index].data());
@@ -1682,10 +1735,25 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder *b,
       Push(b, "i64", b->ConvertTo(Int64, value));
       break;
       }
+   case Opcode::I64Load16U:
+      {
+      auto index = ReadU32(&pc);
+      auto *mem = b->Load(mem_names_[index].data());
+      // auto memsize = b->ConstInt64(64*1024);
+      auto offset = b->ConstInt64(static_cast<uint64_t>(ReadU32(&pc)));
+      auto dynamicAddr = Pop(b, "i64");
+      // EmitTrapIf(b,b->UnsignedGreaterThan(dynamicAddr,
+      //	 b->Sub(b->Sub(memsize,offset),b->ConstInt64(4))),
+      //    interp::Result::TrapMemoryAccessOutOfBounds);//pValueType is always 64-bit...
+      auto address = b->Add(dynamicAddr, offset);
+
+      auto location = b->IndexAt(types_->PointerTo(Int8), mem, address);
+      TR::IlValue *value = b->LoadAt(types_->PointerTo(Int16), location);
+      Push(b, "i64", b->UnsignedConvertTo(Int64, value));
+      break;
+      }
 
    case Opcode::I64Load32S:
-
-   case Opcode::I64Load32U:
       {
       auto index = ReadU32(&pc);
       auto *mem = b->Load(mem_names_[index].data());
@@ -1700,6 +1768,23 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder *b,
       auto location = b->IndexAt(types_->PointerTo(Int8), mem, address);
       TR::IlValue *value = b->LoadAt(types_->PointerTo(Int32), location);
       Push(b, "i64", b->ConvertTo(Int64, value));
+      break;
+      }
+   case Opcode::I64Load32U:
+      {
+      auto index = ReadU32(&pc);
+      auto *mem = b->Load(mem_names_[index].data());
+      // auto memsize = b->ConstInt64(64*1024);
+      auto offset = b->ConstInt64(static_cast<uint64_t>(ReadU32(&pc)));
+      auto dynamicAddr = Pop(b, "i64");
+      // EmitTrapIf(b,b->UnsignedGreaterThan(dynamicAddr,
+      //	 b->Sub(b->Sub(memsize,offset),b->ConstInt64(4))),
+      //    interp::Result::TrapMemoryAccessOutOfBounds);//pValueType is always 64-bit...
+      auto address = b->Add(dynamicAddr, offset);
+
+      auto location = b->IndexAt(types_->PointerTo(Int8), mem, address);
+      TR::IlValue *value = b->LoadAt(types_->PointerTo(Int32), location);
+      Push(b, "i64", b->UnsignedConvertTo(Int64, value));
       break;
       }
 
