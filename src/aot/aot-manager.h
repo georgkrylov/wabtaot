@@ -42,12 +42,22 @@ class AOTManager
    {
 
  public:
+   /**
+    * @brief Construct a new AOTManager object
+    * The fields related to the entry point are
+    * set to "OFF" in default configuration
+    */
+   AOTManager()
+       : needsEntryPointGeneration(false),
+         entryPointFunction(NULL),
+         _loadStoreDriver(NULL){};
+
    void push_back_FB(uint32_t offset, AOTFunctionBuilder *b,
                      AOTTypeDictionary *t)
       {
       func_index_[offset] = {b, t};
       }
-  //  void defineExternalFunctionToJit(std::string const funcName, void *Function);
+   //  void defineExternalFunctionToJit(std::string const funcName, void *Function);
 
    void push_back_import(std::string name, interp::Func *fn)
       {
@@ -105,10 +115,11 @@ class AOTManager
     * @param env environment within threads
     * @param ind position in the environment
     * @param func The defined function we want to compile
-    * @return void* pointer to the compiled function returned
+    * @param thread pointer to the thread that started a compilation
+    * @return void* pointer to the compiled function returned (or, in case of the interpreter, unused?)
     * by JitBuilder
     */
-   void *AOTCompileAFunction(wabt::interp::Environment *env, wabt::Index ind, wabt::interp::DefinedFunc *func);
+   void *AOTCompileAFunction(wabt::interp::Environment *env, wabt::Index ind, wabt::interp::DefinedFunc *func, wabt::interp::Thread* t);
    /**
     * @brief Working from an assumption the dependencies need to be compiled before compiling the method
     *
@@ -119,12 +130,30 @@ class AOTManager
     */
    int CheckDependenciesCompiled(wabt::interp::Environment *env, wabt::Index ind, wabt::interp::DefinedFunc *func);
 
+   void setNeedsEntry(bool needsEntry){ needsEntryPointGeneration = needsEntry;}
+
  protected:
    /**
     * @brief This pointer is necessary to be able to load and store
     * methodheaders, extracted from JIT.cpp
     */
    TR::AOTLoadStoreDriver *_loadStoreDriver;
+   /**
+    * @brief For functions requiring entry point generation, based on
+    * the function that the AOTManager was created for, creates a char*
+    * with entrypoint name in it.
+    * @param fn - the defined function, potentially should be the function index
+    * @return char* - entry point function name. Freeing the memory
+    * is the responsibility of the user
+    */
+   char* generateEntryPointName(interp::DefinedFunc* fn);
+   void *entryPointFunction;
+   /**
+    * @brief When a function is compiled, entry point generation
+    * might be required - popping the function parameters from the
+    * interpreter stack
+    */
+   bool needsEntryPointGeneration;
 
  private:
    std::map<uint32_t, std::pair<AOTFunctionBuilder *,

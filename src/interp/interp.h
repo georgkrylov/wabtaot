@@ -38,19 +38,21 @@
 #include "src/opcode.h"
 #include "src/stream.h"
 
+
 namespace wabt {
 
 namespace jit {
 class FunctionBuilder;
 }
 
+
 namespace aot {
 class AOTFunctionBuilder;
 class AOTManager;
+class WABTAOTCompilerLib;
 }
 
 namespace interp {
-
 #define FOREACH_INTERP_RESULT(V)                                            \
   V(Ok, "ok")                                                               \
   /* returned from the top-most function */                                 \
@@ -607,7 +609,7 @@ class Environment {
     }
 
   int getOffsetForAOTFunctionNaming() {
-    AOTMeta::getOffsetForNaming();
+    return AOTMeta::getOffsetForNaming();
     }
 
 /**
@@ -959,6 +961,7 @@ class Thread {
   friend class jit::FunctionBuilder;
   friend jit::Result_t jit::InterpThunk(jit::ThreadInfo*, Index);
   friend class wabt::aot::AOTFunctionBuilder;
+  friend class wabt::aot::WABTAOTCompilerLib;
   friend class ThreadOffset;
   friend class Executor;
   const uint8_t* GetIstream() const { return env_->istream_->data.data(); }
@@ -1098,6 +1101,7 @@ class Executor {
   Environment* env_ = nullptr;
   Stream* trace_stream_ = nullptr;
   Thread thread_;
+  friend class wabt::aot::WABTAOTCompilerLib;
 };
 
 bool IsCanonicalNan(uint32_t f32_bits);

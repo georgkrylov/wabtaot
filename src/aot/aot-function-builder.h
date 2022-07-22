@@ -113,14 +113,24 @@ class FunctionImport;
  */
 class AOTFunctionBuilder : public TR::MethodBuilder {
  public:
+ /**
+  * @brief Construct a new AOTFunctionBuilder object
+  * 
+  * @param thunk - to see if we should compile a thunk
+  */
   AOTFunctionBuilder(interp::Thread*, interp::DefinedFunc*, std::string&&,
-		     AOTTypeDictionary*, Environment&, AOTManager&);
+		     AOTTypeDictionary*, Environment&, AOTManager&,bool thunk = false);
 
   bool buildIL() override;
 
   TR::IlValue* popReturnValue(TR::IlBuilder*);
   void pushReturnValue(interp::Func*, TR::IlBuilder*, TR::IlValue*);
   void pushReturnValue(Index, TR::IlBuilder*, TR::IlValue*);
+  /**
+   * @brief Parameter names? for the builder are pushed on OMRVMStack
+   * using this method, during IL building stage. The parameters
+   * are stored in the param_names_ vector?
+   */
   void pushParams();
 
   virtual ~AOTFunctionBuilder() {}
@@ -162,6 +172,20 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
    * from `Thread::Pick()` and users must take this into account.
    */
   TR::IlValue* Pick(Index depth);
+
+  /**
+   * @brief To be used as a entrypoint FROM interpreter to compiled code
+   * see more at http://gitlab.casa.cs.unb.ca/gkrylov/wasmjitwithomr/-/issues/11#note_32673
+   * This function cannot go to the AOTFunctionBuilder directly, because
+   * the interpreter is NOT always modified from AOT code, only by
+   * the entry functions,  that also place the result of the call on
+   * the interpreter stack
+   * @param b - IlBuilder that allows to do CALL expression
+   * @param ind - index of a function in the environment. Currently matches index in AOTMeta
+   * @return - boolean value, will be false if the types are not supported
+   */
+  bool generateCallFromInterpToAOT(TR::IlBuilder *b,Index ind);
+
   uint32_t pickLocalOffset();
   /**
    * @brief This function calls the DefineFunction from JitBuilder API
@@ -289,14 +313,18 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
   std::vector<BytecodeWorkItem> workItems_;
 
   AOTTypeDictionary* types_;
-
   interp::Thread* thread_;
+  /**
+   * @brief This design limits to one environment
+   *
+   */
+  static Environment* envPointer;
   interp::DefinedFunc* fn_;
 
   std::string fn_name_;
 
   Environment& env_;
-  static Environment* envPointer;
+
   AOTManager& aotManager_;
 
   TR::IlType* const valueType_;
@@ -327,7 +355,7 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
   };
 
   std::vector<PreviousCompilerState> stackOfStacks_;
-
+  bool _isThunk = false;
   bool Emit(TR::BytecodeBuilder* b, const uint8_t* istream, const uint8_t* pc);
 };
 
