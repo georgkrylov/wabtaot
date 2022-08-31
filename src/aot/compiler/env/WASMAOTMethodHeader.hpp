@@ -116,6 +116,19 @@ public:
    unsigned int getDependenciesArraySize(){return lastUsedIdxInDependenciesArray;}
 
    unsigned int *getDependenciesArray(){return dependencies;}
+   /**
+    * @brief Checks if dependency was previously recorded
+    *
+    * @param dep index of the dependency to look up
+    * @return int 0 if it was, 1 if it wasnt
+    */
+   int containsDependency(unsigned int dep);
+      /**
+    * @brief Index of a function the AOT meta is created for. At the moment of initialization is off by some value
+    * (depending on the number of modules are read and their exports (which are imports to other modules?)).
+    * The proper value (for now) can be computed by subtracting AOTMeta::numberOfImports
+    */
+   unsigned int index;
 
 protected:
 
@@ -128,12 +141,7 @@ protected:
     * we want to keep track of the maximum size of the array.
     */
    unsigned int dependenciesMaxSize;
-   /**
-    * @brief Index of a function the AOT meta is created for. At the moment of initialization is off by some value
-    * (depending on the number of modules are read and their exports (which are imports to other modules?)).
-    * The proper value (for now) can be computed by subtracting AOTMeta::numberOfImports
-    */
-   unsigned int index;
+
    /**
     * @brief As we are going to serialize and deserialize the dependencies array,
     * we want to keep track of the last used index in dependencies array.

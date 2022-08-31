@@ -1438,6 +1438,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder *b,
       //    offset = offset + numberOfImports - numberOfDeclaredImports;
       // // printf("offset to env is %u,",offset);
 
+      /** Offset now has the module imports subtracted */
       auto meta_it = env_.aot_meta_.find(offset);
 
       if (meta_it != env_.aot_meta_.end())
@@ -1475,21 +1476,40 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder *b,
             if (strcmp(fn->dbg_name_.c_str(), "???") == 0 && fn->is_host == false)
                {
                int callingFunction = this->aotManager_.getFunctionThatManagerWasCreatedFor();
-               // /** IF GT THAN NUMBER OF IMPORTS?*/
-               // int updatedCallingFunction = callingFunction;
-               // if (callingFunction >= numberOfFunctionsInEnvBeforeFunction)
-               //    updatedCallingFunction = updatedCallingFunction - numberOfFunctionsInEnvBeforeFunction+numberOfDeclaredImports;
+               /**
+                * @brief  Probably need to do an async compilation? Or define functions?
+                *
+                */
                auto callingAOTMeta = env_.aot_meta_.find(callingFunction);
                if (callingAOTMeta != env_.aot_meta_.end())
                   {
-                  TR::AOTMethodHeader* hdr =  WABTAOTCompilerLib::getLoadStoreDriver()->getRegisteredAOTMethodHeader(callingAOTMeta->second.wasm_fn->dbg_name_.c_str());
-                  if (hdr==NULL){
-                     
-                  }else{
-                     printf("Found a header for the calling function");
-                     hdr->addDependency(meta_it->second.index);
-                  }
-                  return false;
+                  DefinedFunc*  callingFunc = cast<DefinedFunc>(callingAOTMeta->second.wasm_fn);
+                  TR::AOTMethodHeader* hdr =  WABTAOTCompilerLib::getLoadStoreDriver()->getRegisteredAOTMethodHeader(callingFunc->dbg_name_.c_str());
+                  if (hdr==NULL) /** Export for example */
+                     {
+                     return false;
+                     }
+                  else /** There was a header*/
+                     {
+                     unsigned int indexOfTheFunctionBeingCalled = meta_it->second.index;
+                     if (hdr->containsDependency(indexOfTheFunctionBeingCalled) == 1)
+                        {
+                        hdr->addDependency(indexOfTheFunctionBeingCalled);
+                        return false;
+                        }
+                        else
+                        {
+                        auto metaOfTheFunctionBeingCalled = env_.aot_meta_.find(indexOfTheFunctionBeingCalled);
+                         if (metaOfTheFunctionBeingCalled != env_.aot_meta_.end())
+                           {
+                           DefinedFunc*  functionBeingCalled = cast<DefinedFunc>(metaOfTheFunctionBeingCalled->second.wasm_fn);
+                           if (functionBeingCalled->is_compiled == false)
+                              {
+                              return false;
+                              }
+                           }
+                        }
+                     }
                   }
                else
                   {
@@ -1499,6 +1519,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder *b,
                   */
                   //  assert(false);
                   }
+                  return false;
                }
             // printf("sig index within module is %u",fn->sig_index);
             // printf("offset is %u\n",reinterpret_cast<DefinedFunc*>(fn)->offset);

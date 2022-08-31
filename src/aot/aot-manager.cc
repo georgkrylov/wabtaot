@@ -95,6 +95,44 @@ char *wabt::aot::AOTManager::generateEntryPointName(wabt::interp::DefinedFunc *f
    return result;
    }
 
+bool wabt::aot::AOTManager::AOTLoadAFunction(wabt::interp::Environment *env, wabt::Index ind)
+   {
+   if (_loadStoreDriver == NULL)
+      {
+      _loadStoreDriver = reinterpret_cast<TR::AOTLoadStoreDriver *>(getLoadStoreDriver());
+      WABTAOTCompilerLib::setLoadStoreDriver(_loadStoreDriver);
+      }
+   Func *func = (env->GetFunc(ind));
+   if (!func->is_compiled)
+      {
+      DefinedFunc *fn = reinterpret_cast<DefinedFunc *>(func);
+      if (CheckDependenciesCompiled(env, ind, fn) != 0) /* This if statement could possibly contain compilation strategies???*/
+         {
+         assert(strcmp("???", fn->dbg_name_.c_str()));
+         void *function = nullptr;
+         function = getCodeEntry(const_cast<char *>(fn->dbg_name_.c_str()));
+
+         if (function != nullptr) /* was able to load the function */
+            {
+            _loadStoreDriver->relocateRegisteredMethod(const_cast<char *>(fn->dbg_name_.c_str()));
+            /**
+             * @brief Maybe should be united with the lines setting the same value
+             * for function entry point
+             */
+            fn->is_compiled = true;
+            fn->aot_fn_ = reinterpret_cast<wabt::jit::AOTedFunction>(function);
+            /** should I insert into aot meta? */
+            return true;
+            }
+         }
+      }
+   else
+      {
+      return true;
+      }
+   return false;
+   };
+
 void *wabt::aot::AOTManager::AOTCompileAFunction(wabt::interp::Environment *env, wabt::Index ind, wabt::interp::DefinedFunc *fn, wabt::interp::Thread *t)
    {
    /** If we haven't acquired a LoadStoreDriver yet */
@@ -113,6 +151,9 @@ void *wabt::aot::AOTManager::AOTCompileAFunction(wabt::interp::Environment *env,
          if (!function) /* was not able to load the function */
             {
             internal_compileMethodBuilder(&builder, &function);
+#ifndef WASM_SHARED_CACHE // This is an ELF-enabled runtime
+            WABTAOTCompilerLib::shouldReEmitELF = 1;
+#endif
             if (function == NULL)
                { /* was not able to compile, for example the dependencies were not resolved */
                return NULL;
@@ -183,5 +224,10 @@ void *wabt::aot::AOTManager::AOTCompileAFunction(wabt::interp::Environment *env,
          /** TODO: Something more meaningful **/
          return NULL;
          }
+      }
+   else
+      {
+      /*The function was compiled*/
+      return NULL;
       }
    }

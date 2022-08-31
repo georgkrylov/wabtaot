@@ -50,6 +50,7 @@ class AOTManager
    AOTManager()
        : needsEntryPointGeneration(false),
          entryPointFunction(NULL),
+         _indexOfAFuncStartedAOTManager(0),
          _loadStoreDriver(NULL){};
 
    void push_back_FB(uint32_t offset, AOTFunctionBuilder *b,
@@ -120,6 +121,16 @@ class AOTManager
     * by JitBuilder
     */
    void *AOTCompileAFunction(wabt::interp::Environment *env, wabt::Index ind, wabt::interp::DefinedFunc *func, wabt::interp::Thread* t);
+
+   /**
+    * @brief Tries to load a function, returns false if the function was not
+    * compiled
+    * @param env environment within threads
+    * @param ind position of the function in the environment
+    * @return true function was loaded
+    * @return false function was not loaded
+    */
+   bool AOTLoadAFunction(wabt::interp::Environment *env, wabt::Index ind);
    /**
     * @brief Working from an assumption the dependencies need to be compiled before compiling the method
     *

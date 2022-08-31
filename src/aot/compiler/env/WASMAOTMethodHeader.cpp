@@ -95,8 +95,8 @@ void WASM::AOTMethodHeader::serializeMethod(uint8_t *buffer, size_t bufferSize)
    ptr += sizeof(int);
 
    if (lastUsedIdxInDependenciesArray != 0)
-   // store additional data, this could be a method promoted to omr
-   memcpy(ptr, dependencies, lastUsedIdxInDependenciesArray * sizeof(unsigned int));
+      // store additional data, this could be a method promoted to omr
+      memcpy(ptr, dependencies, lastUsedIdxInDependenciesArray * sizeof(unsigned int));
    // Now the buffer contains all the data relevant to the
    // method header.
    }
@@ -175,4 +175,17 @@ void WASM::AOTMethodHeader::addDependency(unsigned int dep)
       }
    dependencies[lastUsedIdxInDependenciesArray] = dep;
    lastUsedIdxInDependenciesArray++;
+   }
+
+int WASM::AOTMethodHeader::containsDependency(unsigned int dep)
+   {
+   int result = 1;
+   for (int i = 0; i < lastUsedIdxInDependenciesArray; i++)
+      {
+      if (dependencies[i] == dep)
+         {
+         result = 0;
+         }
+      }
+   return result;
    }
