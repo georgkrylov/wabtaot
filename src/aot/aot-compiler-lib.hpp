@@ -41,6 +41,26 @@ class WABTAOTCompilerLib
    static void compileEverything(interp::Environment &env, wabt::aot::AOTManager &aotManager, DefinedModule *module);
 
    /**
+    * @brief For functions requiring entry point generation, based on
+    * the function that the AOTManager was created for, creates a char*
+    * with entrypoint name in it.
+    * @param fn - the defined function, potentially should be the function index
+    * @return char* - entry point function name. Freeing the memory
+    * is the responsibility of the user
+    */
+   static char* generateEntryPointName(interp::DefinedFunc* fn);
+
+   /**
+    * @brief For functions requiring entry point generation, based on
+    * the function that the AOTManager was created for, creates a char*
+    * with entrypoint name in it.
+    * @param fn - the defined function, potentially should be the function index
+    * @return char* - entry point function name. Freeing the memory
+    * is the responsibility of the user
+    */
+   static void generateFunctionName(wabt::interp::Func* func,unsigned int Index, std::string moduleName,std::string& name);
+
+   /**
     * @brief Module filename is needed for distinguishing between functions loaded,
     * when doing aot compilation, as we cannot guarantee the module name is always
     * the same. The function defines the module name for other threads to access it

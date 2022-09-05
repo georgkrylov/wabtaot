@@ -62,6 +62,7 @@ public:
       dependencies = NULL;
       dependenciesMaxSize = 0;
       lastUsedIdxInDependenciesArray = 0;
+      methodName[0]=0;
       };
 
    AOTMethodHeader(uint8_t *serializedMethodData);
@@ -89,19 +90,12 @@ public:
    size_t sizeOfSerializedVersion();
 
    /**
-    * @brief Set the Additional Data : a prototype
-    * method to store an int to later load it
-    * @param q - the int to store
-    */
-   void setAdditionalData(wabt::aot::AOTMeta *meta);
-
-   /**
     * @brief get the Additional Data : a prototype
     * method to load a previously stored int
     * @return the wabt::aot::AOTMeta*
     */
    wabt::aot::AOTMeta *getAdditionalData();
-
+   void assignName(const char* methodName);
    /**
     * @brief To build a graph, adds a dependency to the calling AOT Meta.
     *
@@ -133,7 +127,7 @@ public:
 protected:
 
    TR::AOTMethodHeader *self();
-   wabt::aot::AOTMeta *additionalData;
+   char methodName[8];
 
    unsigned int *dependencies = NULL;
    /**

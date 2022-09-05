@@ -1764,7 +1764,9 @@ Result Environment::TryAOT(Thread* t,  DefinedFunc* func, Index ind){
       /**This line is used to construct debug name, limited to 8 symbols as relocation infrastructure does not
        * support longer names
        */
-      std::string name = "f" + std::to_string(ind+getOffsetForAOTFunctionNaming()) + "m" + modulee->name.substr(0, 3);
+      std::string name;
+      WABTAOTCompilerLib::generateFunctionName(fn,ind,modulee->name,name);
+
       AOTTypeDictionary *types = new (PERSISTENT_NEW) AOTTypeDictionary();
       // static AOTTypeDictionary types;
       AOTFunctionBuilder *builder = new (PERSISTENT_NEW) AOTFunctionBuilder(t, fn,
@@ -1778,12 +1780,14 @@ Result Environment::TryAOT(Thread* t,  DefinedFunc* func, Index ind){
 
       // This line is used to construct debug name, limited to 8 symbols as relocation infrastructure does not
       // support longer names
-      fn->dbg_name_ = "f" + std::to_string(ind+getOffsetForAOTFunctionNaming()) + "m" + modulee->name.substr(0, 3);
+      // fn->dbg_name_ = "f" + std::to_string(ind+getOffsetForAOTFunctionNaming()) + "m" + modulee->name.substr(0, 3);
       /** Trying to assign debug name, might be problematic if that's an import
        * Two here is hardcoded as em-module.hpp appends two modules and there's an env module
        */
-      reinterpret_cast<DefinedFunc *>(fn)->dbg_name_ = "f" + std::to_string(ind+getOffsetForAOTFunctionNaming()) + "m" + this->GetModule(moduleIndex)->name.substr(0, 3);
+      WABTAOTCompilerLib::generateFunctionName(fn,ind,modulee->name,name);
+      reinterpret_cast<DefinedFunc *>(fn)->dbg_name_ =name;
       reinterpret_cast<DefinedModule *>(this->GetModule(moduleIndex))->funcs.emplace_back(fn);
+
       }
    else
       {

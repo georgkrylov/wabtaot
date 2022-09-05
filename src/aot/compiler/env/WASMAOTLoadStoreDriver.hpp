@@ -49,6 +49,7 @@ class OMR_EXTENSIBLE AOTLoadStoreDriver : public OMR::AOTLoadStoreDriverConnecto
    TR::AOTMethodHeader *createAndRegisterAOTMethodHeader(const char *methodName, uint8_t *codeStart,
                                                          uint32_t codeSize, TR::RelocationRecordBinaryTemplate *dataStart, uint32_t dataSize);
 
+   void storeHeaderForCompiledMethod(const char* methodName);
  protected:
    TR::AOTLoadStoreDriver *self();
    };

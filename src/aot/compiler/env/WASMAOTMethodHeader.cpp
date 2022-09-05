@@ -10,11 +10,6 @@ WASM::AOTMethodHeader::self()
    return reinterpret_cast<TR::AOTMethodHeader *>(this);
    }
 
-void WASM::AOTMethodHeader::setAdditionalData(wabt::aot::AOTMeta *q)
-   {
-   self()->additionalData = q;
-   index = q->getIndexOfAFunctionWithinModule();
-   }
 
 WASM::AOTMethodHeader::~AOTMethodHeader()
    {
@@ -27,11 +22,6 @@ WASM::AOTMethodHeader::~AOTMethodHeader()
       }
    }
 
-wabt::aot::AOTMeta *
-WASM::AOTMethodHeader::getAdditionalData()
-   {
-   return self()->additionalData;
-   }
 
 size_t WASM::AOTMethodHeader::sizeOfSerializedVersion()
    {
@@ -46,7 +36,8 @@ size_t WASM::AOTMethodHeader::sizeOfSerializedVersion()
    // unsigned int: index of the function
    // size of dependencies array - int
    // lastUsedIdxInDependenciesArray * int  for the prototype of additional data
-   return sizeof(size_t) + 2 * sizeof(uint32_t) + self()->getCompiledCodeSize() + self()->getRelocationsSize() + sizeof(unsigned int) + sizeof(int) + lastUsedIdxInDependenciesArray * sizeof(int);
+   // sizeof(char)*8 - name of the method
+   return sizeof(size_t) + 2 * sizeof(uint32_t) + self()->getCompiledCodeSize() + self()->getRelocationsSize() + sizeof(unsigned int) + sizeof(int) + lastUsedIdxInDependenciesArray * sizeof(int)+sizeof(char)*8;
    }
 
 void WASM::AOTMethodHeader::serializeMethod(uint8_t *buffer, size_t bufferSize)
@@ -95,8 +86,12 @@ void WASM::AOTMethodHeader::serializeMethod(uint8_t *buffer, size_t bufferSize)
    ptr += sizeof(int);
 
    if (lastUsedIdxInDependenciesArray != 0)
+      {
       // store additional data, this could be a method promoted to omr
       memcpy(ptr, dependencies, lastUsedIdxInDependenciesArray * sizeof(unsigned int));
+      ptr+=lastUsedIdxInDependenciesArray * sizeof(unsigned int);
+      }
+   memcpy(ptr,self()->methodName,8*sizeof(char));
    // Now the buffer contains all the data relevant to the
    // method header.
    }
@@ -124,9 +119,12 @@ WASM::AOTMethodHeader::AOTMethodHeader(uint8_t *serializedMethodData)
    // copy exactly the stored number. Maybe nothing to copy
    memcpy(dependencies, serializedMethodData, sizeof(unsigned int) * dependenciesMaxSize);
    self()->lastUsedIdxInDependenciesArray = dependenciesMaxSize;
+   // offset the method data and by the size of dependencies array times type
+   serializedMethodData+=sizeof(unsigned int) * dependenciesMaxSize;
+   // copy method name
+   memcpy(self()->methodName,serializedMethodData,sizeof(char)*8);
    // adjust index to be zero based again indicate that max size was updated
    self()->dependenciesMaxSize += 5;
-
    size_t computedSize = self()->sizeOfSerializedVersion();
 
    TR_ASSERT(computedSize == storedSize, "Stored and Computed MethodHeader sizes mismatch, possible message corruption \n");
@@ -175,6 +173,12 @@ void WASM::AOTMethodHeader::addDependency(unsigned int dep)
       }
    dependencies[lastUsedIdxInDependenciesArray] = dep;
    lastUsedIdxInDependenciesArray++;
+   }
+
+void WASM::AOTMethodHeader::assignName(const char* methodName)
+   {
+   memcpy(self()->methodName,methodName,8*sizeof(char));
+   self()->methodName[7]=0;
    }
 
 int WASM::AOTMethodHeader::containsDependency(unsigned int dep)

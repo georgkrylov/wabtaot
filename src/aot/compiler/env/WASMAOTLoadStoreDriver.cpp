@@ -50,3 +50,15 @@ WASM::AOTLoadStoreDriver::createAndRegisterAOTMethodHeader(const char *methodNam
    self()->registerAOTMethodHeader(methodName, hdr);
    return hdr;
    }
+
+void
+WASM::AOTLoadStoreDriver::storeHeaderForCompiledMethod(const char* methodName)
+   {
+   TR::AOTMethodHeader *hdr = _methodNameToHeaderMap[methodName];
+   if (hdr != NULL)
+      {
+      hdr->assignName(methodName);
+      self()->storeAOTMethodAndDataInTheStorage(methodName);
+      }
+   }
+

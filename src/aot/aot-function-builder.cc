@@ -386,11 +386,24 @@ TR::IlType *AOTFunctionBuilder::functionReturnType(interp::Func *fn)
 
 void AOTFunctionBuilder::defineFunction(const std::string &name, interp::DefinedFunc *fn)
    {
+   /** As Jitbuilder prohibits defining the same function twice (checked by name),
+    * we need to check if the function was defined before. If it was - early return */
+   bool defined_function_before_ = false;
+
+   for (auto& elem:defined_names_)
+      {
+      if (name.compare(elem)==0)
+         {
+         defined_function_before_= true;
+         }
+      }
+
    /** Presumably, if the function we are trying to define in JitBuilder is the function
     * this AOTMethodBuilder describes, do nothing
     */
-   if (fn == fn_ && _isThunk == false)
+   if ((fn == fn_ && _isThunk == false) || defined_function_before_)
       return;
+   defined_names_.push_back(name);
    /** If the function is the function this AOTMethodBuilder describes somehow (not sure
     *  it can possibly evaluate to true, but I will leave it be), then the return type
     *  needs to be the return type of the function, otherwise we use the method

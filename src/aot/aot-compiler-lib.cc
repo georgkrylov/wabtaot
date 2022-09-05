@@ -379,6 +379,19 @@ void WABTAOTCompilerLib::loadELFToMemory(const char *moduleFilename)
       }
    }
 
+char *WABTAOTCompilerLib::generateEntryPointName(wabt::interp::DefinedFunc *func)
+   {
+   char *result = (char *)calloc(1, 8);
+   result = strncpy(result, func->dbg_name_.c_str(), 8);
+   result[0] = 'e';
+   return result;
+   }
+
+void WABTAOTCompilerLib::generateFunctionName(wabt::interp::Func* func, unsigned int ind, std::string moduleName, std::string& name)
+   {
+   name = "f" + std::to_string(ind+wabt::aot::AOTMeta::getOffsetForNaming()) + "m" + moduleName.substr(0, 3);
+   }
+
 void WABTAOTCompilerLib::createELFFile(const char *moduleFilename)
    {
    // TODO: make sure the values are properly set

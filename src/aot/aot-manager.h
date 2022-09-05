@@ -58,7 +58,7 @@ class AOTManager
       {
       func_index_[offset] = {b, t};
       }
-   //  void defineExternalFunctionToJit(std::string const funcName, void *Function);
+    void defineExternalFunctionToJit(std::string const funcName, unsigned int index);
 
    void push_back_import(std::string name, interp::Func *fn)
       {
@@ -130,7 +130,7 @@ class AOTManager
     * @return true function was loaded
     * @return false function was not loaded
     */
-   bool AOTLoadAFunction(wabt::interp::Environment *env, wabt::Index ind);
+   bool AOTLoadAFunction(wabt::interp::Environment *env, wabt::Index ind,wabt::interp::Thread* t);
    /**
     * @brief Working from an assumption the dependencies need to be compiled before compiling the method
     *
@@ -139,7 +139,7 @@ class AOTManager
     * @param func  - Defined Function - reference to builders etc
     * @return int - 0 for dependencies failed, 1 for set continuing compilation
     */
-   int CheckDependenciesCompiled(wabt::interp::Environment *env, wabt::Index ind, wabt::interp::DefinedFunc *func);
+   int CheckDependenciesCompiled(wabt::interp::Environment *env, wabt::Index ind, wabt::interp::DefinedFunc *func,wabt::interp::Thread* t);
 
    void setNeedsEntry(bool needsEntry){ needsEntryPointGeneration = needsEntry;}
 
@@ -149,15 +149,7 @@ class AOTManager
     * methodheaders, extracted from JIT.cpp
     */
    TR::AOTLoadStoreDriver *_loadStoreDriver;
-   /**
-    * @brief For functions requiring entry point generation, based on
-    * the function that the AOTManager was created for, creates a char*
-    * with entrypoint name in it.
-    * @param fn - the defined function, potentially should be the function index
-    * @return char* - entry point function name. Freeing the memory
-    * is the responsibility of the user
-    */
-   char* generateEntryPointName(interp::DefinedFunc* fn);
+
    void *entryPointFunction;
    /**
     * @brief When a function is compiled, entry point generation

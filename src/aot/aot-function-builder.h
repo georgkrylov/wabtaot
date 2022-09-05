@@ -342,6 +342,7 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
 
   std::vector<std::string> global_names_;
   std::vector<std::string> mem_names_;
+  std::vector<std::string> defined_names_;
 
   struct PreviousCompilerState {
     TR::BytecodeBuilder* b;
