@@ -51,14 +51,14 @@ class WABTAOTCompilerLib
    static char* generateEntryPointName(interp::DefinedFunc* fn);
 
    /**
-    * @brief For functions requiring entry point generation, based on
-    * the function that the AOTManager was created for, creates a char*
-    * with entrypoint name in it.
-    * @param fn - the defined function, potentially should be the function index
-    * @return char* - entry point function name. Freeing the memory
-    * is the responsibility of the user
+    * @brief For functions requiring AOT compilation, based on
+    * the function index in the environment and sets the string to
+    * the third variable
+    * @param *env - environment pointer
+    * @param Index - index of a function within environment
+    * @param name - string with the function name
     */
-   static void generateFunctionName(wabt::interp::Func* func,unsigned int Index, std::string moduleName,std::string& name);
+   static void generateFunctionName(wabt::interp::Environment* env,unsigned int Index, std::string& name);
 
    /**
     * @brief Module filename is needed for distinguishing between functions loaded,

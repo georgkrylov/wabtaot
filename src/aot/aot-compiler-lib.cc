@@ -387,9 +387,12 @@ char *WABTAOTCompilerLib::generateEntryPointName(wabt::interp::DefinedFunc *func
    return result;
    }
 
-void WABTAOTCompilerLib::generateFunctionName(wabt::interp::Func* func, unsigned int ind, std::string moduleName, std::string& name)
+void WABTAOTCompilerLib::generateFunctionName(wabt::interp::Environment* env, unsigned int ind, std::string& name)
    {
-   name = "f" + std::to_string(ind+wabt::aot::AOTMeta::getOffsetForNaming()) + "m" + moduleName.substr(0, 3);
+   DefinedModule* modulee;
+   Index moduleIndex = WABTAOTCompilerLib::getModuleIndexByFunctionIndex(*env, ind);
+   modulee = reinterpret_cast<DefinedModule *>(env->GetModule(moduleIndex));
+   name = "f" + std::to_string(ind+wabt::aot::AOTMeta::getOffsetForNaming()) + "m" + modulee->name.substr(0, 3);
    }
 
 void WABTAOTCompilerLib::createELFFile(const char *moduleFilename)

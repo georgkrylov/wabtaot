@@ -1765,7 +1765,7 @@ Result Environment::TryAOT(Thread* t,  DefinedFunc* func, Index ind){
        * support longer names
        */
       std::string name;
-      WABTAOTCompilerLib::generateFunctionName(fn,ind,modulee->name,name);
+      WABTAOTCompilerLib::generateFunctionName(this,ind,name);
 
       AOTTypeDictionary *types = new (PERSISTENT_NEW) AOTTypeDictionary();
       // static AOTTypeDictionary types;
@@ -1784,7 +1784,7 @@ Result Environment::TryAOT(Thread* t,  DefinedFunc* func, Index ind){
       /** Trying to assign debug name, might be problematic if that's an import
        * Two here is hardcoded as em-module.hpp appends two modules and there's an env module
        */
-      WABTAOTCompilerLib::generateFunctionName(fn,ind,modulee->name,name);
+      WABTAOTCompilerLib::generateFunctionName(this,ind,name);
       reinterpret_cast<DefinedFunc *>(fn)->dbg_name_ =name;
       reinterpret_cast<DefinedModule *>(this->GetModule(moduleIndex))->funcs.emplace_back(fn);
 

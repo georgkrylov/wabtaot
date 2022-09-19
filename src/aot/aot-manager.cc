@@ -69,9 +69,9 @@ int wabt::aot::AOTManager::CheckDependenciesCompiled(wabt::interp::Environment *
             }
          else
             {
-            /** TODO hardcoded */
+            std::string name;
+            WABTAOTCompilerLib::generateFunctionName(env,ind,name);
             AOTTypeDictionary *types = new (PERSISTENT_NEW) AOTTypeDictionary();
-            std::string   name = "f" + std::to_string(dependenciesArray[i]+wabt::aot::AOTMeta::getOffsetForNaming()) + "mcal";
             AOTFunctionBuilder *builder = new (PERSISTENT_NEW) AOTFunctionBuilder(t, reinterpret_cast<DefinedFunc*>(envPointer->GetFunc(dependenciesArray[i])),
                                                                             std::move(name),
                                                                             types,
@@ -115,7 +115,8 @@ bool wabt::aot::AOTManager::AOTLoadAFunction(wabt::interp::Environment *env, wab
    Func *func = (env->GetFunc(ind));
    if (!func->is_compiled)
       {
-      std::string   name = "f" + std::to_string(ind+wabt::aot::AOTMeta::getOffsetForNaming()) + "mcal";
+      std::string name;
+      WABTAOTCompilerLib::generateFunctionName(env,ind,name);
       DefinedFunc *fn = reinterpret_cast<DefinedFunc *>(func);
       // if (strcmp("???", fn->dbg_name_.c_str())== 0)
       //    {
