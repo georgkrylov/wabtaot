@@ -256,115 +256,41 @@ int compileAOT(interp::Environment &env, DefinedModule *module, char *filename)
       }
    }
 
-uint32_t printaa(int32_t a, int32_t b, int32_t c, int32_t d)
-   {
-   uint32_t bufferLoc = *(uint32_t *)(envPointer->GetMems()[0] + b);
-   char *buffer = envPointer->GetMems()[0] + bufferLoc;
-   uint32_t buffsize = *(uint32_t *)(envPointer->GetMems()[0] + b + 4);
-   if (buffsize)
-      {
-      std::cout << std::string(buffer, buffsize);
-      }
-   return buffsize;
-   }
-
-uint32_t gettimeod(int32_t a, int32_t b)
-   {
-   static int i = 0;
-   uint32_t bufferLoc1 = *(uint32_t *)(envPointer->GetMems()[0] + a);
-   time_t *bufferLoc = (time_t *)(envPointer->GetMems()[0] + bufferLoc1);
-   suseconds_t *miliLoc = (suseconds_t *)(envPointer->GetMems()[0] + bufferLoc1 + 8);
-   struct timeval tv
-      {
-      };
-   gettimeofday(&tv, NULL);
-   //*bufferLoc = tv.tv_sec;
-   //*miliLoc = tv.tv_usec;
-   *bufferLoc = -1 - (++i);
-   *miliLoc = -1 - (++i);
-   return 0;
-   }
-
-int32_t print1(int32_t a, int32_t b)
-   {
-   std::cout << a << "," << b << "\n";
-   return 0;
-   }
-void print2(int32_t a, int32_t b) { std::cout << a + b << "\n"; }
-int32_t seek(int32_t a, int64_t b, int32_t c, int32_t d)
-   {
-   std::cout << a << b << c << d << "\n";
-   return 0;
-   }
-int32_t clos(int32_t a)
-   {
-   std::cout << a;
-   return 0;
-   };
-void clus(int32_t a) { std::cout << a; };
-
-int32_t args_get(int32_t argv, int32_t argv_buf)
-   {
-   uint32_t *bufferLoc = (uint32_t *)(envPointer->GetMems()[0] + argv);
-   uint8_t *bufferLocsize = (uint8_t *)(envPointer->GetMems()[0] + argv_buf);
-   *bufferLoc = argv_buf;
-   if (numOfArgs > 1)
-      *(bufferLoc + 1) = argv_buf + strlen(args_arr[1]);
-   memcpy(bufferLocsize, args_arr[1], strlen(args_arr[1]) + 1);
-   if (numOfArgs > 1)
-      memcpy(bufferLocsize + strlen(args_arr[1]), args_arr[2], strlen(args_arr[2]) + 1);
-   return 0;
-   }
-int32_t args_size_get(int32_t numOfArgs1, int32_t sizeOfArgs1)
-   {
-   uint32_t *bufferLoc = (uint32_t *)(envPointer->GetMems()[0] + numOfArgs1);
-   uint32_t *bufferLocsize = (uint32_t *)(envPointer->GetMems()[0] + sizeOfArgs1);
-   *bufferLoc = numOfArgs;
-   if (numOfArgs > 1)
-      *bufferLocsize = strlen(args_arr[2]) + strlen(args_arr[1]) + 2;
-   else
-      *bufferLocsize = 0;
-   return 0;
-   }
-
-void funpr(uint64_t a) { std::cout << ((char *)(&a)); }
-
-void preSetCodeEntries(){
-   setCodeEntry("trapWith", reinterpret_cast<void *>(trapWith));
-   double (*sqr)(double) = sqrt;
-   setCodeEntry("sqrt", reinterpret_cast<void *>(sqr));
-   double (*cpsign)(double, double) = copysign;
-   setCodeEntry("copysign", reinterpret_cast<void *>(cpsign));
-   setCodeEntry("sqrtf", reinterpret_cast<void *>(sqrtf));
-   setCodeEntry("copysignf", reinterpret_cast<void *>(copysignf));
-   setCodeEntry("CallIndi", reinterpret_cast<void *>(wabt::aot::AOTFunctionBuilder::AOTCallIndirectHelper));
-   setCodeEntry("GrowMem", reinterpret_cast<void *>(wabt::aot::AOTFunctionBuilder::GrowMemory));
-   setCodeEntry("MemSize", reinterpret_cast<void *>(wabt::aot::AOTFunctionBuilder::CalculateMemorySize));
-   setCodeEntry("PrintSt", reinterpret_cast<void *>(wabt::aot::AOTFunctionBuilder::PrintSomething));
-   setCodeEntry("fd_write", reinterpret_cast<void *>(printaa));
-   setCodeEntry("__lock", reinterpret_cast<void *>(1));
-   setCodeEntry("__unlock", reinterpret_cast<void *>(1));
-   setCodeEntry("emscripten_memcpy_big", reinterpret_cast<void *>(1));
-   setCodeEntry("emscripten_resize_heap", reinterpret_cast<void *>(1));
-   setCodeEntry("setTempRet0", reinterpret_cast<void *>(1));
-   setCodeEntry("memory", reinterpret_cast<void *>(1));
-   setCodeEntry("table", reinterpret_cast<void *>(1));
-   setCodeEntry("emscript", reinterpret_cast<void *>(clus));
-   setCodeEntry("setTempR", reinterpret_cast<void *>(1));
-   setCodeEntry("Popcount", reinterpret_cast<void *>(static_cast<int (*)(unsigned)>(wabt::Popcount)));
-   setCodeEntry("Popcountll", reinterpret_cast<void *>(static_cast<int (*)(unsigned long long)>(wabt::Popcount)));
-   setCodeEntry("args_siz", reinterpret_cast<void *>(args_size_get));
-   setCodeEntry("args_get", reinterpret_cast<void *>(args_get));
-   setCodeEntry("proc_exi", reinterpret_cast<void *>(clus));
-   setCodeEntry("fd_seek", reinterpret_cast<void *>(seek));
-   setCodeEntry("fd_close", reinterpret_cast<void *>(clos));
-   setCodeEntry("funpr", reinterpret_cast<void *>(funpr));
-   setCodeEntry("gettimeo", reinterpret_cast<void *>(gettimeod));
-}
+// void preSetCodeEntries(){
+//    setCodeEntry("trapWith", reinterpret_cast<void *>(trapWith));
+//    double (*sqr)(double) = sqrt;
+//    setCodeEntry("sqrt", reinterpret_cast<void *>(sqr));
+//    double (*cpsign)(double, double) = copysign;
+//    setCodeEntry("copysign", reinterpret_cast<void *>(cpsign));
+//    setCodeEntry("sqrtf", reinterpret_cast<void *>(sqrtf));
+//    setCodeEntry("copysignf", reinterpret_cast<void *>(copysignf));
+//    setCodeEntry("CallIndi", reinterpret_cast<void *>(wabt::aot::AOTFunctionBuilder::AOTCallIndirectHelper));
+//    setCodeEntry("GrowMem", reinterpret_cast<void *>(wabt::aot::AOTFunctionBuilder::GrowMemory));
+//    setCodeEntry("MemSize", reinterpret_cast<void *>(wabt::aot::AOTFunctionBuilder::CalculateMemorySize));
+//    setCodeEntry("PrintSt", reinterpret_cast<void *>(wabt::aot::AOTFunctionBuilder::PrintSomething));
+//    setCodeEntry("fd_write", reinterpret_cast<void *>(printaa));
+//    setCodeEntry("__lock", reinterpret_cast<void *>(1));
+//    setCodeEntry("__unlock", reinterpret_cast<void *>(1));
+//    setCodeEntry("emscripten_memcpy_big", reinterpret_cast<void *>(1));
+//    setCodeEntry("emscripten_resize_heap", reinterpret_cast<void *>(1));
+//    setCodeEntry("setTempRet0", reinterpret_cast<void *>(1));
+//    setCodeEntry("memory", reinterpret_cast<void *>(1));
+//    setCodeEntry("table", reinterpret_cast<void *>(1));
+//    setCodeEntry("emscript", reinterpret_cast<void *>(clus));
+//    setCodeEntry("setTempR", reinterpret_cast<void *>(1));
+//    setCodeEntry("Popcount", reinterpret_cast<void *>(static_cast<int (*)(unsigned)>(wabt::Popcount)));
+//    setCodeEntry("Popcountll", reinterpret_cast<void *>(static_cast<int (*)(unsigned long long)>(wabt::Popcount)));
+//    setCodeEntry("args_siz", reinterpret_cast<void *>(args_size_get));
+//    setCodeEntry("args_get", reinterpret_cast<void *>(args_get));
+//    setCodeEntry("proc_exi", reinterpret_cast<void *>(clus));
+//    setCodeEntry("fd_seek", reinterpret_cast<void *>(seek));
+//    setCodeEntry("fd_close", reinterpret_cast<void *>(clos));
+//    setCodeEntry("funpr", reinterpret_cast<void *>(funpr));
+//    setCodeEntry("gettimeo", reinterpret_cast<void *>(gettimeod));
+// }
 void relocateAOT(interp::Environment &env, DefinedModule *module)
    {
    auto func_count = env.GetFuncCount();
-   preSetCodeEntries();
    // for(Index i = 0; i < func_count; ++i) {
    //   if(env.GetFunc(i)->is_host) {
    //     setCodeEntry()
@@ -593,6 +519,7 @@ int main(int argc, char **argv)
          std::cout << "read failure\n";
          }
       }
+
    /** Adding emscripten adds two modules, hence affects value of i */
    for (uint32_t i = 2; i < no_of_modules; i++)
       {

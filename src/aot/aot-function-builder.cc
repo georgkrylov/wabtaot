@@ -44,7 +44,7 @@ Environment *AOTFunctionBuilder::envPointer = 0;
 /** This function is used to define external to JIT when compiling AOT
  * emscripten
  */
-int32_t clos(int32_t a)
+int32_t closs(int32_t a)
    {
    std::cout << a;
    return 0;
@@ -53,7 +53,7 @@ int32_t clos(int32_t a)
 /** This function is used to define external to JIT when compiling AOT
  * emscripten
  */
-uint32_t printaa(int32_t a, int32_t b, int32_t c, int32_t d)
+uint32_t printaaa(int32_t a, int32_t b, int32_t c, int32_t d)
    {
    uint32_t bufferLoc = *(uint32_t *)(envPointer->GetMems()[1] + b);
    char *buffer = envPointer->GetMems()[1] + bufferLoc;
@@ -259,7 +259,7 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread *thread, interp::DefinedFu
                   Int32,
                   Int32);
    DefineFunction("fd_write", __FILE__, "34",
-                  reinterpret_cast<void *>(printaa),
+                  reinterpret_cast<void *>(printaaa),
                   Int32,
                   4,
                   Int32,
@@ -272,7 +272,7 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread *thread, interp::DefinedFu
                   1,
                   Int32);
    DefineFunction("fd_close", __FILE__, "34",
-                  reinterpret_cast<void *>(clos),
+                  reinterpret_cast<void *>(closs),
                   Int32,
                   1,
                   Int32);
