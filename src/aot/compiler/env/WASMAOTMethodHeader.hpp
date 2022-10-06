@@ -62,6 +62,7 @@ public:
       dependencies = NULL;
       dependenciesMaxSize = 0;
       lastUsedIdxInDependenciesArray = 0;
+      dependenciesCompiled = 0;
       methodName[0]=0;
       };
 
@@ -123,6 +124,14 @@ public:
     * The proper value (for now) can be computed by subtracting AOTMeta::numberOfImports
     */
    unsigned int index;
+   /**
+    * @brief If the header has dependencies compiled, then we don't need 
+    * to recursively traverse the rest of the methods
+    * 0 - unknown
+    * 1 - not compiled
+    * 2 - compiled
+    */
+   uint8_t dependenciesCompiled;
 
 protected:
 

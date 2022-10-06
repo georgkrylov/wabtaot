@@ -37,7 +37,8 @@ size_t WASM::AOTMethodHeader::sizeOfSerializedVersion()
    // size of dependencies array - int
    // lastUsedIdxInDependenciesArray * int  for the prototype of additional data
    // sizeof(char)*8 - name of the method
-   return sizeof(size_t) + 2 * sizeof(uint32_t) + self()->getCompiledCodeSize() + self()->getRelocationsSize() + sizeof(unsigned int) + sizeof(int) + lastUsedIdxInDependenciesArray * sizeof(int)+sizeof(char)*8;
+   // sizeof short - dependencies compiled
+   return sizeof(size_t) + 2 * sizeof(uint32_t) + self()->getCompiledCodeSize() + self()->getRelocationsSize() + sizeof(unsigned int) + sizeof(int) + lastUsedIdxInDependenciesArray * sizeof(int)+sizeof(char)*8 + sizeof(uint8_t);
    }
 
 void WASM::AOTMethodHeader::serializeMethod(uint8_t *buffer, size_t bufferSize)
@@ -92,6 +93,10 @@ void WASM::AOTMethodHeader::serializeMethod(uint8_t *buffer, size_t bufferSize)
       ptr+=lastUsedIdxInDependenciesArray * sizeof(unsigned int);
       }
    memcpy(ptr,self()->methodName,8*sizeof(char));
+
+   ptr += sizeof(8*sizeof(char));
+
+   memcpy(ptr,&(self()->dependenciesCompiled),sizeof(uint8_t));
    // Now the buffer contains all the data relevant to the
    // method header.
    }
@@ -121,10 +126,16 @@ WASM::AOTMethodHeader::AOTMethodHeader(uint8_t *serializedMethodData)
    self()->lastUsedIdxInDependenciesArray = dependenciesMaxSize;
    // offset the method data and by the size of dependencies array times type
    serializedMethodData+=sizeof(unsigned int) * dependenciesMaxSize;
-   // copy method name
-   memcpy(self()->methodName,serializedMethodData,sizeof(char)*8);
    // adjust index to be zero based again indicate that max size was updated
    self()->dependenciesMaxSize += 5;
+
+   // copy method name
+   memcpy(self()->methodName,serializedMethodData,sizeof(char)*8);
+
+   // offset the method data and by the size of name array times type
+   serializedMethodData+=sizeof(char)*8;
+   
+   self()->dependenciesCompiled = *(reinterpret_cast<unsigned int *>(serializedMethodData));
    size_t computedSize = self()->sizeOfSerializedVersion();
 
    TR_ASSERT(computedSize == storedSize, "Stored and Computed MethodHeader sizes mismatch, possible message corruption \n");
@@ -172,6 +183,7 @@ void WASM::AOTMethodHeader::addDependency(unsigned int dep)
          }
       }
    dependencies[lastUsedIdxInDependenciesArray] = dep;
+   dependenciesCompiled = 0;
    lastUsedIdxInDependenciesArray++;
    }
 

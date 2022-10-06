@@ -443,18 +443,6 @@ void WABTAOTCompilerLib::registerAllImports(wabt::aot::AOTManager &aotManager, i
    //   }
    // }
    }
-#ifndef WASM_SHARED_CACHE
-
-void WABTAOTCompilerLib::loadELFToMemory(const char *moduleFilename)
-   {
-
-   char *soFilename = WABTAOTCompilerLib::getSOFilename(const_cast<char *>(moduleFilename));
-   if (access(static_cast<const char *>(soFilename), F_OK) == 0)
-      {
-      loadFileInMemory(soFilename);
-      WABTAOTCompilerLib::build_type = 1;
-      }
-   }
 
 char *WABTAOTCompilerLib::generateEntryPointName(wabt::interp::DefinedFunc *func)
    {
@@ -471,6 +459,21 @@ void WABTAOTCompilerLib::generateFunctionName(wabt::interp::Environment* env, un
    modulee = reinterpret_cast<DefinedModule *>(env->GetModule(moduleIndex));
    name = "f" + std::to_string(ind+wabt::aot::AOTMeta::getOffsetForNaming()) + "m" + modulee->name.substr(0, 3);
    }
+
+#ifndef WASM_SHARED_CACHE
+
+void WABTAOTCompilerLib::loadELFToMemory(const char *moduleFilename)
+   {
+
+   char *soFilename = WABTAOTCompilerLib::getSOFilename(const_cast<char *>(moduleFilename));
+   if (access(static_cast<const char *>(soFilename), F_OK) == 0)
+      {
+      loadFileInMemory(soFilename);
+      WABTAOTCompilerLib::build_type = 1;
+      }
+   }
+
+
 
 void WABTAOTCompilerLib::createELFFile(const char *moduleFilename)
    {

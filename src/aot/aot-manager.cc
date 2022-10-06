@@ -24,7 +24,7 @@ void wabt::aot::AOTManager::defineExternalFunctionToJit(std::string const funcNa
       {
       for (auto &inner_kv : func_index_)
          {
-         inner_kv.second.first->defineFunction(funcName, reinterpret_cast<DefinedFunc*>(envPointer->GetFunc(index)));
+         inner_kv.second.first->defineFunction(funcName, reinterpret_cast<DefinedFunc *>(envPointer->GetFunc(index)));
          }
       }
    }
@@ -48,7 +48,7 @@ void wabt::aot::AOTManager::broadcastImports()
          }
       }
    }
-int wabt::aot::AOTManager::CheckDependenciesCompiled(wabt::interp::Environment *env, wabt::Index ind, wabt::interp::DefinedFunc *func,interp::Thread* t)
+int wabt::aot::AOTManager::CheckDependenciesCompiled(wabt::interp::Environment *env, wabt::Index ind, wabt::interp::DefinedFunc *func, interp::Thread *t)
    {
    TR::AOTMethodHeader *header = _loadStoreDriver->getRegisteredAOTMethodHeader(func->dbg_name_.c_str());
    /** 0 -yes, should fail, 1 - we're good to compile */
@@ -59,26 +59,41 @@ int wabt::aot::AOTManager::CheckDependenciesCompiled(wabt::interp::Environment *
       unsigned int dependenciesMaxSize = header->getDependenciesArraySize();
       unsigned int *dependenciesArray = header->getDependenciesArray();
       shouldFailCompilation = 1;
-      for (unsigned int i = 0; i < dependenciesMaxSize; i++)
+      if (header->dependenciesCompiled == 1)
          {
+         shouldFailCompilation = 0;
+         }
+      else if (header->dependenciesCompiled == 0 || header->dependenciesCompiled == 2)
+         {
+         for (unsigned int i = 0; i < dependenciesMaxSize; i++)
+            {
             /** when loading, maybe substract an offset */
-         if ((AOTLoadAFunction(env,dependenciesArray[i],t) == false) || env->aot_meta_.at(dependenciesArray[i]).wasm_fn->is_compiled == false)
-            {
-            shouldFailCompilation = 0;
-            break;
-            }
-         else
-            {
-            std::string name;
-            WABTAOTCompilerLib::generateFunctionName(env,ind,name);
-            AOTTypeDictionary *types = new (PERSISTENT_NEW) AOTTypeDictionary();
-            AOTFunctionBuilder *builder = new (PERSISTENT_NEW) AOTFunctionBuilder(t, reinterpret_cast<DefinedFunc*>(envPointer->GetFunc(dependenciesArray[i])),
-                                                                            std::move(name),
-                                                                            types,
-                                                                            *envPointer, *this);
-            int indexToDefine = reinterpret_cast<DefinedFunc*>(envPointer->GetFunc(dependenciesArray[i]))->offset;
-            push_back_FB(indexToDefine,builder,types);
-            defineExternalFunctionToJit(env->GetFunc(dependenciesArray[i])->dbg_name_,dependenciesArray[i]);
+            if ((AOTLoadAFunction(env, dependenciesArray[i], t) == false) || env->aot_meta_.at(dependenciesArray[i]).wasm_fn->is_compiled == false)
+               {
+               /* dependencies were not compiled */
+               _loadStoreDriver->storeHeaderForCompiledMethod(func->dbg_name_.c_str());
+               header->dependenciesCompiled = 1;
+               shouldFailCompilation = 0;
+               break;
+               }
+            else
+               {
+               /* dependencies were compiled  the first time*/
+               if (header->getCompiledCodeSize() == 0)
+                  { /** optimization */ 
+                  std::string name;
+                  header->dependenciesCompiled = 2;
+                  WABTAOTCompilerLib::generateFunctionName(env, ind, name);
+                  AOTTypeDictionary *types = new (PERSISTENT_NEW) AOTTypeDictionary();
+                  AOTFunctionBuilder *builder = new (PERSISTENT_NEW) AOTFunctionBuilder(t, reinterpret_cast<DefinedFunc *>(envPointer->GetFunc(dependenciesArray[i])),
+                                                                                        std::move(name),
+                                                                                        types,
+                                                                                        *envPointer, *this);
+                  int indexToDefine = reinterpret_cast<DefinedFunc *>(envPointer->GetFunc(dependenciesArray[i]))->offset;
+                  push_back_FB(indexToDefine, builder, types);
+                  defineExternalFunctionToJit(env->GetFunc(dependenciesArray[i])->dbg_name_, dependenciesArray[i]);
+                  }
+               }
             }
          }
       }
@@ -90,6 +105,7 @@ int wabt::aot::AOTManager::CheckDependenciesCompiled(wabt::interp::Environment *
        * When method was created - look up
        */
       _loadStoreDriver->createAndRegisterAOTMethodHeader(func->dbg_name_.c_str(), NULL, 0, NULL, 0);
+      _loadStoreDriver->storeHeaderForCompiledMethod(func->dbg_name_.c_str());
       shouldFailCompilation = 0;
       }
 #ifndef WASM_SHARED_CACHE // This is an ELF-enabled runtime
@@ -103,9 +119,7 @@ int wabt::aot::AOTManager::CheckDependenciesCompiled(wabt::interp::Environment *
    return shouldFailCompilation;
    }
 
-
-
-bool wabt::aot::AOTManager::AOTLoadAFunction(wabt::interp::Environment *env, wabt::Index ind,wabt::interp::Thread* t)
+bool wabt::aot::AOTManager::AOTLoadAFunction(wabt::interp::Environment *env, wabt::Index ind, wabt::interp::Thread *t)
    {
    if (_loadStoreDriver == NULL)
       {
@@ -116,7 +130,7 @@ bool wabt::aot::AOTManager::AOTLoadAFunction(wabt::interp::Environment *env, wab
    if (!func->is_compiled)
       {
       std::string name;
-      WABTAOTCompilerLib::generateFunctionName(env,ind,name);
+      WABTAOTCompilerLib::generateFunctionName(env, ind, name);
       DefinedFunc *fn = reinterpret_cast<DefinedFunc *>(func);
       // if (strcmp("???", fn->dbg_name_.c_str())== 0)
       //    {
@@ -124,7 +138,7 @@ bool wabt::aot::AOTManager::AOTLoadAFunction(wabt::interp::Environment *env, wab
       //    }
       fn->dbg_name_ = name;
       func->dbg_name_ = name;
-      if (CheckDependenciesCompiled(env, ind, fn,t) != 0) /* This if statement could possibly contain compilation strategies???*/
+      if (CheckDependenciesCompiled(env, ind, fn, t) != 0) /* This if statement could possibly contain compilation strategies???*/
          {
          void *function = nullptr;
          function = getCodeEntry(const_cast<char *>(fn->dbg_name_.c_str()));
@@ -158,13 +172,14 @@ void *wabt::aot::AOTManager::AOTCompileAFunction(wabt::interp::Environment *env,
       _loadStoreDriver = reinterpret_cast<TR::AOTLoadStoreDriver *>(getLoadStoreDriver());
       WABTAOTCompilerLib::setLoadStoreDriver(_loadStoreDriver);
       }
-   if (envPointer == NULL){
+   if (envPointer == NULL)
+      {
       envPointer = env;
-   }
+      }
    if (!env->GetFunc(ind)->is_compiled)
       {
       auto &builder = this->getFB(fn->offset);
-      if (CheckDependenciesCompiled(env, ind, fn,t) != 0) /* This if statement could possibly contain compilation strategies???*/
+      if (CheckDependenciesCompiled(env, ind, fn, t) != 0) /* This if statement could possibly contain compilation strategies???*/
          {
          void *function = nullptr;
          function = getCodeEntry(const_cast<char *>(fn->dbg_name_.c_str()));
@@ -176,7 +191,8 @@ void *wabt::aot::AOTManager::AOTCompileAFunction(wabt::interp::Environment *env,
             WABTAOTCompilerLib::shouldReEmitELF = 1;
 #endif
             if (function == NULL)
-               { /* was not able to compile, for example the dependencies were not resolved */
+               {                                                                      /* was not able to compile, for example the dependencies were not resolved */
+               _loadStoreDriver->storeHeaderForCompiledMethod(fn->dbg_name_.c_str()); /* Update the dependencies */
                return NULL;
                }
             else /* compilation was a success */

@@ -1747,6 +1747,7 @@ Result Environment::TryAOT(Thread* t,  DefinedFunc* func, Index ind){
    DefinedFunc* fn = cast<DefinedFunc>(func);
    // Looks like AOTManager in aot-cd.cc is aware of all functions, whereas TryAOT currently recreates AOTManager every time
    // Such awareness allows calls
+   if (fn->is_compiled == false){
    //  if (aotManager == NULL){
    aotManager = new AOTManager();
    //  }
@@ -1819,6 +1820,7 @@ Result Environment::TryAOT(Thread* t,  DefinedFunc* func, Index ind){
     {
     modulee->aot_compiled_functions.push_back(function);
     }
+   }
    return Result::Ok;
    }
 
