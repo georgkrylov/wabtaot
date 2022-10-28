@@ -25,12 +25,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-TR::AOTStorage*
-AOTStorageConnector::self(){
-  return static_cast <TR::AOTStorage*> (this);
-}
 uint8_t*
-AOTStorageConnector::allocateMemoryInCache(uintptr_t size){
+WASMCompositeCache::allocateEntry(uintptr_t size){
   return (uint8_t*) malloc(sizeof(uint8_t) * size);
 }
 

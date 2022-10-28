@@ -121,7 +121,7 @@ UDATA WASMCompositeCache::dataSectionFreeSpace() const
 //    } AOTMethodHeader;
 // find space for, and stores, a code entry. if it fails at any point,
 // simply return 0.
-bool WASMCompositeCache::storeEntry(const char* elementName, TR::AOTMethodHeader* hdr)
+void WASMCompositeCache::storeEntry(const char* elementName, TR::AOTMethodHeader* hdr)
 {
   uint32_t allocSize = hdr->sizeOfSerializedVersion();
   uint8_t* data = (uint8_t*)malloc (sizeof(char)*allocSize);
@@ -129,7 +129,7 @@ bool WASMCompositeCache::storeEntry(const char* elementName, TR::AOTMethodHeader
   UDATA freeSpace = dataSectionFreeSpace();
 
   if(freeSpace < allocSize) {
-    return false;
+    return;
   }
 
   // yes, there's an extraneous string copy done here, buuuht, that is fine for now.
@@ -155,7 +155,7 @@ bool WASMCompositeCache::storeEntry(const char* elementName, TR::AOTMethodHeader
   // _relocationData = nullptr;
   // _codeUpdatePtr+=relocationRecordSize;
   free(data);
-  return true;
+  return ;
 }
 
 //TODO: should copy to the code cache (not scc) when code cache becomes available

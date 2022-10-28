@@ -26,11 +26,11 @@
 
 namespace TR
 {
-  class AOTStorage : public AOTStorageConnector
+  class AOTStorage : public WASMCompositeCache
   {
   public:
 
-  AOTStorage() : AOTStorageConnector() {}
+  AOTStorage() : WASMCompositeCache() {}
 
   };
 }

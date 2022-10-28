@@ -22,11 +22,7 @@
 #ifndef WASM_SHARED_CACHE_INCL
 #define WASM_SHARED_CACHE_INCL
 
-#ifndef WASM_SHARED_CACHE_CONNECTOR
-#define WASM_SHARED_CACHE_CONNECTOR
-class WASMCompositeCache;
-typedef WASMCompositeCache AOTStorageConnector;
-#endif
+
 #include "WASMCompositeCache.hpp"
 
 #endif

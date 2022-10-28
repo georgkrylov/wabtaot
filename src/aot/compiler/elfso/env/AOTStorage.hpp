@@ -26,7 +26,7 @@
 
 namespace TR{
 
-class OMR_EXTENSIBLE AOTStorage: public ELF::AOTStorageConnector
+class  AOTStorage: public ELF::AOTStorageConnector
    {
 public:
    AOTStorage() : ELF::AOTStorageConnector(TR::RawAllocator())

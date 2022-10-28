@@ -1,11 +1,7 @@
 #if !defined(WASM_COMPOSITE_CACHE_HPP_INCLUDED)
 #define WASM_COMPOSITE_CACHE_HPP_INCLUDED
 
-#ifndef WASM_SHARED_CACHE_CONNECTOR
-#define WASM_SHARED_CACHE_CONNECTOR
-namespace WASM { class WASMCompositeCache;}
-namespace WASM { typedef WASM::WASMCompositeCache AOTStorageConnector;}
-#endif
+
 #include <map>
 #include <string>
 
@@ -23,9 +19,8 @@ namespace WASM { typedef WASM::WASMCompositeCache AOTStorageConnector;}
 #include "runtime/Runtime.hpp"
 #include "env/TRMemory.hpp"
 
-class WASMCompositeCache :public OMR::AOTStorageConnector {
-protected:
-  TR::AOTStorage* self();
+class WASMCompositeCache : public OMR::AOTStorage{
+
 public:
   TR_ALLOC(TR_Memory::SharedCache)
 
@@ -39,14 +34,14 @@ public:
   void setRelocationData(uint8_t* relocationData) {
       _relocationData = relocationData;
   }
-  uint8_t* allocateMemoryInCache(uintptr_t size);
+  virtual uint8_t* allocateEntry(uintptr_t size);
   bool startup(const char* cacheName, const char* ctrlDirName);
 
-  bool storeEntry(const char* elementName, TR::AOTMethodHeader* header);
+  virtual void storeEntry(const char* elementName, TR::AOTMethodHeader* header);
 
   UDATA baseSharedCacheAddress();
 
-  TR::AOTMethodHeader* loadEntry(const char *elementName);
+  virtual TR::AOTMethodHeader* loadEntry(const char *elementName);
 
   void storeCallAddressToHeaders(void *calleeMethod,size_t methodNameTemplateOffset,void *calleeCodeCacheAddress);
 
