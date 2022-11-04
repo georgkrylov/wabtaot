@@ -4183,14 +4183,32 @@ ExecResult Executor::RunFunction(Index func_index, const TypedValues& args) {
 
   thread_.Reset();
   exec_result.result = PushArgs(sig, args);
-  if (exec_result.result == Result::Ok) {
-    exec_result.result =
-        func->is_host ? thread_.CallHost(cast<HostFunc>(func))
-                      : RunDefinedFunction(cast<DefinedFunc>(func)->offset);
-    if (exec_result.result == Result::Ok) {
-      CopyResults(sig, &exec_result.values);
+  if (exec_result.result == Result::Ok)
+    {
+    if (func->is_host)
+        {
+        exec_result.result = thread_.CallHost(cast<HostFunc>(func));
+        }
+    else
+        {
+        DefinedFunc *fn = reinterpret_cast<DefinedFunc *>(func);
+        env_->TryAOT(&thread_, fn, func_index);
+        if (fn->aot_fn_)
+          {
+          fn->aot_fn_();
+          exec_result.result = Result::Ok;
+          }
+        else
+          {
+          exec_result.result = RunDefinedFunction(cast<DefinedFunc>(func)->offset);
+          }
+        }
+
+    if (exec_result.result == Result::Ok)
+        {
+        CopyResults(sig, &exec_result.values);
+        }
     }
-  }
 
   exec_result.call_stack.assign(thread_.call_stack_.begin(), thread_.call_stack_.begin() + thread_.call_stack_top_);
   exec_result.call_stack.push_back(CallFrame(thread_.pc_, thread_.in_jit_, exec_result.result == Result::TrapFailedJITCompilation));

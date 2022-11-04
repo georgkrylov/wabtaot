@@ -491,6 +491,8 @@ struct HostModule : Module {
 class Thread;
 class Environment {
  public:
+  /* Moved here as noone has time for private/public lol*/
+  Result TryAOT(Thread*,  DefinedFunc*, Index);
   // Used to track and reset the state of the environment.
   struct MarkPoint {
     size_t modules_size = 0;
@@ -707,7 +709,6 @@ class Environment {
   friend class wabt::aot::AOTManager;
 
   Result TryJit(Thread* t, DefinedFunc* fn, Index ind);
-  Result TryAOT(Thread*,  DefinedFunc*, Index);
 
 #if defined (unnecessary)
   bool TryAOT(Thread* t, IstreamOffset offset, AOTedFunction* fn,DefinedFunc *&);
