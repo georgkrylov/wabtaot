@@ -457,7 +457,7 @@ void WABTAOTCompilerLib::generateFunctionName(wabt::interp::Environment* env, un
    DefinedModule* modulee;
    Index moduleIndex = WABTAOTCompilerLib::getModuleIndexByFunctionIndex(*env, ind);
    modulee = reinterpret_cast<DefinedModule *>(env->GetModule(moduleIndex));
-   name = "f" + std::to_string(ind+wabt::aot::AOTMeta::getOffsetForNaming()) + "m" + modulee->name.substr(0, 3);
+   name = "f" + std::to_string(ind+wabt::aot::AOTMeta::getOffsetForNaming()) + "m" + modulee->name.substr(0, 2);
    }
 
 #ifndef WASM_SHARED_CACHE
