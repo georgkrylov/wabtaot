@@ -74,25 +74,24 @@ int wabt::aot::AOTManager::CheckDependenciesCompiled(wabt::interp::Environment *
                _loadStoreDriver->storeHeaderForCompiledMethod(func->dbg_name_.c_str());
                header->dependenciesCompiled = 1;
                shouldFailCompilation = 0;
-               break;
                }
-            else
+            }
+         if (shouldFailCompilation == 1 && header->getCompiledCodeSize() == 0)
+            {
+            for (unsigned int i = 0; i < dependenciesMaxSize; i++)
                {
                /* dependencies were compiled  the first time*/
-               if (header->getCompiledCodeSize() == 0)
-                  { /** optimization */ 
-                  std::string name;
-                  header->dependenciesCompiled = 2;
-                  WABTAOTCompilerLib::generateFunctionName(env, ind, name);
-                  AOTTypeDictionary *types = new (PERSISTENT_NEW) AOTTypeDictionary();
-                  AOTFunctionBuilder *builder = new (PERSISTENT_NEW) AOTFunctionBuilder(t, reinterpret_cast<DefinedFunc *>(envPointer->GetFunc(dependenciesArray[i])),
-                                                                                        std::move(name),
-                                                                                        types,
-                                                                                        *envPointer, *this);
-                  int indexToDefine = reinterpret_cast<DefinedFunc *>(envPointer->GetFunc(dependenciesArray[i]))->offset;
-                  push_back_FB(indexToDefine, builder, types);
-                  defineExternalFunctionToJit(env->GetFunc(dependenciesArray[i])->dbg_name_, dependenciesArray[i]);
-                  }
+               std::string name;
+               header->dependenciesCompiled = 2;
+               WABTAOTCompilerLib::generateFunctionName(env, ind, name);
+               AOTTypeDictionary *types = new (PERSISTENT_NEW) AOTTypeDictionary();
+               AOTFunctionBuilder *builder = new (PERSISTENT_NEW) AOTFunctionBuilder(t, reinterpret_cast<DefinedFunc *>(envPointer->GetFunc(dependenciesArray[i])),
+                                                                                     std::move(name),
+                                                                                     types,
+                                                                                     *envPointer, *this);
+               int indexToDefine = reinterpret_cast<DefinedFunc *>(envPointer->GetFunc(dependenciesArray[i]))->offset;
+               push_back_FB(indexToDefine, builder, types);
+               defineExternalFunctionToJit(env->GetFunc(dependenciesArray[i])->dbg_name_, dependenciesArray[i]);
                }
             }
          }
