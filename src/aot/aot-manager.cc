@@ -63,7 +63,7 @@ int wabt::aot::AOTManager::CheckDependenciesCompiled(wabt::interp::Environment *
          {
          shouldFailCompilation = 0;
          }
-      else if (header->dependenciesCompiled == 0 || header->dependenciesCompiled == 2)
+      else if (header->dependenciesCompiled == 0)
          {
          for (unsigned int i = 0; i < dependenciesMaxSize; i++)
             {
@@ -78,13 +78,14 @@ int wabt::aot::AOTManager::CheckDependenciesCompiled(wabt::interp::Environment *
             }
          if (shouldFailCompilation == 1 && header->getCompiledCodeSize() == 0)
             {
+            AOTTypeDictionary *types = new (PERSISTENT_NEW) AOTTypeDictionary();
             for (unsigned int i = 0; i < dependenciesMaxSize; i++)
                {
                /* dependencies were compiled  the first time*/
                std::string name;
-               header->dependenciesCompiled = 2;
+               header->dependenciesCompiled = 0;
                WABTAOTCompilerLib::generateFunctionName(env, ind, name);
-               AOTTypeDictionary *types = new (PERSISTENT_NEW) AOTTypeDictionary();
+
                AOTFunctionBuilder *builder = new (PERSISTENT_NEW) AOTFunctionBuilder(t, reinterpret_cast<DefinedFunc *>(envPointer->GetFunc(dependenciesArray[i])),
                                                                                      std::move(name),
                                                                                      types,
