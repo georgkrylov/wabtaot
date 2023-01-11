@@ -517,7 +517,9 @@ class Environment {
   bool enable_load_thunk = false;
   char *infile = nullptr;
   uint32_t jit_threshold = 1;
-
+  bool enable_aot_entry = false;
+  bool enable_aot_hardcoded = false;
+  bool enable_aot_libffi = false;
   Environment();
   ~Environment();
 

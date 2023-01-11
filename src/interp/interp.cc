@@ -1777,7 +1777,10 @@ Result Environment::TryAOT(Thread* t,  DefinedFunc* func, Index ind){
 
       // builder->pu
       aotManager->push_back_FB(fn->offset, builder, types);
-      aotManager->setNeedsEntry(true);
+      if (enable_aot_entry)
+        {
+        aotManager->setNeedsEntry(true);
+        }
 
       // This line is used to construct debug name, limited to 8 symbols as relocation infrastructure does not
       // support longer names
@@ -2059,7 +2062,10 @@ Result Thread::Run(int num_instructions) {
           //   params_array[i] = Pop().i32;
           // }
           wabt::jit::AOTedFunction p = fn->aot_fn_;
-          long q = p();
+          if (env_->enable_aot_entry)
+            {
+            long q = p();
+            }
           // Value t = Value(q);
           // Push(q);
   //   printf("%i\n",q);
