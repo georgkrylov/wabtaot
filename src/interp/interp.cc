@@ -2065,6 +2065,25 @@ Result Thread::Run(int num_instructions) {
           if (env_->enable_aot_entry)
             {
             long q = p();
+            } else if (env_->enable_aot_hardcoded)
+            {
+              int numberOfParameters = env_->GetFuncSignature(func_index)->param_types.size();
+              int numberOfReturnValues =  env_->GetFuncSignature(func_index)->.size()
+              Value params_array[numberOfParameters];
+                switch(numberOfParameters)
+                {
+                  case 0:
+                  {
+                    long q = p();
+                  
+                    break;
+                  }
+                  default:
+                  {
+                    printf("The number of arguments is not supported\n");
+                    exit(1);
+                  }
+
             }
           // Value t = Value(q);
           // Push(q);
