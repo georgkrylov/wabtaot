@@ -151,7 +151,7 @@ bool wabt::aot::AOTManager::AOTLoadAFunction(wabt::interp::Environment *env, wab
              * for function entry point
              */
             fn->is_compiled = true;
-            fn->aot_fn_ = reinterpret_cast<wabt::jit::AOTedFunction>(function);
+            fn->aot_fn_ = reinterpret_cast<wabt::interp::AOTedFunction>(function);
             /** should I insert into aot meta? */
             return true;
             }
@@ -215,7 +215,7 @@ void *wabt::aot::AOTManager::AOTCompileAFunction(wabt::interp::Environment *env,
           * for function entry point
           */
          fn->is_compiled = true;
-         fn->aot_fn_ = reinterpret_cast<wabt::jit::AOTedFunction>(function);
+         fn->aot_fn_ = reinterpret_cast<wabt::interp::AOTedFunction>(function);
          /** If need to generate an entry point */
          if (this->needsEntryPointGeneration == true)
             {
@@ -253,7 +253,7 @@ void *wabt::aot::AOTManager::AOTCompileAFunction(wabt::interp::Environment *env,
                }
             _loadStoreDriver->relocateRegisteredMethod(entryPointName);
             fn->is_compiled = true;
-            fn->aot_fn_ = reinterpret_cast<wabt::jit::AOTedFunction>(entryFunction);
+            fn->aot_fn_ = reinterpret_cast<wabt::interp::AOTedFunction>(entryFunction);
             }
          }
       else /* the dependencies were not compiled, failing the compilation*/

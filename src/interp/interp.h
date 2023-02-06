@@ -198,6 +198,7 @@ union Value {
   ValueTypeRep<v128> v128_bits;
 };
 
+using AOTedFunction =   void (*) (...);
 struct TypedValue {
   TypedValue() {}
   explicit TypedValue(Type type) : type(type) {}
@@ -340,7 +341,7 @@ struct DefinedFunc : Func {
   uint32_t num_calls_ = 0;
   bool tried_jit_ = false;
   jit::JITedFunction jit_fn_ = nullptr;
-  jit::AOTedFunction aot_fn_ = nullptr;
+  interp::AOTedFunction aot_fn_ = nullptr;
 #if not defined(unneeded)
   /**
    * @brief  Offset in defined function is to the bytes stream
@@ -733,7 +734,7 @@ class Environment {
    * when aot functions and jit functions will be proven
    * to be equivalent. Or reintroduced when jit will 
    * be at higher opt level */
-  std::vector<jit::AOTedFunction> aot_funcs_;
+  std::vector<interp::AOTedFunction> aot_funcs_;
   jit::JitEnvironment jit_env_;
   /** Could be later turned into methodHeader, or tied
    * with it.

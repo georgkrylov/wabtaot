@@ -2061,21 +2061,1231 @@ Result Thread::Run(int num_instructions) {
           // for (int i = 0; i < numberOfParameters; i++){
           //   params_array[i] = Pop().i32;
           // }
-          wabt::jit::AOTedFunction p = fn->aot_fn_;
+          void (*p) (...) = fn->aot_fn_;
           if (env_->enable_aot_entry)
             {
-            long q = p();
+             unsigned long long q =reinterpret_cast<unsigned long (*)()>(p)();
             } else if (env_->enable_aot_hardcoded)
             {
-              int numberOfParameters = env_->GetFuncSignature(func_index)->param_types.size();
-              int numberOfReturnValues =  env_->GetFuncSignature(func_index)->.size()
+              TypeVector parameterTypes = env_->GetFuncSignature(fn->sig_index)->param_types;
+              int numberOfParameters = parameterTypes.size();
+              int numberOfReturnValues =  env_->GetFuncSignature(fn->sig_index)->result_types.size();
+
               Value params_array[numberOfParameters];
+              for (int i = 0 ;  i < numberOfParameters; i++){
+                params_array[numberOfParameters-i-1] = Pop();
+              }
                 switch(numberOfParameters)
                 {
                   case 0:
                   {
-                    long q = p();
-                  
+                    if (numberOfReturnValues == 1){
+                    Type returnType =  env_->GetFuncSignature(fn->sig_index)->result_types[0];
+                    switch (returnType)
+                      {
+                        case Type::I32:{
+                          unsigned int q = reinterpret_cast<unsigned int (*)(...)>(p)();
+                          Push(q);
+                          break;
+                        }
+                        case  Type::I64: {
+                           unsigned long q = reinterpret_cast<unsigned long (*)(...)>(p)();
+                           Push(q);
+                          break;
+                        }
+                        case  Type::F32: {
+                          float q = reinterpret_cast<float (*)()>(p)();
+                          Push(q);
+                          break;}
+                        case Type::F64: {
+                          double q = reinterpret_cast<double (*)()>(p)();
+                          Push(q);
+                          break;
+                        }
+                        default:
+                        {
+                          printf("Return type is not supported \n");
+                          exit(0);
+                        }
+                      }
+
+                    }
+                    else
+                    {
+                      p();
+                    }
+                    break;
+                  }
+                  case 1:
+                  {
+                    uint64_t parameter0 = *((uint64_t*)&(params_array[0]));
+                    if (numberOfReturnValues == 1){
+                    Type returnType =  env_->GetFuncSignature(fn->sig_index)->result_types[0];
+
+                    switch (returnType)
+                      {
+                        case Type::I32:{
+                          switch(parameterTypes[0])
+                          {
+                            case Type::F32:
+                            {
+                              float parameter0 = *((float*)&(params_array[0]));
+                              uint32_t q= reinterpret_cast<uint32_t (*)(float)>(p)(parameter0);
+                              Push(q);
+                              break;
+                            }
+                            case Type::F64:
+                            {
+                              double parameter0 = *((double*)&(params_array[0]));
+                              uint32_t q= reinterpret_cast<uint32_t (*)(double)>(p)(parameter0);
+                              Push(q);
+                              break;
+                            }
+                            case Type::I32:
+                            {
+                              uint32_t parameter0 = *((uint32_t*)&(params_array[0]));
+                              uint32_t q= reinterpret_cast<uint32_t (*)(uint32_t)>(p)(parameter0);
+                              Push(q);
+                              break;
+                            }
+                            case Type::I64:
+                            {
+                              uint64_t parameter0 = *((uint64_t*)&(params_array[0]));
+                              uint32_t q= reinterpret_cast<uint32_t (*)(uint64_t)>(p)(parameter0);
+                              Push(q);
+                              break;
+                            }
+                            default:
+                            {
+                              printf("The parameter type is not supported\n");
+                              exit(0);
+                              break;
+                            }
+                          }
+
+
+                          break;
+                        }
+                        case  Type::I64: {
+                      switch(parameterTypes[0])
+                          {
+                            case Type::F32:
+                            {
+                              float parameter0 = *((float*)&(params_array[0]));
+                              uint64_t q= reinterpret_cast<uint64_t (*)(float)>(p)(parameter0);
+                              Push(q);
+                              break;
+                            }
+                            case Type::F64:
+                            {
+                              double parameter0 = *((double*)&(params_array[0]));
+                              uint64_t q= reinterpret_cast<uint64_t (*)(double)>(p)(parameter0);
+                              Push(q);
+                              break;
+                            }
+                            case Type::I32:
+                            {
+                              uint32_t parameter0 = *((uint32_t*)&(params_array[0]));
+                              uint64_t q= reinterpret_cast<uint64_t (*)(uint32_t)>(p)(parameter0);
+                              Push(q);
+                              break;
+                            }
+                            case Type::I64:
+                            {
+                              uint64_t parameter0 = *((uint64_t*)&(params_array[0]));
+                              uint64_t q= reinterpret_cast<uint64_t (*)(uint64_t)>(p)(parameter0);
+                              Push(q);
+                              break;
+                            }
+                            default:
+                            {
+                              printf("The parameter type is not supported\n");
+                              exit(0);
+                              break;
+                            }
+                          }
+                          break;
+                        }
+                        case  Type::F32: {
+                          switch(parameterTypes[0])
+                          {
+                            case Type::F32:
+                            {
+                              float parameter0 = *((float*)&(params_array[0]));
+                              float q= reinterpret_cast<float (*)(float)>(p)(parameter0);
+                              Push(q);
+                              break;
+                            }
+                            case Type::F64:
+                            {
+                              double parameter0 = *((double*)&(params_array[0]));
+                              float q= reinterpret_cast<float (*)(double)>(p)(parameter0);
+                              Push(q);
+                              break;
+                            }
+                            case Type::I32:
+                            {
+                              uint32_t parameter0 = *((uint32_t*)&(params_array[0]));
+                              float q= reinterpret_cast<float (*)(uint32_t)>(p)(parameter0);
+                              Push(q);
+                              break;
+                            }
+                            case Type::I64:
+                            {
+                              uint64_t parameter0 = *((uint64_t*)&(params_array[0]));
+                              float q= reinterpret_cast<float (*)(uint64_t)>(p)(parameter0);
+                              Push(q);
+                              break;
+                            }
+                            default:
+                            {
+                              printf("The parameter type is not supported\n");
+                              exit(0);
+                              break;
+                            }
+                          }
+                          break;
+                        }
+                        case Type::F64: {
+                          switch(parameterTypes[0])
+                          {
+                            case Type::F32:
+                            {
+                              float parameter0 = *((float*)&(params_array[0]));
+                              double q= reinterpret_cast<double (*)(float)>(p)(parameter0);
+                              Push(q);
+                              break;
+                            }
+                            case Type::F64:
+                            {
+                              double parameter0 = *((double*)&(params_array[0]));
+                              double q= reinterpret_cast<double (*)(double)>(p)(parameter0);
+                              Push(q);
+                              break;
+                            }
+                            case Type::I32:
+                            {
+                              uint32_t parameter0 = *((uint32_t*)&(params_array[0]));
+                              double q= reinterpret_cast<double (*)(uint32_t)>(p)(parameter0);
+                              Push(q);
+                              break;
+                            }
+                            case Type::I64:
+                            {
+                              uint64_t parameter0 = *((uint64_t*)&(params_array[0]));
+                              double q= reinterpret_cast<double (*)(uint64_t)>(p)(parameter0);
+                              Push(q);
+                              break;
+                            }
+                            default:
+                            {
+                              printf("The parameter type is not supported\n");
+                              exit(0);
+                              break;
+                            }
+                          }
+                          break;
+                        }
+                        default:
+                        {
+                          printf("Return type is not supported \n");
+                          exit(0);
+                        }
+                      }
+                    } else
+                    {
+                      switch(parameterTypes[0])
+                          {
+                            case Type::F32:
+                            {
+                              float parameter0 = *((float*)&(params_array[0]));
+                              reinterpret_cast<void (*)(float)>(p)(parameter0);
+                              break;
+                            }
+                            case Type::F64:
+                            {
+                              double parameter0 = *((double*)&(params_array[0]));
+                              reinterpret_cast<void (*)(double)>(p)(parameter0);
+                              break;
+                            }
+                            case Type::I32:
+                            {
+                              uint32_t parameter0 = *((uint32_t*)&(params_array[0]));
+                              reinterpret_cast<void (*)(uint32_t)>(p)(parameter0);
+                              break;
+                            }
+                            case Type::I64:
+                            {
+                              uint64_t parameter0 = *((uint64_t*)&(params_array[0]));
+                              reinterpret_cast<void (*)(uint64_t)>(p)(parameter0);
+                              break;
+                            }
+                            default:
+                            {
+                              printf("The parameter type is not supported\n");
+                              exit(0);
+                              break;
+                            }
+                          }
+                    }
+                    break;
+                  }
+                  case 2:
+                  {
+                    if (numberOfReturnValues == 1){
+                    Type returnType =  env_->GetFuncSignature(fn->sig_index)->result_types[0];
+                    switch (returnType)
+                      {
+                        case Type::I32:{
+                          switch(parameterTypes[0])
+                          {
+                            case Type::F32:
+                            {
+                            switch(parameterTypes[1])
+                              {
+                                case Type::F32:
+                                {
+                                  float parameter0 = *((float*)&(params_array[0]));
+                                  float parameter1 = *((float*)&(params_array[1]));
+                                  uint32_t q= reinterpret_cast<uint32_t (*)(float,float)>(p)(parameter0,parameter1);
+                                  Push(q);
+                                  break;
+                                }
+                                case Type::F64:
+                                {
+                                  float parameter0 = *((float*)&(params_array[0]));
+                                  double parameter1 = *((double*)&(params_array[1]));
+                                  uint32_t q= reinterpret_cast<uint32_t (*)(float,double)>(p)(parameter0,parameter1);
+                                  Push(q);
+                                  break;
+                                }
+                                case Type::I32:
+                                {
+                                  float parameter0 = *((float*)&(params_array[0]));
+                                  uint32_t parameter1 = *((uint32_t*)&(params_array[1]));
+                                  uint32_t q= reinterpret_cast<uint32_t (*)(float,uint32_t)>(p)(parameter0,parameter1);
+                                  Push(q);
+                                  break;
+                                }
+                                case Type::I64:
+                                {
+                                  float parameter0 = *((float*)&(params_array[0]));
+                                  uint64_t parameter1 = *((uint64_t*)&(params_array[1]));
+                                  uint32_t q= reinterpret_cast<uint32_t (*)(float,uint64_t)>(p)(parameter0,parameter1);
+                                  Push(q);
+                                  break;
+                                }
+                                default:
+                                {
+                                  printf("The parameter type is not supported\n");
+                                  exit(0);
+                                  break;
+                                }
+                              }
+                              break;
+                            }
+                            case Type::F64:
+                            {
+                              switch(parameterTypes[1])
+                              {
+                                case Type::F32:
+                                {
+                                  double parameter0 = *((double*)&(params_array[0]));
+                                  float parameter1 = *((float*)&(params_array[1]));
+                                  uint32_t q= reinterpret_cast<uint32_t (*)(double,float)>(p)(parameter0,parameter1);
+                                  Push(q);
+                                  break;
+                                }
+                                case Type::F64:
+                                {
+                                  double parameter0 = *((double*)&(params_array[0]));
+                                  double parameter1 = *((double*)&(params_array[1]));
+                                  uint32_t q= reinterpret_cast<uint32_t (*)(double,double)>(p)(parameter0,parameter1);
+                                  Push(q);
+                                  break;
+                                }
+                                case Type::I32:
+                                {
+                                  double parameter0 = *((double*)&(params_array[0]));
+                                  uint32_t parameter1 = *((uint32_t*)&(params_array[1]));
+                                  uint32_t q= reinterpret_cast<uint32_t (*)(double,uint32_t)>(p)(parameter0,parameter1);
+                                  Push(q);
+                                  break;
+                                }
+                                case Type::I64:
+                                {
+                                  double parameter0 = *((double*)&(params_array[0]));
+                                  uint64_t parameter1 = *((uint64_t*)&(params_array[1]));
+                                  uint32_t q= reinterpret_cast<uint32_t (*)(double,uint64_t)>(p)(parameter0,parameter1);
+                                  Push(q);
+                                  break;
+                                }
+                                default:
+                                {
+                                  printf("The parameter type is not supported\n");
+                                  exit(0);
+                                  break;
+                                }
+                              }
+                              break;
+                            }
+                            case Type::I32:
+                            {
+                              switch(parameterTypes[1])
+                              {
+                                case Type::F32:
+                                {
+                                  uint32_t parameter0 = *((uint32_t*)&(params_array[0]));
+                                  float parameter1 = *((float*)&(params_array[1]));
+                                  uint32_t q= reinterpret_cast<uint32_t (*)(uint32_t,float)>(p)(parameter0,parameter1);
+                                  Push(q);
+                                  break;
+                                }
+                                case Type::F64:
+                                {
+                                  uint32_t parameter0 = *((uint32_t*)&(params_array[0]));
+                                  double parameter1 = *((double*)&(params_array[1]));
+                                  uint32_t q= reinterpret_cast<uint32_t (*)(uint32_t,double)>(p)(parameter0,parameter1);
+                                  Push(q);
+                                  break;
+                                }
+                                case Type::I32:
+                                {
+                                  uint32_t parameter0 = *((uint32_t*)&(params_array[0]));
+                                  uint32_t parameter1 = *((uint32_t*)&(params_array[1]));
+                                  uint32_t q= reinterpret_cast<uint32_t (*)(uint32_t,uint32_t)>(p)(parameter0,parameter1);
+                                  Push(q);
+                                  break;
+                                }
+                                case Type::I64:
+                                {
+                                  uint32_t parameter0 = *((uint32_t*)&(params_array[0]));
+                                  uint64_t parameter1 = *((uint64_t*)&(params_array[1]));
+                                  uint32_t q= reinterpret_cast<uint32_t (*)(uint32_t,uint64_t)>(p)(parameter0,parameter1);
+                                  Push(q);
+                                  break;
+                                }
+                                default:
+                                {
+                                  printf("The parameter type is not supported\n");
+                                  exit(0);
+                                  break;
+                                }
+                              }
+                              break;
+                            }
+                            case Type::I64:
+                            {
+                              switch(parameterTypes[1])
+                              {
+                                case Type::F32:
+                                {
+                                  uint64_t parameter0 = *((uint64_t*)&(params_array[0]));
+                                  float parameter1 = *((float*)&(params_array[1]));
+                                  uint32_t q= reinterpret_cast<uint32_t (*)(uint64_t,float)>(p)(parameter0,parameter1);
+                                  Push(q);
+                                  break;
+                                }
+                                case Type::F64:
+                                {
+                                  uint64_t parameter0 = *((uint64_t*)&(params_array[0]));
+                                  double parameter1 = *((double*)&(params_array[1]));
+                                  uint32_t q= reinterpret_cast<uint32_t (*)(uint64_t,double)>(p)(parameter0,parameter1);
+                                  Push(q);
+                                  break;
+                                }
+                                case Type::I32:
+                                {
+                                  uint64_t parameter0 = *((uint64_t*)&(params_array[0]));
+                                  uint32_t parameter1 = *((uint32_t*)&(params_array[1]));
+                                  uint32_t q= reinterpret_cast<uint32_t (*)(uint64_t,uint32_t)>(p)(parameter0,parameter1);
+                                  Push(q);
+                                  break;
+                                }
+                                case Type::I64:
+                                {
+                                  uint64_t parameter0 = *((uint64_t*)&(params_array[0]));
+                                  uint64_t parameter1 = *((uint64_t*)&(params_array[1]));
+                                  uint32_t q= reinterpret_cast<uint32_t (*)(uint64_t,uint64_t)>(p)(parameter0,parameter1);
+                                  Push(q);
+                                  break;
+                                }
+                                default:
+                                {
+                                  printf("The parameter type is not supported\n");
+                                  exit(0);
+                                  break;
+                                }
+                              }
+                              break;
+                            }
+                            default:
+                            {
+                              printf("The parameter type is not supported\n");
+                              exit(0);
+                              break;
+                            }
+                          }
+                          break;
+                        }
+                        case  Type::I64: {
+                          switch(parameterTypes[0])
+                          {
+                            case Type::F32:
+                            {
+                            switch(parameterTypes[1])
+                              {
+                                case Type::F32:
+                                {
+                                  float parameter0 = *((float*)&(params_array[0]));
+                                  float parameter1 = *((float*)&(params_array[1]));
+                                  uint64_t q= reinterpret_cast<uint64_t (*)(float,float)>(p)(parameter0,parameter1);
+                                  Push(q);
+                                  break;
+                                }
+                                case Type::F64:
+                                {
+                                  float parameter0 = *((float*)&(params_array[0]));
+                                  double parameter1 = *((double*)&(params_array[1]));
+                                  uint64_t q= reinterpret_cast<uint64_t (*)(float,double)>(p)(parameter0,parameter1);
+                                  Push(q);
+                                  break;
+                                }
+                                case Type::I32:
+                                {
+                                  float parameter0 = *((float*)&(params_array[0]));
+                                  uint32_t parameter1 = *((uint32_t*)&(params_array[1]));
+                                  uint64_t q= reinterpret_cast<uint64_t (*)(float,uint32_t)>(p)(parameter0,parameter1);
+                                  Push(q);
+                                  break;
+                                }
+                                case Type::I64:
+                                {
+                                  float parameter0 = *((float*)&(params_array[0]));
+                                  uint64_t parameter1 = *((uint64_t*)&(params_array[1]));
+                                  uint64_t q= reinterpret_cast<uint64_t (*)(float,uint64_t)>(p)(parameter0,parameter1);
+                                  Push(q);
+                                  break;
+                                }
+                                default:
+                                {
+                                  printf("The parameter type is not supported\n");
+                                  exit(0);
+                                  break;
+                                }
+                              }
+                              break;
+                            }
+                            case Type::F64:
+                            {
+                              switch(parameterTypes[1])
+                              {
+                                case Type::F32:
+                                {
+                                  double parameter0 = *((double*)&(params_array[0]));
+                                  float parameter1 = *((float*)&(params_array[1]));
+                                  uint64_t q= reinterpret_cast<uint64_t (*)(double,float)>(p)(parameter0,parameter1);
+                                  Push(q);
+                                  break;
+                                }
+                                case Type::F64:
+                                {
+                                  double parameter0 = *((double*)&(params_array[0]));
+                                  double parameter1 = *((double*)&(params_array[1]));
+                                  uint64_t q= reinterpret_cast<uint64_t (*)(double,double)>(p)(parameter0,parameter1);
+                                  Push(q);
+                                  break;
+                                }
+                                case Type::I32:
+                                {
+                                  double parameter0 = *((double*)&(params_array[0]));
+                                  uint32_t parameter1 = *((uint32_t*)&(params_array[1]));
+                                  uint64_t q= reinterpret_cast<uint64_t (*)(double,uint32_t)>(p)(parameter0,parameter1);
+                                  Push(q);
+                                  break;
+                                }
+                                case Type::I64:
+                                {
+                                  double parameter0 = *((double*)&(params_array[0]));
+                                  uint64_t parameter1 = *((uint64_t*)&(params_array[1]));
+                                  uint64_t q= reinterpret_cast<uint64_t (*)(double,uint64_t)>(p)(parameter0,parameter1);
+                                  Push(q);
+                                  break;
+                                }
+                                default:
+                                {
+                                  printf("The parameter type is not supported\n");
+                                  exit(0);
+                                  break;
+                                }
+                              }
+                              break;
+                            }
+                            case Type::I32:
+                            {
+                              switch(parameterTypes[1])
+                              {
+                                case Type::F32:
+                                {
+                                  uint32_t parameter0 = *((uint32_t*)&(params_array[0]));
+                                  float parameter1 = *((float*)&(params_array[1]));
+                                  uint64_t q= reinterpret_cast<uint64_t (*)(uint32_t,float)>(p)(parameter0,parameter1);
+                                  Push(q);
+                                  break;
+                                }
+                                case Type::F64:
+                                {
+                                  uint32_t parameter0 = *((uint32_t*)&(params_array[0]));
+                                  double parameter1 = *((double*)&(params_array[1]));
+                                  uint64_t q= reinterpret_cast<uint64_t (*)(uint32_t,double)>(p)(parameter0,parameter1);
+                                  Push(q);
+                                  break;
+                                }
+                                case Type::I32:
+                                {
+                                  uint32_t parameter0 = *((uint32_t*)&(params_array[0]));
+                                  uint32_t parameter1 = *((uint32_t*)&(params_array[1]));
+                                  uint64_t q= reinterpret_cast<uint64_t (*)(uint32_t,uint32_t)>(p)(parameter0,parameter1);
+                                  Push(q);
+                                  break;
+                                }
+                                case Type::I64:
+                                {
+                                  uint32_t parameter0 = *((uint32_t*)&(params_array[0]));
+                                  uint64_t parameter1 = *((uint64_t*)&(params_array[1]));
+                                  uint64_t q= reinterpret_cast<uint64_t (*)(uint32_t,uint64_t)>(p)(parameter0,parameter1);
+                                  Push(q);
+                                  break;
+                                }
+                                default:
+                                {
+                                  printf("The parameter type is not supported\n");
+                                  exit(0);
+                                  break;
+                                }
+                              }
+                              break;
+                            }
+                            case Type::I64:
+                            {
+                              switch(parameterTypes[1])
+                              {
+                                case Type::F32:
+                                {
+                                  uint64_t parameter0 = *((uint64_t*)&(params_array[0]));
+                                  float parameter1 = *((float*)&(params_array[1]));
+                                  uint64_t q= reinterpret_cast<uint64_t (*)(uint64_t,float)>(p)(parameter0,parameter1);
+                                  Push(q);
+                                  break;
+                                }
+                                case Type::F64:
+                                {
+                                  uint64_t parameter0 = *((uint64_t*)&(params_array[0]));
+                                  double parameter1 = *((double*)&(params_array[1]));
+                                  uint64_t q= reinterpret_cast<uint64_t (*)(uint64_t,double)>(p)(parameter0,parameter1);
+                                  Push(q);
+                                  break;
+                                }
+                                case Type::I32:
+                                {
+                                  uint64_t parameter0 = *((uint64_t*)&(params_array[0]));
+                                  uint32_t parameter1 = *((uint32_t*)&(params_array[1]));
+                                  uint64_t q= reinterpret_cast<uint64_t (*)(uint64_t,uint32_t)>(p)(parameter0,parameter1);
+                                  Push(q);
+                                  break;
+                                }
+                                case Type::I64:
+                                {
+                                  uint64_t parameter0 = *((uint64_t*)&(params_array[0]));
+                                  uint64_t parameter1 = *((uint64_t*)&(params_array[1]));
+                                  uint64_t q= reinterpret_cast<uint64_t (*)(uint64_t,uint64_t)>(p)(parameter0,parameter1);
+                                  Push(q);
+                                  break;
+                                }
+                                default:
+                                {
+                                  printf("The parameter type is not supported\n");
+                                  exit(0);
+                                  break;
+                                }
+                              }
+                              break;
+                            }
+                            default:
+                            {
+                              printf("The parameter type is not supported\n");
+                              exit(0);
+                              break;
+                            }
+                          }
+                          break;
+                        }
+                        case  Type::F32: {
+                          switch(parameterTypes[0])
+                          {
+                            case Type::F32:
+                            {
+                            switch(parameterTypes[1])
+                              {
+                                case Type::F32:
+                                {
+                                  float parameter0 = *((float*)&(params_array[0]));
+                                  float parameter1 = *((float*)&(params_array[1]));
+                                  float q= reinterpret_cast<float (*)(float,float)>(p)(parameter0,parameter1);
+                                  Push(q);
+                                  break;
+                                }
+                                case Type::F64:
+                                {
+                                  float parameter0 = *((float*)&(params_array[0]));
+                                  double parameter1 = *((double*)&(params_array[1]));
+                                  float q= reinterpret_cast<float (*)(float,double)>(p)(parameter0,parameter1);
+                                  Push(q);
+                                  break;
+                                }
+                                case Type::I32:
+                                {
+                                  float parameter0 = *((float*)&(params_array[0]));
+                                  uint32_t parameter1 = *((uint32_t*)&(params_array[1]));
+                                  float q= reinterpret_cast<float (*)(float,uint32_t)>(p)(parameter0,parameter1);
+                                  Push(q);
+                                  break;
+                                }
+                                case Type::I64:
+                                {
+                                  float parameter0 = *((float*)&(params_array[0]));
+                                  uint64_t parameter1 = *((uint64_t*)&(params_array[1]));
+                                  float q= reinterpret_cast<float (*)(float,uint64_t)>(p)(parameter0,parameter1);
+                                  Push(q);
+                                  break;
+                                }
+                                default:
+                                {
+                                  printf("The parameter type is not supported\n");
+                                  exit(0);
+                                  break;
+                                }
+                              }
+                              break;
+                            }
+                            case Type::F64:
+                            {
+                              switch(parameterTypes[1])
+                              {
+                                case Type::F32:
+                                {
+                                  double parameter0 = *((double*)&(params_array[0]));
+                                  float parameter1 = *((float*)&(params_array[1]));
+                                  float q= reinterpret_cast<float (*)(double,float)>(p)(parameter0,parameter1);
+                                  Push(q);
+                                  break;
+                                }
+                                case Type::F64:
+                                {
+                                  double parameter0 = *((double*)&(params_array[0]));
+                                  double parameter1 = *((double*)&(params_array[1]));
+                                  float q= reinterpret_cast<float (*)(double,double)>(p)(parameter0,parameter1);
+                                  Push(q);
+                                  break;
+                                }
+                                case Type::I32:
+                                {
+                                  double parameter0 = *((double*)&(params_array[0]));
+                                  uint32_t parameter1 = *((uint32_t*)&(params_array[1]));
+                                  float q= reinterpret_cast<float (*)(double,uint32_t)>(p)(parameter0,parameter1);
+                                  Push(q);
+                                  break;
+                                }
+                                case Type::I64:
+                                {
+                                  double parameter0 = *((double*)&(params_array[0]));
+                                  uint64_t parameter1 = *((uint64_t*)&(params_array[1]));
+                                  float q= reinterpret_cast<float (*)(double,uint64_t)>(p)(parameter0,parameter1);
+                                  Push(q);
+                                  break;
+                                }
+                                default:
+                                {
+                                  printf("The parameter type is not supported\n");
+                                  exit(0);
+                                  break;
+                                }
+                              }
+                              break;
+                            }
+                            case Type::I32:
+                            {
+                              switch(parameterTypes[1])
+                              {
+                                case Type::F32:
+                                {
+                                  uint32_t parameter0 = *((uint32_t*)&(params_array[0]));
+                                  float parameter1 = *((float*)&(params_array[1]));
+                                  float q= reinterpret_cast<float (*)(uint32_t,float)>(p)(parameter0,parameter1);
+                                  Push(q);
+                                  break;
+                                }
+                                case Type::F64:
+                                {
+                                  uint32_t parameter0 = *((uint32_t*)&(params_array[0]));
+                                  double parameter1 = *((double*)&(params_array[1]));
+                                  float q= reinterpret_cast<float (*)(uint32_t,double)>(p)(parameter0,parameter1);
+                                  Push(q);
+                                  break;
+                                }
+                                case Type::I32:
+                                {
+                                  uint32_t parameter0 = *((uint32_t*)&(params_array[0]));
+                                  uint32_t parameter1 = *((uint32_t*)&(params_array[1]));
+                                  float q= reinterpret_cast<float (*)(uint32_t,uint32_t)>(p)(parameter0,parameter1);
+                                  Push(q);
+                                  break;
+                                }
+                                case Type::I64:
+                                {
+                                  uint32_t parameter0 = *((uint32_t*)&(params_array[0]));
+                                  uint64_t parameter1 = *((uint64_t*)&(params_array[1]));
+                                  float q= reinterpret_cast<float (*)(uint32_t,uint64_t)>(p)(parameter0,parameter1);
+                                  Push(q);
+                                  break;
+                                }
+                                default:
+                                {
+                                  printf("The parameter type is not supported\n");
+                                  exit(0);
+                                  break;
+                                }
+                              }
+                              break;
+                            }
+                            case Type::I64:
+                            {
+                              switch(parameterTypes[1])
+                              {
+                                case Type::F32:
+                                {
+                                  uint64_t parameter0 = *((uint64_t*)&(params_array[0]));
+                                  float parameter1 = *((float*)&(params_array[1]));
+                                  float q= reinterpret_cast<float (*)(uint64_t,float)>(p)(parameter0,parameter1);
+                                  Push(q);
+                                  break;
+                                }
+                                case Type::F64:
+                                {
+                                  uint64_t parameter0 = *((uint64_t*)&(params_array[0]));
+                                  double parameter1 = *((double*)&(params_array[1]));
+                                  float q= reinterpret_cast<float (*)(uint64_t,double)>(p)(parameter0,parameter1);
+                                  Push(q);
+                                  break;
+                                }
+                                case Type::I32:
+                                {
+                                  uint64_t parameter0 = *((uint64_t*)&(params_array[0]));
+                                  uint32_t parameter1 = *((uint32_t*)&(params_array[1]));
+                                  float q= reinterpret_cast<float (*)(uint64_t,uint32_t)>(p)(parameter0,parameter1);
+                                  Push(q);
+                                  break;
+                                }
+                                case Type::I64:
+                                {
+                                  uint64_t parameter0 = *((uint64_t*)&(params_array[0]));
+                                  uint64_t parameter1 = *((uint64_t*)&(params_array[1]));
+                                  float q= reinterpret_cast<float (*)(uint64_t,uint64_t)>(p)(parameter0,parameter1);
+                                  Push(q);
+                                  break;
+                                }
+                                default:
+                                {
+                                  printf("The parameter type is not supported\n");
+                                  exit(0);
+                                  break;
+                                }
+                              }
+                              break;
+                            }
+                            default:
+                            {
+                              printf("The parameter type is not supported\n");
+                              exit(0);
+                              break;
+                            }
+                          }
+                          break;
+                        }
+                        case Type::F64: {
+                          switch(parameterTypes[0])
+                          {
+                            case Type::F32:
+                            {
+                            switch(parameterTypes[1])
+                              {
+                                case Type::F32:
+                                {
+                                  float parameter0 = *((float*)&(params_array[0]));
+                                  float parameter1 = *((float*)&(params_array[1]));
+                                  double q= reinterpret_cast<double (*)(float,float)>(p)(parameter0,parameter1);
+                                  Push(q);
+                                  break;
+                                }
+                                case Type::F64:
+                                {
+                                  float parameter0 = *((float*)&(params_array[0]));
+                                  double parameter1 = *((double*)&(params_array[1]));
+                                  double q= reinterpret_cast<double (*)(float,double)>(p)(parameter0,parameter1);
+                                  Push(q);
+                                  break;
+                                }
+                                case Type::I32:
+                                {
+                                  float parameter0 = *((float*)&(params_array[0]));
+                                  uint32_t parameter1 = *((uint32_t*)&(params_array[1]));
+                                  double q= reinterpret_cast<double (*)(float,uint32_t)>(p)(parameter0,parameter1);
+                                  Push(q);
+                                  break;
+                                }
+                                case Type::I64:
+                                {
+                                  float parameter0 = *((float*)&(params_array[0]));
+                                  uint64_t parameter1 = *((uint64_t*)&(params_array[1]));
+                                  double q= reinterpret_cast<double (*)(float,uint64_t)>(p)(parameter0,parameter1);
+                                  Push(q);
+                                  break;
+                                }
+                                default:
+                                {
+                                  printf("The parameter type is not supported\n");
+                                  exit(0);
+                                  break;
+                                }
+                              }
+                              break;
+                            }
+                            case Type::F64:
+                            {
+                              switch(parameterTypes[1])
+                              {
+                                case Type::F32:
+                                {
+                                  double parameter0 = *((double*)&(params_array[0]));
+                                  float parameter1 = *((float*)&(params_array[1]));
+                                  double q= reinterpret_cast<double (*)(double,float)>(p)(parameter0,parameter1);
+                                  Push(q);
+                                  break;
+                                }
+                                case Type::F64:
+                                {
+                                  double parameter0 = *((double*)&(params_array[0]));
+                                  double parameter1 = *((double*)&(params_array[1]));
+                                  double q= reinterpret_cast<double (*)(double,double)>(p)(parameter0,parameter1);
+                                  Push(q);
+                                  break;
+                                }
+                                case Type::I32:
+                                {
+                                  double parameter0 = *((double*)&(params_array[0]));
+                                  uint32_t parameter1 = *((uint32_t*)&(params_array[1]));
+                                  double q= reinterpret_cast<double (*)(double,uint32_t)>(p)(parameter0,parameter1);
+                                  Push(q);
+                                  break;
+                                }
+                                case Type::I64:
+                                {
+                                  double parameter0 = *((double*)&(params_array[0]));
+                                  uint64_t parameter1 = *((uint64_t*)&(params_array[1]));
+                                  double q= reinterpret_cast<double (*)(double,uint64_t)>(p)(parameter0,parameter1);
+                                  Push(q);
+                                  break;
+                                }
+                                default:
+                                {
+                                  printf("The parameter type is not supported\n");
+                                  exit(0);
+                                  break;
+                                }
+                              }
+                              break;
+                            }
+                            case Type::I32:
+                            {
+                              switch(parameterTypes[1])
+                              {
+                                case Type::F32:
+                                {
+                                  uint32_t parameter0 = *((uint32_t*)&(params_array[0]));
+                                  float parameter1 = *((float*)&(params_array[1]));
+                                  double q= reinterpret_cast<double (*)(uint32_t,float)>(p)(parameter0,parameter1);
+                                  Push(q);
+                                  break;
+                                }
+                                case Type::F64:
+                                {
+                                  uint32_t parameter0 = *((uint32_t*)&(params_array[0]));
+                                  double parameter1 = *((double*)&(params_array[1]));
+                                  double q= reinterpret_cast<double (*)(uint32_t,double)>(p)(parameter0,parameter1);
+                                  Push(q);
+                                  break;
+                                }
+                                case Type::I32:
+                                {
+                                  uint32_t parameter0 = *((uint32_t*)&(params_array[0]));
+                                  uint32_t parameter1 = *((uint32_t*)&(params_array[1]));
+                                  double q= reinterpret_cast<double (*)(uint32_t,uint32_t)>(p)(parameter0,parameter1);
+                                  Push(q);
+                                  break;
+                                }
+                                case Type::I64:
+                                {
+                                  uint32_t parameter0 = *((uint32_t*)&(params_array[0]));
+                                  uint64_t parameter1 = *((uint64_t*)&(params_array[1]));
+                                  double q= reinterpret_cast<double (*)(uint32_t,uint64_t)>(p)(parameter0,parameter1);
+                                  Push(q);
+                                  break;
+                                }
+                                default:
+                                {
+                                  printf("The parameter type is not supported\n");
+                                  exit(0);
+                                  break;
+                                }
+                              }
+                              break;
+                            }
+                            case Type::I64:
+                            {
+                              switch(parameterTypes[1])
+                              {
+                                case Type::F32:
+                                {
+                                  uint64_t parameter0 = *((uint64_t*)&(params_array[0]));
+                                  float parameter1 = *((float*)&(params_array[1]));
+                                  double q= reinterpret_cast<double (*)(uint64_t,float)>(p)(parameter0,parameter1);
+                                  Push(q);
+                                  break;
+                                }
+                                case Type::F64:
+                                {
+                                  uint64_t parameter0 = *((uint64_t*)&(params_array[0]));
+                                  double parameter1 = *((double*)&(params_array[1]));
+                                  double q= reinterpret_cast<double (*)(uint64_t,double)>(p)(parameter0,parameter1);
+                                  Push(q);
+                                  break;
+                                }
+                                case Type::I32:
+                                {
+                                  uint64_t parameter0 = *((uint64_t*)&(params_array[0]));
+                                  uint32_t parameter1 = *((uint32_t*)&(params_array[1]));
+                                  double q= reinterpret_cast<double (*)(uint64_t,uint32_t)>(p)(parameter0,parameter1);
+                                  Push(q);
+                                  break;
+                                }
+                                case Type::I64:
+                                {
+                                  uint64_t parameter0 = *((uint64_t*)&(params_array[0]));
+                                  uint64_t parameter1 = *((uint64_t*)&(params_array[1]));
+                                  double q= reinterpret_cast<double (*)(uint64_t,uint64_t)>(p)(parameter0,parameter1);
+                                  Push(q);
+                                  break;
+                                }
+                                default:
+                                {
+                                  printf("The parameter type is not supported\n");
+                                  exit(0);
+                                  break;
+                                }
+                              }
+                              break;
+                            }
+                            default:
+                            {
+                              printf("The parameter type is not supported\n");
+                              exit(0);
+                              break;
+                            }
+                          }
+                          break;
+                        }
+                        default:
+                        {
+                          printf("Return type is not supported \n");
+                          exit(0);
+                        }
+                      }
+                    } else
+                    {
+                      switch(parameterTypes[0])
+                      {
+                        case Type::F32:
+                        {
+                        switch(parameterTypes[1])
+                          {
+                            case Type::F32:
+                            {
+                              float parameter0 = *((float*)&(params_array[0]));
+                              float parameter1 = *((float*)&(params_array[1]));
+                              reinterpret_cast<void (*)(float,float)>(p)(parameter0,parameter1);
+                              break;
+                            }
+                            case Type::F64:
+                            {
+                              float parameter0 = *((float*)&(params_array[0]));
+                              double parameter1 = *((double*)&(params_array[1]));
+                              reinterpret_cast<void (*)(float,double)>(p)(parameter0,parameter1);
+                              break;
+                            }
+                            case Type::I32:
+                            {
+                              float parameter0 = *((float*)&(params_array[0]));
+                              uint32_t parameter1 = *((uint32_t*)&(params_array[1]));
+                              reinterpret_cast<void (*)(float,uint32_t)>(p)(parameter0,parameter1);
+                              break;
+                            }
+                            case Type::I64:
+                            {
+                              float parameter0 = *((float*)&(params_array[0]));
+                              uint64_t parameter1 = *((uint64_t*)&(params_array[1]));
+                              reinterpret_cast<void (*)(float,uint64_t)>(p)(parameter0,parameter1);
+                              break;
+                            }
+                            default:
+                            {
+                              printf("The parameter type is not supported\n");
+                              exit(0);
+                              break;
+                            }
+                          }
+                          break;
+                        }
+                        case Type::F64:
+                        {
+                          switch(parameterTypes[1])
+                          {
+                            case Type::F32:
+                            {
+                              double parameter0 = *((double*)&(params_array[0]));
+                              float parameter1 = *((float*)&(params_array[1]));
+                              reinterpret_cast<void (*)(double,float)>(p)(parameter0,parameter1);
+                              break;
+                            }
+                            case Type::F64:
+                            {
+                              double parameter0 = *((double*)&(params_array[0]));
+                              double parameter1 = *((double*)&(params_array[1]));
+                              reinterpret_cast<void (*)(double,double)>(p)(parameter0,parameter1);
+                              break;
+                            }
+                            case Type::I32:
+                            {
+                              double parameter0 = *((double*)&(params_array[0]));
+                              uint32_t parameter1 = *((uint32_t*)&(params_array[1]));
+                               reinterpret_cast<void (*)(double,uint32_t)>(p)(parameter0,parameter1);
+                              break;
+                            }
+                            case Type::I64:
+                            {
+                              double parameter0 = *((double*)&(params_array[0]));
+                              uint64_t parameter1 = *((uint64_t*)&(params_array[1]));
+                              reinterpret_cast<void (*)(double,uint64_t)>(p)(parameter0,parameter1);
+                              break;
+                            }
+                            default:
+                            {
+                              printf("The parameter type is not supported\n");
+                              exit(0);
+                              break;
+                            }
+                          }
+                          break;
+                        }
+                        case Type::I32:
+                        {
+                          switch(parameterTypes[1])
+                          {
+                            case Type::F32:
+                            {
+                              uint32_t parameter0 = *((uint32_t*)&(params_array[0]));
+                              float parameter1 = *((float*)&(params_array[1]));
+                              reinterpret_cast<void (*)(uint32_t,float)>(p)(parameter0,parameter1);
+                              break;
+                            }
+                            case Type::F64:
+                            {
+                              uint32_t parameter0 = *((uint32_t*)&(params_array[0]));
+                              double parameter1 = *((double*)&(params_array[1]));
+                              reinterpret_cast<void (*)(uint32_t,double)>(p)(parameter0,parameter1);
+                              break;
+                            }
+                            case Type::I32:
+                            {
+                              uint32_t parameter0 = *((uint32_t*)&(params_array[0]));
+                              uint32_t parameter1 = *((uint32_t*)&(params_array[1]));
+                              reinterpret_cast<void (*)(uint32_t,uint32_t)>(p)(parameter0,parameter1);
+                              break;
+                            }
+                            case Type::I64:
+                            {
+                              uint32_t parameter0 = *((uint32_t*)&(params_array[0]));
+                              uint64_t parameter1 = *((uint64_t*)&(params_array[1]));
+                              reinterpret_cast<void (*)(uint32_t,uint64_t)>(p)(parameter0,parameter1);
+                              break;
+                            }
+                            default:
+                            {
+                              printf("The parameter type is not supported\n");
+                              exit(0);
+                              break;
+                            }
+                          }
+                          break;
+                        }
+                        case Type::I64:
+                        {
+                          switch(parameterTypes[1])
+                          {
+                            case Type::F32:
+                            {
+                              uint64_t parameter0 = *((uint64_t*)&(params_array[0]));
+                              float parameter1 = *((float*)&(params_array[1]));
+                              reinterpret_cast<void (*)(uint64_t,float)>(p)(parameter0,parameter1);
+                              break;
+                            }
+                            case Type::F64:
+                            {
+                              uint64_t parameter0 = *((uint64_t*)&(params_array[0]));
+                              double parameter1 = *((double*)&(params_array[1]));
+                              reinterpret_cast<void (*)(uint64_t,double)>(p)(parameter0,parameter1);
+                              break;
+                            }
+                            case Type::I32:
+                            {
+                              uint64_t parameter0 = *((uint64_t*)&(params_array[0]));
+                              uint32_t parameter1 = *((uint32_t*)&(params_array[1]));
+                              reinterpret_cast<void (*)(uint64_t,uint32_t)>(p)(parameter0,parameter1);
+                              break;
+                            }
+                            case Type::I64:
+                            {
+                              uint64_t parameter0 = *((uint64_t*)&(params_array[0]));
+                              uint64_t parameter1 = *((uint64_t*)&(params_array[1]));
+                              reinterpret_cast<void (*)(uint64_t,uint64_t)>(p)(parameter0,parameter1);
+                              break;
+                            }
+                            default:
+                            {
+                              printf("The parameter type is not supported\n");
+                              exit(0);
+                              break;
+                            }
+                          }
+                          break;
+                        }
+                        default:
+                        {
+                          printf("The parameter type is not supported\n");
+                          exit(0);
+                          break;
+                        }
+                      }
+                    }
                     break;
                   }
                   default:
@@ -2083,7 +3293,7 @@ Result Thread::Run(int num_instructions) {
                     printf("The number of arguments is not supported\n");
                     exit(1);
                   }
-
+                }
             }
           // Value t = Value(q);
           // Push(q);
@@ -4220,14 +5430,59 @@ ExecResult Executor::RunFunction(Index func_index, const TypedValues& args) {
         env_->TryAOT(&thread_, fn, func_index);
         if (fn->aot_fn_)
           {
-          fn->aot_fn_();
-          exec_result.result = Result::Ok;
+          if (env_->enable_aot_entry)
+            {
+            fn->aot_fn_();
+            exec_result.result = Result::Ok;
+            }
+            else if (env_->enable_aot_hardcoded)
+            {
+            int numberOfReturnValues =  env_->GetFuncSignature(fn->sig_index)->result_types.size();
+
+            if (numberOfReturnValues = 1)
+              {
+                Type returnType =  env_->GetFuncSignature(fn->sig_index)->result_types[0];
+                switch (returnType)
+                  {
+                    case Type::I32:{
+                      int32_t q = reinterpret_cast<int32_t (*)()>(fn->aot_fn_)();
+                      thread_.Push(q);
+                      break;
+                    }
+                    case  Type::I64: {
+                        int64_t q = reinterpret_cast<int64_t (*)()>(fn->aot_fn_)();
+                        thread_.Push(q);
+                        break;
+                    }
+                    case  Type::F32: {
+                      float q = reinterpret_cast<float (*)()>(fn->aot_fn_)();
+                      thread_.Push(q);
+                        break;}
+                    case Type::F64: {
+                      double q = reinterpret_cast<double (*)()>(fn->aot_fn_)();
+                      thread_.Push(q);
+                     break;
+                    }
+                    default:
+                    {
+                      printf("Return type is not supported \n");
+                      exit(0);
+                    }
+                  }
+              }
+              else
+              {
+                fn->aot_fn_();
+              }
+            }
           }
-        else
+          else
           {
           exec_result.result = RunDefinedFunction(cast<DefinedFunc>(func)->offset);
           }
         }
+
+
 
     if (exec_result.result == Result::Ok)
         {
