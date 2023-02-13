@@ -4,7 +4,7 @@
 #include "src/interp/interp.h"
 #include "env/AOTLoadStoreDriver.hpp"
 #include <iostream>
-#include <math.h>   // for relocating math functions
+#include <tgmath.h>   // for relocating math functions
 #include <unistd.h> // F_OK, access
 
 #ifndef WASM_SHARED_CACHE // This basically is only used in ELF-enabled runtime
@@ -244,7 +244,7 @@ int32_t args_size_get(int32_t numOfArgs1, int32_t sizeOfArgs1)
    return 0;
    }
 
-void funpr(uint64_t a) { std::cout << ((char *)(&a)); }
+// void funpr(uint64_t a) { std::cout << ((char *)(&a)); }
 
 void WABTAOTCompilerLib::relocateAOT(interp::Environment &env, DefinedModule *module)
    {
@@ -270,7 +270,7 @@ void WABTAOTCompilerLib::relocateAOT(interp::Environment &env, DefinedModule *mo
    setCodeEntry("proc_exi",reinterpret_cast<void*>(clus));
    setCodeEntry("fd_seek",reinterpret_cast<void*>(seek));
    setCodeEntry("fd_close",reinterpret_cast<void*>(clos));
-   setCodeEntry("funpr",reinterpret_cast<void*>(funpr));
+   // setCodeEntry("funpr",reinterpret_cast<void*>(funpr));
    setCodeEntry("gettimeo",reinterpret_cast<void*>(gettimeod));
    // for(Index i = 0; i < func_count; ++i) {
    //   if(env.GetFunc(i)->is_host) {

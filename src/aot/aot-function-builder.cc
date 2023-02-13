@@ -10,7 +10,8 @@
 #include "env/AOTLoadStoreDriver.hpp"
 #include "env/AOTMethodHeader.hpp"
 #include "ilgen/VirtualMachineState.hpp"
-#include <cmath>
+
+ #include <tgmath.h>
 #include <iostream>
 #include <limits>
 #include <string.h>
@@ -215,10 +216,10 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread *thread, interp::DefinedFu
                   Float);
    DefineFunction("copysignf", __FILE__, "0",
                   reinterpret_cast<void *>(static_cast<float (*)(float, float)>(copysignf)),
-                  Float,
+                  Double,
                   2,
-                  Float,
-                  Float);
+                  Double,
+                  Double);
 
    DefineFunction("sqrt", __FILE__, "0",
                   reinterpret_cast<void *>(static_cast<double (*)(double)>(sqrt)),
@@ -286,11 +287,11 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread *thread, interp::DefinedFu
                   Int32,
                   1,
                   Int32);
-   DefineFunction("funpr", __FILE__, "0",
-                  reinterpret_cast<void *>(sqrt),
-                  NoType,
-                  1,
-                  Int64);
+   // DefineFunction("funpr", __FILE__, "0",
+   //                reinterpret_cast<void *>(sqrt),
+   //                NoType,
+   //                1,
+   //                Int64);
 
    envPointer = &env_;
    returnType_ = functionReturnType(fn_);
@@ -2239,7 +2240,8 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder *b,
 
    case Opcode::F32Copysign:
       EmitBinaryOp<float>(b, [&](TR::IlValue *lhs, TR::IlValue *rhs)
-                          { return b->Call("copysignf", 2, lhs, rhs); });
+                        //   { return b->Call("copysignf", 2, lhs, rhs); });
+                          { return b->ConvertTo(Float,b->Call("copysignf", 2, b->ConvertTo(Double,lhs), b->ConvertTo(Double,rhs))); });
       break;
 
    case Opcode::F32Eq:
