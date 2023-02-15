@@ -27,6 +27,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <string>
+#include <ffi.h>
 
 #include "src/interp/interp-internal.h"
 
@@ -2065,7 +2066,95 @@ Result Thread::Run(int num_instructions) {
           if (env_->enable_aot_entry)
             {
              unsigned long long q =reinterpret_cast<unsigned long (*)()>(p)();
-            } else if (env_->enable_aot_hardcoded)
+            } else if (env_->enable_aot_libffi) {
+              TypeVector parameterTypes = env_->GetFuncSignature(fn->sig_index)->param_types;
+              int numberOfParameters = parameterTypes.size();
+              int numberOfReturnValues =  env_->GetFuncSignature(fn->sig_index)->result_types.size();
+              Type returnType =  env_->GetFuncSignature(fn->sig_index)->result_types[0];
+              Value params_array[numberOfParameters];
+              for (int i = 0 ;  i < numberOfParameters; i++){
+                params_array[numberOfParameters-i-1] = Pop();
+              }
+              void *ffi_call_params[numberOfParameters];
+              for (int i = 0 ; i < numberOfParameters; i++){
+                ffi_call_params[i]=&params_array[i];
+              }
+              ffi_cif cif;
+              ffi_type *ffi_arg_types[numberOfParameters];
+              ffi_type *ffi_rtype;
+              for (int i = 0 ; i < numberOfParameters; i++){
+                switch(parameterTypes[i]){
+                  case Type::I32:{
+                    ffi_arg_types[i]=&ffi_type_sint32;
+                    break;
+                  }
+                  case Type::I64:{
+                    ffi_arg_types[i]=&ffi_type_uint64;
+                    break;
+                  }
+                  case Type::F32:{
+                    ffi_arg_types[i]=&ffi_type_float;
+                    break;
+                  }
+                  case Type::F64:{
+                    ffi_arg_types[i]=&ffi_type_double;
+                    break;
+                  }
+                  default:
+                  {
+                    printf("Libffi parameter type is not supported yet");
+                    exit(0);
+                  }
+                }
+              }
+              void (*function)() = reinterpret_cast<void (*)()>(p);
+              /** Single Return Value here*/
+              switch(returnType){
+                  case Type::I32:{
+                    unsigned int rc;
+                    ffi_rtype=&ffi_type_uint32;
+                     if (ffi_prep_cif(&cif, FFI_DEFAULT_ABI, numberOfParameters, ffi_rtype, ffi_arg_types) == FFI_OK){
+                      ffi_call(&cif, function, &rc, ffi_call_params);
+                      Push(rc);
+                     }
+                    break;
+                  }
+                  case Type::I64:{
+                    ffi_rtype=&ffi_type_uint64;
+                    uint64_t rc;
+                      if (ffi_prep_cif(&cif, FFI_DEFAULT_ABI, numberOfParameters, ffi_rtype, ffi_arg_types) == FFI_OK){
+                      ffi_call(&cif, function, &rc, ffi_call_params);
+                      Push(rc);
+                     }
+                    break;
+                  }
+                  case Type::F32:{
+                    float rc;
+                    ffi_rtype=&ffi_type_float;
+                      if (ffi_prep_cif(&cif, FFI_DEFAULT_ABI, numberOfParameters, ffi_rtype, ffi_arg_types) == FFI_OK){
+                      ffi_call(&cif, function, &rc, ffi_call_params);
+                      Push(rc);
+                     }
+                    break;
+                  }
+                  case Type::F64:{
+                    double rc;
+                    ffi_rtype=&ffi_type_double;
+                     if (ffi_prep_cif(&cif, FFI_DEFAULT_ABI,numberOfParameters, ffi_rtype, ffi_arg_types) == FFI_OK){
+                      ffi_call(&cif, function, &rc, ffi_call_params);
+                      Push(rc);
+                     }
+                    break;
+                  }
+                default:
+                  {
+                    printf("Libffi return type is not supported yet");
+                    exit(0);
+                  }
+              }
+
+            }
+            else if (env_->enable_aot_hardcoded)
             {
               TypeVector parameterTypes = env_->GetFuncSignature(fn->sig_index)->param_types;
               int numberOfParameters = parameterTypes.size();
@@ -5474,6 +5563,8 @@ ExecResult Executor::RunFunction(Index func_index, const TypedValues& args) {
               {
                 fn->aot_fn_();
               }
+            }  else if (env_->enable_aot_libffi){
+              
             }
           }
           else
