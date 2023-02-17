@@ -798,7 +798,12 @@ class Thread {
   Result CallThunk(Environment::AOTedFunction,Func*);
 #endif
   Result CallHost(HostFunc*);
-
+  /**
+   * @brief This function queries the environment for
+   * function signature and properly assigns types
+   * for libffi
+   */
+  void generateLibFFICall(interp::Environment*, wabt::interp::DefinedFunc*, wabt::interp::Thread*);
  private:
   friend class jit::FunctionBuilder;
   friend jit::Result_t jit::InterpThunk(jit::ThreadInfo*, Index);

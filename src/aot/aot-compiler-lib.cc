@@ -1,10 +1,10 @@
 
 #include "aot-compiler-lib.hpp"
 #include "../cast.h" // cast
-#include "src/interp/interp.h"
 #include "env/AOTLoadStoreDriver.hpp"
+#include "src/interp/interp.h"
 #include <iostream>
-#include <tgmath.h>   // for relocating math functions
+#include <tgmath.h> // for relocating math functions
 #include <unistd.h> // F_OK, access
 
 #ifndef WASM_SHARED_CACHE // This basically is only used in ELF-enabled runtime
@@ -88,13 +88,13 @@ void WABTAOTCompilerLib::preSetCodeEntries(wabt::interp::Executor *executor, wab
    setCodeEntry("vsdata", pptr);
 
    // Setting up global variables to be available for relocations
-   Value **globals = (Value**)malloc(sizeof(Value*)*env.GetGlobalCount());
+   Value **globals = (Value **)malloc(sizeof(Value *) * env.GetGlobalCount());
    std::vector<std::string> global_names;
    for (int i = 0; i < env.GetGlobalCount(); i++)
       {
-      globals[i] = (Value*)malloc(sizeof(Value*));
+      globals[i] = (Value *)malloc(sizeof(Value *));
       auto tmp = &env.GetGlobal(i)->typed_value.value;
-      memcpy(globals+i,&tmp,sizeof(Value*));
+      memcpy(globals + i, &tmp, sizeof(Value *));
 
       char *global_name = (char *)calloc(6, sizeof(char));
       sprintf(global_name, "g%d", i);
@@ -118,15 +118,17 @@ void WABTAOTCompilerLib::preSetCodeEntries(wabt::interp::Executor *executor, wab
    setCodeEntry(const_cast<char *>("Params"), reinterpret_cast<void *>(&env.indirectCallParams));
    }
 
-TR::AOTLoadStoreDriver* WABTAOTCompilerLib::_loadStoreDriver = NULL;
+TR::AOTLoadStoreDriver *WABTAOTCompilerLib::_loadStoreDriver = NULL;
 
-void WABTAOTCompilerLib::setLoadStoreDriver(TR::AOTLoadStoreDriver* driver){
+void WABTAOTCompilerLib::setLoadStoreDriver(TR::AOTLoadStoreDriver *driver)
+   {
    WABTAOTCompilerLib::_loadStoreDriver = driver;
-}
+   }
 
-TR::AOTLoadStoreDriver* WABTAOTCompilerLib::getLoadStoreDriver(){
+TR::AOTLoadStoreDriver *WABTAOTCompilerLib::getLoadStoreDriver()
+   {
    return WABTAOTCompilerLib::_loadStoreDriver;
-}
+   }
 
 int WABTAOTCompilerLib::getModuleIndexByFunctionIndex(wabt::interp::Environment &env, unsigned int Index)
    {
@@ -218,8 +220,8 @@ void clus(int32_t a) { std::cout << a; };
 
 int32_t args_get(int32_t argv, int32_t argv_buf)
    {
-      int numOfArgs =1;
-      char args_arr[1][2]={"."};
+   int numOfArgs = 1;
+   char args_arr[1][2] = {"."};
    uint32_t *bufferLoc = (uint32_t *)(envPointer->GetMems()[0] + argv);
    uint8_t *bufferLocsize = (uint8_t *)(envPointer->GetMems()[0] + argv_buf);
    *bufferLoc = argv_buf;
@@ -232,8 +234,8 @@ int32_t args_get(int32_t argv, int32_t argv_buf)
    }
 int32_t args_size_get(int32_t numOfArgs1, int32_t sizeOfArgs1)
    {
-            int numOfArgs =1;
-             char args_arr[1][2]={"."};
+   int numOfArgs = 1;
+   char args_arr[1][2] = {"."};
    uint32_t *bufferLoc = (uint32_t *)(envPointer->GetMems()[0] + numOfArgs1);
    uint32_t *bufferLocsize = (uint32_t *)(envPointer->GetMems()[0] + sizeOfArgs1);
    *bufferLoc = numOfArgs;
@@ -261,17 +263,17 @@ void WABTAOTCompilerLib::relocateAOT(interp::Environment &env, DefinedModule *mo
    setCodeEntry("setTempRet0", reinterpret_cast<void *>(1));
    setCodeEntry("memory", reinterpret_cast<void *>(1));
    setCodeEntry("table", reinterpret_cast<void *>(1));
-   setCodeEntry("emscript",reinterpret_cast<void*>(clus));
+   setCodeEntry("emscript", reinterpret_cast<void *>(clus));
    setCodeEntry("setTempR", reinterpret_cast<void *>(1));
    setCodeEntry("Popcount", reinterpret_cast<void *>(static_cast<int (*)(unsigned)>(wabt::Popcount)));
    setCodeEntry("Popcountll", reinterpret_cast<void *>(static_cast<int (*)(unsigned long long)>(wabt::Popcount)));
-   setCodeEntry("args_siz",reinterpret_cast<void*>(args_size_get));
-   setCodeEntry("args_get",reinterpret_cast<void*>(args_get));
-   setCodeEntry("proc_exi",reinterpret_cast<void*>(clus));
-   setCodeEntry("fd_seek",reinterpret_cast<void*>(seek));
-   setCodeEntry("fd_close",reinterpret_cast<void*>(clos));
+   setCodeEntry("args_siz", reinterpret_cast<void *>(args_size_get));
+   setCodeEntry("args_get", reinterpret_cast<void *>(args_get));
+   setCodeEntry("proc_exi", reinterpret_cast<void *>(clus));
+   setCodeEntry("fd_seek", reinterpret_cast<void *>(seek));
+   setCodeEntry("fd_close", reinterpret_cast<void *>(clos));
    // setCodeEntry("funpr",reinterpret_cast<void*>(funpr));
-   setCodeEntry("gettimeo",reinterpret_cast<void*>(gettimeod));
+   setCodeEntry("gettimeo", reinterpret_cast<void *>(gettimeod));
    // for(Index i = 0; i < func_count; ++i) {
    //   if(env.GetFunc(i)->is_host) {
    //     setCodeEntry()
@@ -452,12 +454,12 @@ char *WABTAOTCompilerLib::generateEntryPointName(wabt::interp::DefinedFunc *func
    return result;
    }
 
-void WABTAOTCompilerLib::generateFunctionName(wabt::interp::Environment* env, unsigned int ind, std::string& name)
+void WABTAOTCompilerLib::generateFunctionName(wabt::interp::Environment *env, unsigned int ind, std::string &name)
    {
-   DefinedModule* modulee;
+   DefinedModule *modulee;
    Index moduleIndex = WABTAOTCompilerLib::getModuleIndexByFunctionIndex(*env, ind);
    modulee = reinterpret_cast<DefinedModule *>(env->GetModule(moduleIndex));
-   name = "f" + std::to_string(ind+wabt::aot::AOTMeta::getOffsetForNaming()) + "m" + modulee->name.substr(0, 2);
+   name = "f" + std::to_string(ind + wabt::aot::AOTMeta::getOffsetForNaming()) + "m" + modulee->name.substr(0, 2);
    }
 
 #ifndef WASM_SHARED_CACHE
@@ -472,8 +474,6 @@ void WABTAOTCompilerLib::loadELFToMemory(const char *moduleFilename)
       WABTAOTCompilerLib::build_type = 1;
       }
    }
-
-
 
 void WABTAOTCompilerLib::createELFFile(const char *moduleFilename)
    {
