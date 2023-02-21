@@ -4,17 +4,17 @@
 #include "src/interp/interp-internal.h"
 #include "src/interp/interp.h"
 #include "trap-with.h"
-//#include "/home/petar/wasmjit-omr/third_party/omr/compiler/ilgen/VirtualMachineOperandStack.hpp"
-//#include "infra/Assert.hpp"
+// #include "/home/petar/wasmjit-omr/third_party/omr/compiler/ilgen/VirtualMachineOperandStack.hpp"
+// #include "infra/Assert.hpp"
 #include "aot-compiler-lib.hpp"
 #include "env/AOTLoadStoreDriver.hpp"
 #include "env/AOTMethodHeader.hpp"
 #include "ilgen/VirtualMachineState.hpp"
 
- #include <tgmath.h>
 #include <iostream>
 #include <limits>
 #include <string.h>
+#include <tgmath.h>
 #include <type_traits>
 
 namespace wabt
@@ -66,10 +66,10 @@ uint32_t printaaa(int32_t a, int32_t b, int32_t c, int32_t d)
    return buffsize;
    }
 
-bool AOTFunctionBuilder::generateCallFromInterpToAOT(TR::IlBuilder *b, Index ind)
+bool AOTFunctionBuilder::generateCallFromInterpToAOT(TR::MethodBuilder *b, Index ind)
    {
    DefinedFunc *fn = dynamic_cast<DefinedFunc *>(envPointer->GetFunc(ind));
-
+   auto builder = entryBuilderAddress;
    auto interpFunctionCallParametersTypesArray = envPointer->GetFuncSignature(fn->sig_index)->param_types;
    auto returnParametersTypesArray = envPointer->GetFuncSignature(fn->sig_index)->result_types;
    unsigned int numberOfParameters = interpFunctionCallParametersTypesArray.size();
@@ -87,7 +87,6 @@ bool AOTFunctionBuilder::generateCallFromInterpToAOT(TR::IlBuilder *b, Index ind
    auto *addres_of_index_of_value_stack_top = b->Load("vstop");
    auto *value_stack_base_addr = b->Load("vsdata");
    auto *value_stack_top_index = b->LoadAt(pInt32Type, addres_of_index_of_value_stack_top);
-
 
    /**
     * @brief Effectively, equal to sizeof (union Value) described in interp.h
@@ -135,7 +134,7 @@ bool AOTFunctionBuilder::generateCallFromInterpToAOT(TR::IlBuilder *b, Index ind
     * @brief For JitBuilder to not throw errors
     */
    defineFunction(fn->dbg_name_, fn);
-   auto *value = b->Call(fn->dbg_name_.c_str(), numberOfParameters, params_array);
+   auto *value = b->Call(builder, numberOfParameters, params_array);
    value_stack_top_index = b->LoadAt(pInt32Type, addres_of_index_of_value_stack_top);
    /** TODO: Multi-value return, current WebAssembly spec allows for only one type.*/
    if (returnParametersTypesArray.size() > 0)
@@ -188,7 +187,7 @@ static void printInt32(int32_t val)
    }
 AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread *thread, interp::DefinedFunc *fn,
                                        std::string &&fn_name, AOTTypeDictionary *types,
-                                       Environment &env, AOTManager &aotManager, bool thunk)
+                                       Environment &env, AOTManager &aotManager, bool thunk, AOTFunctionBuilder* def)
     : TR::MethodBuilder(types),
       types_(types),
       thread_(thread),
@@ -200,6 +199,9 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread *thread, interp::DefinedFu
       pValueType_(types_->PointerTo(Int64)),
       ppValueType_(types_->PointerTo(pValueType_))
    {
+      if (def!= NULL){
+         entryBuilderAddress = def;
+      }
    _isThunk = thunk;
    DefineLine(__LINE__);
    DefineFile(__FILE__);
@@ -391,11 +393,11 @@ void AOTFunctionBuilder::defineFunction(const std::string &name, interp::Defined
     * we need to check if the function was defined before. If it was - early return */
    bool defined_function_before_ = false;
 
-   for (auto& elem:defined_names_)
+   for (auto &elem : defined_names_)
       {
-      if (name.compare(elem)==0)
+      if (name.compare(elem) == 0)
          {
-         defined_function_before_= true;
+         defined_function_before_ = true;
          }
       }
 
@@ -592,48 +594,49 @@ bool AOTFunctionBuilder::buildIL()
 
    const uint8_t *istream = thread_->GetIstream();
 
-   workItems_.emplace_back(OrphanBytecodeBuilder(0,
-                                                 const_cast<char *>(interp::ReadOpcodeAt(&istream[fn_->offset]).GetName())),
-                           &istream[fn_->offset], stack_, stackCount_);
-   AppendBuilder(workItems_[0].builder);
-
    if (_isThunk)
       {
       return generateCallFromInterpToAOT(this, aotManager_.getFunctionThatManagerWasCreatedFor());
       }
-   int32_t next_index;
-   for (;;)
+   else
       {
-      if ((next_index = GetNextBytecodeFromWorklist()) != -1)
+      workItems_.emplace_back(OrphanBytecodeBuilder(0,
+                                                   const_cast<char *>(interp::ReadOpcodeAt(&istream[fn_->offset]).GetName())),
+                              &istream[fn_->offset], stack_, stackCount_);
+      AppendBuilder(workItems_[0].builder);
+      int32_t next_index;
+      for (;;)
          {
-         auto &work_item = workItems_[next_index];
-         stack_ = work_item.stack_;
-         stackCount_ = work_item.stackCount_;
+         if ((next_index = GetNextBytecodeFromWorklist()) != -1)
+            {
+            auto &work_item = workItems_[next_index];
+            stack_ = work_item.stack_;
+            stackCount_ = work_item.stackCount_;
 
-         if (!Emit(work_item.builder, istream, work_item.pc))
-            return false;
-         }
-      else if (!stackOfStacks_.empty())
-         {
-         auto prev_state = stackOfStacks_.back();
-         stackOfStacks_.pop_back();
+            if (!Emit(work_item.builder, istream, work_item.pc))
+               return false;
+            }
+         else if (!stackOfStacks_.empty())
+            {
+            auto prev_state = stackOfStacks_.back();
+            stackOfStacks_.pop_back();
 
-         int32_t next_index = static_cast<int32_t>(workItems_.size());
+            int32_t next_index = static_cast<int32_t>(workItems_.size());
 
-         workItems_.emplace_back(OrphanBytecodeBuilder(next_index,
-                                                       const_cast<char *>(interp::ReadOpcodeAt(prev_state.pc).GetName())),
-                                 prev_state.pc, prev_state.stack, prev_state.stack_count);
+            workItems_.emplace_back(OrphanBytecodeBuilder(next_index,
+                                                          const_cast<char *>(interp::ReadOpcodeAt(prev_state.pc).GetName())),
+                                    prev_state.pc, prev_state.stack, prev_state.stack_count);
 
-         prev_state.b->AddFallThroughBuilder(workItems_[next_index].builder);
-         // stack_ = prev_state.stack;
-         // stackCount_ = prev_state.stack_count;
-         }
-      else
-         {
-         break;
+            prev_state.b->AddFallThroughBuilder(workItems_[next_index].builder);
+            // stack_ = prev_state.stack;
+            // stackCount_ = prev_state.stack_count;
+            }
+         else
+            {
+            break;
+            }
          }
       }
-
    return true;
    }
 
@@ -1497,9 +1500,9 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder *b,
                auto callingAOTMeta = env_.aot_meta_.find(callingFunction);
                if (callingAOTMeta != env_.aot_meta_.end())
                   {
-                  DefinedFunc*  callingFunc = cast<DefinedFunc>(callingAOTMeta->second.wasm_fn);
-                  TR::AOTMethodHeader* hdr =  WABTAOTCompilerLib::getLoadStoreDriver()->getRegisteredAOTMethodHeader(callingFunc->dbg_name_.c_str());
-                  if (hdr==NULL) /** Export for example */
+                  DefinedFunc *callingFunc = cast<DefinedFunc>(callingAOTMeta->second.wasm_fn);
+                  TR::AOTMethodHeader *hdr = WABTAOTCompilerLib::getLoadStoreDriver()->getRegisteredAOTMethodHeader(callingFunc->dbg_name_.c_str());
+                  if (hdr == NULL) /** Export for example */
                      {
                      return false;
                      }
@@ -1511,12 +1514,12 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder *b,
                         hdr->addDependency(indexOfTheFunctionBeingCalled);
                         return false;
                         }
-                        else
+                     else
                         {
                         auto metaOfTheFunctionBeingCalled = env_.aot_meta_.find(indexOfTheFunctionBeingCalled);
-                         if (metaOfTheFunctionBeingCalled != env_.aot_meta_.end())
+                        if (metaOfTheFunctionBeingCalled != env_.aot_meta_.end())
                            {
-                           DefinedFunc*  functionBeingCalled = cast<DefinedFunc>(metaOfTheFunctionBeingCalled->second.wasm_fn);
+                           DefinedFunc *functionBeingCalled = cast<DefinedFunc>(metaOfTheFunctionBeingCalled->second.wasm_fn);
                            if (functionBeingCalled->is_compiled == false)
                               {
                               return false;
@@ -1533,7 +1536,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder *b,
                   */
                   //  assert(false);
                   }
-                  return false;
+               return false;
                }
             // printf("sig index within module is %u",fn->sig_index);
             // printf("offset is %u\n",reinterpret_cast<DefinedFunc*>(fn)->offset);
@@ -2240,8 +2243,8 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder *b,
 
    case Opcode::F32Copysign:
       EmitBinaryOp<float>(b, [&](TR::IlValue *lhs, TR::IlValue *rhs)
-                        //   { return b->Call("copysignf", 2, lhs, rhs); });
-                          { return b->ConvertTo(Float,b->Call("copysignf", 2, b->ConvertTo(Double,lhs), b->ConvertTo(Double,rhs))); });
+                          //   { return b->Call("copysignf", 2, lhs, rhs); });
+                          { return b->ConvertTo(Float, b->Call("copysignf", 2, b->ConvertTo(Double, lhs), b->ConvertTo(Double, rhs))); });
       break;
 
    case Opcode::F32Eq:

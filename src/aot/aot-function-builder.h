@@ -119,7 +119,7 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
   * @param thunk - to see if we should compile a thunk
   */
   AOTFunctionBuilder(interp::Thread*, interp::DefinedFunc*, std::string&&,
-		     AOTTypeDictionary*, Environment&, AOTManager&,bool thunk = false);
+		     AOTTypeDictionary*, Environment&, AOTManager&,bool thunk = false, AOTFunctionBuilder* def = NULL);
 
   bool buildIL() override;
 
@@ -184,7 +184,7 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
    * @param ind - index of a function in the environment. Currently matches index in AOTMeta
    * @return - boolean value, will be false if the types are not supported
    */
-  bool generateCallFromInterpToAOT(TR::IlBuilder *b,Index ind);
+  bool generateCallFromInterpToAOT(TR::MethodBuilder *b,Index ind);
 
   uint32_t pickLocalOffset();
   /**
@@ -343,7 +343,7 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
   std::vector<std::string> global_names_;
   std::vector<std::string> mem_names_;
   std::vector<std::string> defined_names_;
-
+  AOTFunctionBuilder* entryBuilderAddress;
   struct PreviousCompilerState {
     TR::BytecodeBuilder* b;
     TR::VirtualMachineOperandStack* stack;
