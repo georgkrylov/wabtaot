@@ -1,16 +1,12 @@
 [submodule "third_party/omr"]
 	path = third_party/omr
 	branch = "AOTRelocationsWIP-wabt-elf"
-	url = git@gitlab.casa.cs.unb.ca:gkrylov/omr.git
+	url = git@github.ibm.com:Georgiy-Krylov/omr.git
 [submodule "em-interp"]
 	path = em-interp
 	branch = "dev-jit-thunks"
-	url = git@gitlab.casa.cs.unb.ca:pjelenko/em-interp.git
-[submodule "polybench"]
-	path = polybench
-	branch = "main"
-	url = git@gitlab.casa.cs.unb.ca:pjelenko/polybench.git
+	url = git@github.ibm.com:Georgiy-Krylov/em-interp.git
 [submodule "wabtaot-private-additions"]
 	path = wabtaot-private-additions
 	branch = "main"
-	url = git@gitlab.casa.cs.unb.ca:gkrylov/wabtaot-private-additions.git
+	url = git@github.ibm.com:Georgiy-Krylov/wabtaot-private-additions.git
