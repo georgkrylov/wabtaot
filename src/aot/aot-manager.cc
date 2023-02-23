@@ -231,20 +231,11 @@ void *wabt::aot::AOTManager::AOTCompileAFunction(wabt::interp::Environment *env,
                 * to separate it to an individual function, as this code appears in
                 * many places
                 */
-                              std::string name;
-               WABTAOTCompilerLib::generateFunctionName(env,ind,name);
-
-      AOTTypeDictionary *types = new (PERSISTENT_NEW) AOTTypeDictionary();
-      // static AOTTypeDictionary types;
-      AOTFunctionBuilder *builder = new (PERSISTENT_NEW) AOTFunctionBuilder(t, fn,
-                                                                            std::move(name),
-                                                                            types,
-                                                                            *env, *this);
                AOTTypeDictionary *typess = new (PERSISTENT_NEW) AOTTypeDictionary();
                AOTFunctionBuilder *entryBuilder = new (PERSISTENT_NEW) AOTFunctionBuilder(t, fn,
                                                                                           std::move(entryFunctionNameForBuilder),
                                                                                           typess,
-                                                                                          *env, *this, true,builder);
+                                                                                          *env, *this, true);
                internal_compileMethodBuilder(entryBuilder, &entryFunction);
                if (entryFunction == NULL)
                   { /* was not able to compile the entry point, for example the dependencies were not resolved */

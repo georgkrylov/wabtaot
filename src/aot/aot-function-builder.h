@@ -119,7 +119,9 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
   * @param thunk - to see if we should compile a thunk
   */
   AOTFunctionBuilder(interp::Thread*, interp::DefinedFunc*, std::string&&,
-		     AOTTypeDictionary*, Environment&, AOTManager&,bool thunk = false, AOTFunctionBuilder* def = NULL);
+		     AOTTypeDictionary*, Environment&, AOTManager&,bool thunk = false);
+  AOTFunctionBuilder(interp::Thread*, interp::DefinedFunc*, std::string&&,
+		     AOTTypeDictionary*,Environment&,AOTManager&, AOTFunctionBuilder*);
 
   bool buildIL() override;
 

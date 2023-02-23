@@ -69,7 +69,9 @@ uint32_t printaaa(int32_t a, int32_t b, int32_t c, int32_t d)
 bool AOTFunctionBuilder::generateCallFromInterpToAOT(TR::MethodBuilder *b, Index ind)
    {
    DefinedFunc *fn = dynamic_cast<DefinedFunc *>(envPointer->GetFunc(ind));
-   auto builder = entryBuilderAddress;
+      std::string inlineFunctionNameForBuilder;
+      WABTAOTCompilerLib::generateFunctionName(&env_,ind,inlineFunctionNameForBuilder);
+   auto builder = new (PERSISTENT_NEW) AOTFunctionBuilder(thread_,fn_,std::move(inlineFunctionNameForBuilder),types_,env_,aotManager_,this);
    auto interpFunctionCallParametersTypesArray = envPointer->GetFuncSignature(fn->sig_index)->param_types;
    auto returnParametersTypesArray = envPointer->GetFuncSignature(fn->sig_index)->result_types;
    unsigned int numberOfParameters = interpFunctionCallParametersTypesArray.size();
@@ -187,7 +189,7 @@ static void printInt32(int32_t val)
    }
 AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread *thread, interp::DefinedFunc *fn,
                                        std::string &&fn_name, AOTTypeDictionary *types,
-                                       Environment &env, AOTManager &aotManager, bool thunk, AOTFunctionBuilder* def)
+                                       Environment &env, AOTManager &aotManager, bool thunk)
     : TR::MethodBuilder(types),
       types_(types),
       thread_(thread),
@@ -199,10 +201,178 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread *thread, interp::DefinedFu
       pValueType_(types_->PointerTo(Int64)),
       ppValueType_(types_->PointerTo(pValueType_))
    {
-      if (def!= NULL){
-         entryBuilderAddress = def;
-      }
+
    _isThunk = thunk;
+   DefineLine(__LINE__);
+   DefineFile(__FILE__);
+   /** Temporarily changing from this, to use the fn_name*/
+   // DefineName(fn->dbg_name_.c_str());
+   DefineName(fn_name_.c_str());
+
+   DefineReturnType(wabt::jit::toIlType<Result_t>(types));
+
+   DefineFunction("sqrtf", __FILE__, "0",
+                  reinterpret_cast<void *>(static_cast<float (*)(float)>(sqrtf)),
+                  Float,
+                  1,
+                  Float);
+   DefineFunction("copysignf", __FILE__, "0",
+                  reinterpret_cast<void *>(static_cast<float (*)(float, float)>(copysignf)),
+                  Double,
+                  2,
+                  Double,
+                  Double);
+
+   DefineFunction("sqrt", __FILE__, "0",
+                  reinterpret_cast<void *>(static_cast<double (*)(double)>(sqrt)),
+                  Double,
+                  1,
+                  Double);
+   DefineFunction("copysign", __FILE__, "0",
+                  reinterpret_cast<void *>(static_cast<double (*)(double, double)>(copysign)),
+                  Double,
+                  2,
+                  Double,
+                  Double);
+   DefineFunction("trapWith", __FILE__, "0",
+                  reinterpret_cast<void *>(static_cast<void (*)(Result_t)>(trapWith)),
+                  NoType,
+                  1,
+                  Int32);
+
+   DefineFunction("CallIndi", __FILE__, "0",
+                  reinterpret_cast<void *>(AOTCallIndirectHelper),
+                  Int64,
+                  3,
+                  Int64, Int64, Int64);
+   DefineFunction("Popcount", __FILE__, "0",
+                  reinterpret_cast<void *>(static_cast<int (*)(unsigned)>(wabt::Popcount)),
+                  Int32,
+                  1,
+                  Int32);
+   DefineFunction("Popcountll", __FILE__, "0",
+                  reinterpret_cast<void *>(static_cast<int (*)(unsigned long long)>(wabt::Popcount)),
+                  Int64,
+                  1,
+                  Int32);
+   DefineFunction("GrowMem", __FILE__, "34",
+                  reinterpret_cast<void *>(GrowMemory),
+                  Int32,
+                  2,
+                  Int32,
+                  Int32);
+   DefineFunction("fd_write", __FILE__, "34",
+                  reinterpret_cast<void *>(printaaa),
+                  Int32,
+                  4,
+                  Int32,
+                  Int32,
+                  Int32,
+                  Int32);
+   DefineFunction("emscripten_notify_memory_growth", __FILE__, "34",
+                  reinterpret_cast<void *>((1)),
+                  NoType,
+                  1,
+                  Int32);
+   DefineFunction("fd_close", __FILE__, "34",
+                  reinterpret_cast<void *>(closs),
+                  Int32,
+                  1,
+                  Int32);
+   DefineFunction("PrintSt", __FILE__, "34",
+                  reinterpret_cast<void *>(PrintSomething),
+                  Int32,
+                  1,
+                  Int32);
+   DefineFunction("MemSize", __FILE__, "17",
+                  reinterpret_cast<void *>(CalculateMemorySize),
+                  Int32,
+                  1,
+                  Int32);
+   // DefineFunction("funpr", __FILE__, "0",
+   //                reinterpret_cast<void *>(sqrt),
+   //                NoType,
+   //                1,
+   //                Int64);
+
+   envPointer = &env_;
+   returnType_ = functionReturnType(fn_);
+
+   auto memories_size = env_.GetMemoryCount();
+   auto globals_size = env_.GetGlobalCount();
+   auto param_count = env_.GetFuncSignature(fn_->sig_index)->param_types.size();
+   int total_size = param_count;
+
+   if (memories_size > 0)
+      total_size++;
+   if (globals_size > 0)
+      total_size++;
+   param_names_.reserve(total_size);
+
+   int arg = 0;
+
+   for (const auto &t : env_.GetFuncSignature(fn_->sig_index)->param_types)
+      {
+      char param[6]; // ie, "p6" is the sixth parameter.
+      sprintf(param, "p%d", arg++);
+
+      param_names_.push_back(param);
+      TR::IlType *tt = TypeFieldType(t, this);
+
+      DefineParameter(param_names_.back().data(), tt);
+      param_types_.push_back(tt);
+      }
+
+   arg = 0;
+   global_names_.reserve(globals_size);
+   for (const auto &g : env_.globals_)
+      {
+      char global_name[6];
+      sprintf(global_name, "g%d", arg++);
+      TR::IlType *gt = TypeFieldType(g.typed_value.type, this);
+
+      global_names_.push_back(global_name);
+      DefineGlobal(global_names_.back().data(), gt, reinterpret_cast<void *>(&(env_.globals_.data()[arg - 1].typed_value.value)));
+      }
+   arg = 0;
+   mem_names_.reserve(memories_size);
+   for (const auto &m : env_.memories_)
+      {
+      char mem_name[6];
+      sprintf(mem_name, "m%d", arg++);
+      //    TR::IlType *mt = TypeFieldType(ppValue);
+
+      mem_names_.push_back(mem_name);
+      DefineGlobal(mem_names_.back().data(), types_->PointerTo(Int8), reinterpret_cast<void *>(env_.mems + arg - 1));
+      // it must be a pointer to the value, as in globals
+      }
+
+   if (env_.GetTableCount())
+      {
+      DefineGlobal("Params", types_->PointerTo(Int64), reinterpret_cast<void *>(env_.indirectCallParams));
+      }
+   DefineLocal("SelectionVar", Int32);
+   DefineGlobal("vstop", types_->Address, reinterpret_cast<void *>(&(thread_->value_stack_top_)));
+   DefineGlobal("vsdata", types_->Address, reinterpret_cast<void *>(thread_->value_stack_.data()));
+   DefineReturnType(returnType_);
+   }
+AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread *thread, interp::DefinedFunc *fn,
+                                       std::string &&fn_name, AOTTypeDictionary *types,
+                                       Environment &env,AOTManager &aotManager, AOTFunctionBuilder* callerBuilder)
+    : TR::MethodBuilder(callerBuilder),
+      types_(types),
+      thread_(thread),
+      fn_(fn),
+      fn_name_(std::move(fn_name)),
+      env_(env),
+      aotManager_(aotManager),
+      valueType_(Int64),
+      pValueType_(types_->PointerTo(Int64)),
+      ppValueType_(types_->PointerTo(pValueType_))
+   {
+      if (callerBuilder!= NULL){
+         entryBuilderAddress = callerBuilder;
+      }
    DefineLine(__LINE__);
    DefineFile(__FILE__);
    /** Temporarily changing from this, to use the fn_name*/
