@@ -66,8 +66,10 @@ uint32_t printaaa(int32_t a, int32_t b, int32_t c, int32_t d)
    return buffsize;
    }
 
-bool AOTFunctionBuilder::generateCallFromInterpToAOT(TR::MethodBuilder *b, Index ind)
+bool AOTFunctionBuilder::generateCallFromInterpToAOT(TR::MethodBuilder *bb, Index ind)
    {
+   TR::IlBuilder* b = OrphanBytecodeBuilder(0,"entry");
+   AppendBuilder(b);
    DefinedFunc *fn = dynamic_cast<DefinedFunc *>(envPointer->GetFunc(ind));
       std::string inlineFunctionNameForBuilder;
       WABTAOTCompilerLib::generateFunctionName(&env_,ind,inlineFunctionNameForBuilder);
@@ -310,19 +312,20 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread *thread, interp::DefinedFu
    param_names_.reserve(total_size);
 
    int arg = 0;
-
-   for (const auto &t : env_.GetFuncSignature(fn_->sig_index)->param_types)
+   if (_isThunk == false)
       {
-      char param[6]; // ie, "p6" is the sixth parameter.
-      sprintf(param, "p%d", arg++);
+      for (const auto &t : env_.GetFuncSignature(fn_->sig_index)->param_types)
+         {
+         char param[6]; // ie, "p6" is the sixth parameter.
+         sprintf(param, "p%d", arg++);
 
-      param_names_.push_back(param);
-      TR::IlType *tt = TypeFieldType(t, this);
+         param_names_.push_back(param);
+         TR::IlType *tt = TypeFieldType(t, this);
 
-      DefineParameter(param_names_.back().data(), tt);
-      param_types_.push_back(tt);
+         DefineParameter(param_names_.back().data(), tt);
+         param_types_.push_back(tt);
+         }
       }
-
    arg = 0;
    global_names_.reserve(globals_size);
    for (const auto &g : env_.globals_)
@@ -480,19 +483,20 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread *thread, interp::DefinedFu
    param_names_.reserve(total_size);
 
    int arg = 0;
-
-   for (const auto &t : env_.GetFuncSignature(fn_->sig_index)->param_types)
+   if (_isThunk == false)
       {
-      char param[6]; // ie, "p6" is the sixth parameter.
-      sprintf(param, "p%d", arg++);
+      for (const auto &t : env_.GetFuncSignature(fn_->sig_index)->param_types)
+         {
+         char param[6]; // ie, "p6" is the sixth parameter.
+         sprintf(param, "p%d", arg++);
 
-      param_names_.push_back(param);
-      TR::IlType *tt = TypeFieldType(t, this);
+         param_names_.push_back(param);
+         TR::IlType *tt = TypeFieldType(t, this);
 
-      DefineParameter(param_names_.back().data(), tt);
-      param_types_.push_back(tt);
+         DefineParameter(param_names_.back().data(), tt);
+         param_types_.push_back(tt);
+         }
       }
-
    arg = 0;
    global_names_.reserve(globals_size);
    for (const auto &g : env_.globals_)
@@ -754,22 +758,21 @@ uint32_t AOTFunctionBuilder::GrowMemory(uint32_t mem, uint32_t grow_pages)
 
 bool AOTFunctionBuilder::buildIL()
    {
-   setVMState(new TR::VirtualMachineState());
-
-   // expects a non-NULL Compilation object to exist, so must be
-   // constructed here, at compile time
-   stack_ = new TR::VirtualMachineOperandStack(this, 64, valueType_, nullptr);
-
-   pushParams();
-
-   const uint8_t *istream = thread_->GetIstream();
-
    if (_isThunk)
       {
       return generateCallFromInterpToAOT(this, aotManager_.getFunctionThatManagerWasCreatedFor());
       }
    else
       {
+      setVMState(new TR::VirtualMachineState());
+
+      // expects a non-NULL Compilation object to exist, so must be
+      // constructed here, at compile time
+      stack_ = new TR::VirtualMachineOperandStack(this, 64, valueType_, nullptr);
+
+      pushParams();
+
+      const uint8_t *istream = thread_->GetIstream();
       workItems_.emplace_back(OrphanBytecodeBuilder(0,
                                                    const_cast<char *>(interp::ReadOpcodeAt(&istream[fn_->offset]).GetName())),
                               &istream[fn_->offset], stack_, stackCount_);
