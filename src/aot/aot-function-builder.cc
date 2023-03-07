@@ -68,8 +68,8 @@ uint32_t printaaa(int32_t a, int32_t b, int32_t c, int32_t d)
 
 bool AOTFunctionBuilder::generateCallFromInterpToAOT(TR::MethodBuilder *bb, Index ind)
    {
-   TR::IlBuilder* b = OrphanBytecodeBuilder(0,"entry");
-   AppendBuilder(b);
+   TR::BytecodeBuilder* b = OrphanBytecodeBuilder(0,"dontcare");
+   AppendBytecodeBuilder(b);
    DefinedFunc *fn = dynamic_cast<DefinedFunc *>(envPointer->GetFunc(ind));
       std::string inlineFunctionNameForBuilder;
       WABTAOTCompilerLib::generateFunctionName(&env_,ind,inlineFunctionNameForBuilder);
@@ -111,7 +111,7 @@ bool AOTFunctionBuilder::generateCallFromInterpToAOT(TR::MethodBuilder *bb, Inde
          {
       case Type::I32:
          {
-         params_array[invertedIndex] = b->UnsignedConvertTo(Int64, b->LoadAt(pInt32Type, b->Add(value_stack_base_addr, b->Mul(value_stack_top_index, size_of_value_stack_type))));
+         params_array[invertedIndex] =b->LoadAt(pInt32Type, b->Add(value_stack_base_addr, b->Mul(value_stack_top_index, size_of_value_stack_type)));
          break;
          };
       case Type::I64:
@@ -139,6 +139,8 @@ bool AOTFunctionBuilder::generateCallFromInterpToAOT(TR::MethodBuilder *bb, Inde
     */
    defineFunction(fn->dbg_name_, fn);
    auto *value = b->Call(builder, numberOfParameters, params_array);
+   // reinterpret_cast<TR::BytecodeBuilder*> (builder->returnBuilder())->AddFallThroughBuilder(builders[1]);
+
    value_stack_top_index = b->LoadAt(pInt32Type, addres_of_index_of_value_stack_top);
    /** TODO: Multi-value return, current WebAssembly spec allows for only one type.*/
    if (returnParametersTypesArray.size() > 0)
@@ -758,18 +760,19 @@ uint32_t AOTFunctionBuilder::GrowMemory(uint32_t mem, uint32_t grow_pages)
 
 bool AOTFunctionBuilder::buildIL()
    {
+   
+
    if (_isThunk)
       {
       return generateCallFromInterpToAOT(this, aotManager_.getFunctionThatManagerWasCreatedFor());
       }
    else
       {
-      setVMState(new TR::VirtualMachineState());
 
-      // expects a non-NULL Compilation object to exist, so must be
-      // constructed here, at compile time
-      stack_ = new TR::VirtualMachineOperandStack(this, 64, valueType_, nullptr);
-
+   setVMState(new TR::VirtualMachineState());
+   // expects a non-NULL Compilation object to exist, so must be
+   // constructed here, at compile time
+   stack_ = new TR::VirtualMachineOperandStack(this, 64, valueType_, nullptr);
       pushParams();
 
       const uint8_t *istream = thread_->GetIstream();
