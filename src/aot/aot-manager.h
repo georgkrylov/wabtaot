@@ -165,6 +165,8 @@ class AOTManager
 
    unsigned int _indexOfAFuncStartedAOTManager;
    std::vector<std::pair<std::string, FunctionImport>> import_index_;
+   // For stopping the recursive traversal
+   std::vector<int> visited_this_traversal;
    };
    }   // namespace aot
    }   // namespace wabt

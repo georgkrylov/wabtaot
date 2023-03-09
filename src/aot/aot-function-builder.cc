@@ -1506,12 +1506,16 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder *b,
                   else /** There was a header*/
                      {
                      unsigned int indexOfTheFunctionBeingCalled = meta_it->second.index;
-                     if (hdr->containsDependency(indexOfTheFunctionBeingCalled) == 1)
+                     if (indexOfTheFunctionBeingCalled ==  callingFunction)
+                        {
+                        // do nothing and keep trying to compile;
+                        }
+                     else if (hdr->containsDependency(indexOfTheFunctionBeingCalled) == 1)
                         {
                         hdr->addDependency(indexOfTheFunctionBeingCalled);
                         return false;
                         }
-                        else
+                     else
                         {
                         auto metaOfTheFunctionBeingCalled = env_.aot_meta_.find(indexOfTheFunctionBeingCalled);
                          if (metaOfTheFunctionBeingCalled != env_.aot_meta_.end())
@@ -1579,7 +1583,9 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder *b,
 
    case Opcode::CallIndirect:
       {
-
+      // As there is an issue with deciding when to compile the methods, 
+      // this is a temporary fix to see the behaviour of the runtime
+      return false;
       //    auto th_addr = b->ConstAddress(thread_);
       auto table_index = b->ConstInt64(ReadU32(&pc));
       auto sig = ReadU32(&pc);

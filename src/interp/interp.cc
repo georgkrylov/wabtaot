@@ -3655,7 +3655,28 @@ Result Thread::Run(int num_instructions) {
           CHECK_TRAP(PushCall(pc));
           GOTO(fn->offset);
           CHECK_TRAP(env_->TryJit(this, fn, func_index));
+          // CHECK_TRAP(env_->TryAOT(this, fn, func_index));
 
+          // if (fn->aot_fn_) 
+          // {
+
+          // //         if (true == TryAOT(t, ind,fn)){
+          // // // printf("TryAOT returned 0\n");
+          //       // unsigned int numberOfParameters = env_->GetFuncSignature(func_index)->param_types.size();
+          //       // int params_array[numberOfParameters];
+          //       // for (int i = 0; i < numberOfParameters; i++){
+          //       //   params_array[i] = Pop().i32;
+          //       // }
+          // void (*p) (...) = fn->aot_fn_;
+          // if (env_->enable_aot_entry)
+          //   {
+          //    unsigned long long q =reinterpret_cast<unsigned long (*)()>(p)();
+          //   } 
+          // else if (env_->enable_aot_libffi)
+          //   {
+          //     generateLibFFICall(env_,fn,this);
+          //   }
+          // }
           if (fn->jit_fn_) {
             in_jit_ = true;
 

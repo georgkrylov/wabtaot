@@ -133,7 +133,7 @@ TR::AOTLoadStoreDriver *WABTAOTCompilerLib::getLoadStoreDriver()
 int WABTAOTCompilerLib::getModuleIndexByFunctionIndex(wabt::interp::Environment &env, unsigned int Index)
    {
    unsigned int moduleIndex = 0;
-   unsigned int exportsSoFar = -1;
+   int exportsSoFar = -1;
    int result = 0;
    for (moduleIndex = 0; moduleIndex < env.GetModuleCount(); moduleIndex++)
       {

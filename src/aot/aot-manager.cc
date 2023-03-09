@@ -66,14 +66,18 @@ int wabt::aot::AOTManager::CheckDependenciesCompiled(wabt::interp::Environment *
       else if (header->dependenciesCompiled == 0)
          {
          for (unsigned int i = 0; i < dependenciesMaxSize; i++)
-            {
-            /** when loading, maybe substract an offset */
-            if ((AOTLoadAFunction(env, dependenciesArray[i], t) == false) || env->aot_meta_.at(dependenciesArray[i]).wasm_fn->is_compiled == false)
-               {
-               /* dependencies were not compiled */
-               _loadStoreDriver->storeHeaderForCompiledMethod(func->dbg_name_.c_str());
-               header->dependenciesCompiled = 1;
-               shouldFailCompilation = 0;
+            {  
+               /* to prevent stack overflow traversing the methods that depend on one another*/
+               if (std::find(visited_this_traversal.begin(),visited_this_traversal.end(),dependenciesArray[i])==visited_this_traversal.end()){
+               visited_this_traversal.emplace_back(dependenciesArray[i]);
+               /** when loading, maybe substract an offset */
+               if ((AOTLoadAFunction(env, dependenciesArray[i], t) == false) || env->aot_meta_.at(dependenciesArray[i]).wasm_fn->is_compiled == false)
+                  {
+                  /* dependencies were not compiled */
+                  _loadStoreDriver->storeHeaderForCompiledMethod(func->dbg_name_.c_str());
+                  header->dependenciesCompiled = 1;
+                  shouldFailCompilation = 0;
+                  }
                }
             }
          if (shouldFailCompilation == 1 && header->getCompiledCodeSize() == 0)
@@ -179,6 +183,7 @@ void *wabt::aot::AOTManager::AOTCompileAFunction(wabt::interp::Environment *env,
    if (!env->GetFunc(ind)->is_compiled)
       {
       auto &builder = this->getFB(fn->offset);
+      visited_this_traversal.clear();
       if (CheckDependenciesCompiled(env, ind, fn, t) != 0) /* This if statement could possibly contain compilation strategies???*/
          {
          void *function = nullptr;
