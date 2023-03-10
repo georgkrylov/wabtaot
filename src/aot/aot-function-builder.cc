@@ -1487,7 +1487,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder *b,
             {
             /** TODO will need to iterate among all dependencies and check if they are compiled
              * and return false if they are not. Dependencies are also added here  **/
-            if ((strcmp(fn->dbg_name_.c_str(), "???") == 0 || this->lookupFunction(fn->dbg_name_.c_str()) == NULL ) && fn->is_host == false)
+            if ((strcmp(fn->dbg_name_.c_str(), "???") == 0  && fn->is_host == false))
                {
                int callingFunction = this->aotManager_.getFunctionThatManagerWasCreatedFor();
                /**
@@ -1513,19 +1513,6 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder *b,
                      else if (hdr->containsDependency(indexOfTheFunctionBeingCalled) == 1)
                         {
                         hdr->addDependency(indexOfTheFunctionBeingCalled);
-                        return false;
-                        }
-                     else
-                        {
-                        auto metaOfTheFunctionBeingCalled = env_.aot_meta_.find(indexOfTheFunctionBeingCalled);
-                         if (metaOfTheFunctionBeingCalled != env_.aot_meta_.end())
-                           {
-                           DefinedFunc*  functionBeingCalled = cast<DefinedFunc>(metaOfTheFunctionBeingCalled->second.wasm_fn);
-                           if (functionBeingCalled->is_compiled == false)
-                              {
-                              return false;
-                              }
-                           }
                         }
                      }
                   }
@@ -1537,6 +1524,9 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder *b,
                   */
                   //  assert(false);
                   }
+                  return false;
+               }
+               if (this->lookupFunction(fn->dbg_name_.c_str()) == NULL ){
                   return false;
                }
             // printf("sig index within module is %u",fn->sig_index);
