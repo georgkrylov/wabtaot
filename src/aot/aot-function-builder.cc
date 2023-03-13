@@ -419,7 +419,8 @@ void AOTFunctionBuilder::defineFunction(const std::string &name, interp::Defined
 
    /** So the JitBuilder knows about the function now
     */
-   DefineFunction(name.c_str(), __FILE__, "0",
+   char* namee = strdup(name.c_str());
+   DefineFunction(namee, __FILE__, "0",
                   reinterpret_cast<void *>(18), // this is a magic number that makes trampoline lookup work.
                   result_type,
                   builder_fn.param_types_.size(),
@@ -1487,48 +1488,53 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder *b,
             {
             /** TODO will need to iterate among all dependencies and check if they are compiled
              * and return false if they are not. Dependencies are also added here  **/
-            if ((strcmp(fn->dbg_name_.c_str(), "???") == 0  && fn->is_host == false))
+            // if ((strcmp(fn->dbg_name_.c_str(), "???") == 0  && fn->is_host == false))
+            //    {
+            int callingFunction = this->aotManager_.getFunctionThatManagerWasCreatedFor();
+            /**
+             * @brief  Probably need to do an async compilation? Or define functions?
+             *
+             */
+            auto callingAOTMeta = env_.aot_meta_.find(callingFunction);
+            if (callingAOTMeta != env_.aot_meta_.end())
                {
-               int callingFunction = this->aotManager_.getFunctionThatManagerWasCreatedFor();
-               /**
-                * @brief  Probably need to do an async compilation? Or define functions?
-                *
-                */
-               auto callingAOTMeta = env_.aot_meta_.find(callingFunction);
-               if (callingAOTMeta != env_.aot_meta_.end())
+               DefinedFunc*  callingFunc = cast<DefinedFunc>(callingAOTMeta->second.wasm_fn);
+               TR::AOTMethodHeader* hdr =  WABTAOTCompilerLib::getLoadStoreDriver()->getRegisteredAOTMethodHeader(callingFunc->dbg_name_.c_str());
+               if (hdr==NULL) /** Export for example */
                   {
-                  DefinedFunc*  callingFunc = cast<DefinedFunc>(callingAOTMeta->second.wasm_fn);
-                  TR::AOTMethodHeader* hdr =  WABTAOTCompilerLib::getLoadStoreDriver()->getRegisteredAOTMethodHeader(callingFunc->dbg_name_.c_str());
-                  if (hdr==NULL) /** Export for example */
+                  return false; /** shouldnt reach here tbh */
+                  }
+               else /** There was a header*/
+                  {
+                  unsigned int indexOfTheFunctionBeingCalled = meta_it->second.index;
+                  if (strcmp(fn->dbg_name_.c_str(), "???") == 0)
                      {
-                     return false;
+                     std::string name;
+                     WABTAOTCompilerLib::generateFunctionName(&env_,indexOfTheFunctionBeingCalled,name);
+                     fn->dbg_name_ = name;
                      }
-                  else /** There was a header*/
+                  if (indexOfTheFunctionBeingCalled == callingFunction)
                      {
-                     unsigned int indexOfTheFunctionBeingCalled = meta_it->second.index;
-                     if (indexOfTheFunctionBeingCalled ==  callingFunction)
-                        {
-                        // do nothing and keep trying to compile;
-                        }
-                     else if (hdr->containsDependency(indexOfTheFunctionBeingCalled) == 1)
-                        {
-                        hdr->addDependency(indexOfTheFunctionBeingCalled);
-                        }
+                     // do nothing and keep trying to compile; recursive call
+                     }
+                  else if (hdr->containsDependency(indexOfTheFunctionBeingCalled) == 1)
+                     {
+                     hdr->addDependency(indexOfTheFunctionBeingCalled);
                      }
                   }
-               else
-                  {
-                  /* Cannot find function that started compilation,
-                  it is either the exported function or something
-                  is wrong
-                  */
-                  //  assert(false);
-                  }
-                  return false;
                }
-               if (this->lookupFunction(fn->dbg_name_.c_str()) == NULL ){
-                  return false;
+            else
+               {
+               /* Cannot find function that started compilation,
+               it is either the exported function or something
+               is wrong
+               */
+               //  assert(false);
                }
+
+            if (this->lookupFunction(fn->dbg_name_.c_str()) == NULL ){
+               return false;
+            }
             // printf("sig index within module is %u",fn->sig_index);
             // printf("offset is %u\n",reinterpret_cast<DefinedFunc*>(fn)->offset);
             // auto *fn = env_.GetFunc(offset);

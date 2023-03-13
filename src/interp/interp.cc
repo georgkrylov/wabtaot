@@ -2171,7 +2171,7 @@ Result Thread::Run(int num_instructions) {
         GOTO(fn->offset);
         CHECK_TRAP(env_->TryAOT(this, fn, func_index));
 
-        if (fn->aot_fn_) {
+        if (fn->is_loaded) {
 
     //         if (true == TryAOT(t, ind,fn)){
     // // printf("TryAOT returned 0\n");
@@ -2183,6 +2183,7 @@ Result Thread::Run(int num_instructions) {
           void (*p) (...) = fn->aot_fn_;
           if (env_->enable_aot_entry)
             {
+             p = fn->entry_fn_;
              unsigned long long q =reinterpret_cast<unsigned long (*)()>(p)();
             } else if (env_->enable_aot_libffi)
               {
@@ -5572,11 +5573,11 @@ ExecResult Executor::RunFunction(Index func_index, const TypedValues& args) {
         {
         DefinedFunc *fn = reinterpret_cast<DefinedFunc *>(func);
         env_->TryAOT(&thread_, fn, func_index);
-        if (fn->aot_fn_)
+        if (fn->is_loaded)
           {
           if (env_->enable_aot_entry)
             {
-            fn->aot_fn_();
+            fn->entry_fn_();
             exec_result.result = Result::Ok;
             }
             else if (env_->enable_aot_hardcoded)

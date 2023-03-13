@@ -51,6 +51,7 @@ class AOTManager
        : needsEntryPointGeneration(false),
          entryPointFunction(NULL),
          _indexOfAFuncStartedAOTManager(0),
+         something_was_loaded(false),
          _loadStoreDriver(NULL){};
 
    void push_back_FB(uint32_t offset, AOTFunctionBuilder *b,
@@ -159,10 +160,17 @@ class AOTManager
    bool needsEntryPointGeneration;
 
  private:
+   /**
+    * @brief func_index_ is a map that contains pairs of
+    * function builders and type dictionaries for a given
+    * offset from the beginning of the code section 
+    * in a wabt binary, that is recorded at fn->offset
+    */
    std::map<uint32_t, std::pair<AOTFunctionBuilder *,
                                 AOTTypeDictionary *>>
        func_index_;
 
+   bool something_was_loaded;
    unsigned int _indexOfAFuncStartedAOTManager;
    std::vector<std::pair<std::string, FunctionImport>> import_index_;
    // For stopping the recursive traversal

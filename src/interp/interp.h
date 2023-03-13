@@ -308,6 +308,7 @@ struct Func {
   Index sig_index;
   bool is_host;
   bool is_compiled = false;
+  bool is_loaded = false;
   std::string dbg_name_ = "???";
   IstreamOffset offset;
 };
@@ -342,6 +343,7 @@ struct DefinedFunc : Func {
   bool tried_jit_ = false;
   jit::JITedFunction jit_fn_ = nullptr;
   interp::AOTedFunction aot_fn_ = nullptr;
+  interp::AOTedFunction entry_fn_ = nullptr;
 #if not defined(unneeded)
   /**
    * @brief  Offset in defined function is to the bytes stream
