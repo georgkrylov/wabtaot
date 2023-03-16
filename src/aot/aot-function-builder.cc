@@ -1293,7 +1293,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder *b,
       auto nextBuilder = static_cast<TR::IlBuilder *>(workItems_[workItems_.size() - 1].builder);
       b->AddSuccessorBuilder(&workItems_[workItems_.size() - 1].builder);
       b->TableSwitch(b->Load("SelectionVar"), &nextBuilder, false, num_targets, cases);
-      delete cases;
+      delete [] cases;
       return true;
       }
 
@@ -1462,6 +1462,22 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder *b,
          /* If we are calling the function that is host - do NOTHING */
          if (fn->is_host == true)
             {
+            int callingFunction = this->aotManager_.getFunctionThatManagerWasCreatedFor();
+            auto callingAOTMeta = env_.aot_meta_.find(callingFunction);
+            if (callingAOTMeta != env_.aot_meta_.end())
+               {
+               DefinedFunc*  callingFunc = cast<DefinedFunc>(callingAOTMeta->second.wasm_fn);
+               TR::AOTMethodHeader* hdr =  WABTAOTCompilerLib::getLoadStoreDriver()->getRegisteredAOTMethodHeader(callingFunc->dbg_name_.c_str());
+               if (hdr==NULL) /** Export for example */
+                  {
+                  return false; /** shouldnt reach here tbh */
+                  }
+               else
+                  {
+                  /** For now, to avoid trying to compile */
+                  hdr->setCompilationIsSupported(false);
+                  }
+               }
             int size = env_.GetFuncSignature(fn->sig_index)->param_types.size();
             TR::IlValue **args = new TR::IlValue *[size]();
 
@@ -1563,7 +1579,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder *b,
 
             auto *value = b->Call(fn->dbg_name_.c_str(), size, args);
             pushReturnValue(fn, b, value);
-            delete args;
+            delete [] args;
             //	aotManager_.addCallToRegistry(fn_name_,builder.fn_name_);
             }
          }
@@ -1579,8 +1595,22 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder *b,
 
    case Opcode::CallIndirect:
       {
-      // As there is an issue with deciding when to compile the methods, 
-      // this is a temporary fix to see the behaviour of the runtime
+      int callingFunction = this->aotManager_.getFunctionThatManagerWasCreatedFor();
+      auto callingAOTMeta = env_.aot_meta_.find(callingFunction);
+      if (callingAOTMeta != env_.aot_meta_.end())
+         {
+         DefinedFunc*  callingFunc = cast<DefinedFunc>(callingAOTMeta->second.wasm_fn);
+         TR::AOTMethodHeader* hdr =  WABTAOTCompilerLib::getLoadStoreDriver()->getRegisteredAOTMethodHeader(callingFunc->dbg_name_.c_str());
+         if (hdr==NULL) /** Export for example */
+            {
+            return false; /** shouldnt reach here tbh */
+            }
+         else
+            {
+            /** For now, to avoid trying to compile */
+            hdr->setCompilationIsSupported(false);
+            }
+         }
       return false;
       //    auto th_addr = b->ConstAddress(thread_);
       auto table_index = b->ConstInt64(ReadU32(&pc));
@@ -2387,7 +2417,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder *b,
       {
       auto *value = Pop(b, "i32");
       Push(b, "i64",
-           b->UnsignedConvertTo(Int64, value));
+           b->ConvertTo(Int64, value));
       //     pc);
       break;
       }
@@ -2426,21 +2456,21 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder *b,
 
    case Opcode::I64Extend8S:
       {
-      auto *value = b->ConvertTo(Int32, b->ConvertTo(Int8, Pop(b, "i32")));
+      auto *value = b->ConvertTo(Int64, b->ConvertTo(Int8, Pop(b, "i32")));
       Push(b, "i32", value); //, pc);
       break;
       }
 
    case Opcode::I64Extend16S:
       {
-      auto *value = b->ConvertTo(Int32, b->ConvertTo(Int16, Pop(b, "i32")));
+      auto *value = b->ConvertTo(Int64, b->ConvertTo(Int16, Pop(b, "i32")));
       Push(b, "i32", value); //, pc);
       break;
       }
 
    case Opcode::I64Extend32S:
       {
-      auto *value = b->ConvertTo(Int64, b->ConvertTo(Int32, Pop(b, "i64")));
+      auto *value = b->ConvertTo(Int64, b->ConvertTo(Int32, Pop(b, "32")));
       Push(b, "i64", value); //, pc);
       break;
       }
@@ -2621,7 +2651,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder *b,
       { Pop(b, "i32") };
       auto *value = b->Call("Popcount", 1, args);
       Push(b, "i32", value);
-      delete args;
+      delete [] args;
       break;
       }
 

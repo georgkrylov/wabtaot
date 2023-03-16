@@ -77,6 +77,7 @@ void WABTAOTCompilerLib::preSetCodeEntries(wabt::interp::Executor *executor, wab
    setCodeEntry("GrowMem", reinterpret_cast<void *>(wabt::aot::AOTFunctionBuilder::GrowMemory));
    setCodeEntry("MemSize", reinterpret_cast<void *>(wabt::aot::AOTFunctionBuilder::CalculateMemorySize));
    setCodeEntry("CallIndi", reinterpret_cast<void *>(wabt::aot::AOTFunctionBuilder::AOTCallIndirectHelper));
+   setCodeEntry("Popcount", reinterpret_cast<void *>(static_cast<int (*)(unsigned)>(wabt::Popcount)));
    uint8_t *ptr = reinterpret_cast<uint8_t *>(&(thread->value_stack_top_));
    uint8_t *pptr = reinterpret_cast<uint8_t *>(malloc(sizeof(void *)));
    memcpy(pptr, &ptr, sizeof(void *));
@@ -265,7 +266,6 @@ void WABTAOTCompilerLib::relocateAOT(interp::Environment &env, DefinedModule *mo
    setCodeEntry("table", reinterpret_cast<void *>(1));
    setCodeEntry("emscript", reinterpret_cast<void *>(clus));
    setCodeEntry("setTempR", reinterpret_cast<void *>(1));
-   setCodeEntry("Popcount", reinterpret_cast<void *>(static_cast<int (*)(unsigned)>(wabt::Popcount)));
    setCodeEntry("Popcountll", reinterpret_cast<void *>(static_cast<int (*)(unsigned long long)>(wabt::Popcount)));
    setCodeEntry("args_siz", reinterpret_cast<void *>(args_size_get));
    setCodeEntry("args_get", reinterpret_cast<void *>(args_get));

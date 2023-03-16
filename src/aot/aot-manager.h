@@ -59,7 +59,7 @@ class AOTManager
       {
       func_index_[offset] = {b, t};
       }
-    void defineExternalFunctionToJit(std::string const funcName, unsigned int index);
+   void defineExternalFunctionToJit(std::string const funcName, unsigned int index);
 
    void push_back_import(std::string name, interp::Func *fn)
       {
@@ -121,7 +121,18 @@ class AOTManager
     * @return void* pointer to the compiled function returned (or, in case of the interpreter, unused?)
     * by JitBuilder
     */
-   void *AOTCompileAFunction(wabt::interp::Environment *env, wabt::Index ind, wabt::interp::DefinedFunc *func, wabt::interp::Thread* t);
+   void *AOTCompileAFunction(wabt::interp::Environment *env, wabt::Index ind, wabt::interp::DefinedFunc *func, wabt::interp::Thread *t);
+
+   /**
+    * @brief Runs get code entry, updates names if it can,
+    * updates things all over the place
+    *
+    * @param env
+    * @param ind
+    * @return true - function was compiled
+    * @return false  - no function to be found
+    */
+   bool AOTGetCompiledFunction(wabt::interp::Environment *env, wabt::Index ind);
 
    /**
     * @brief Tries to load a function, returns false if the function was not
@@ -131,7 +142,7 @@ class AOTManager
     * @return true function was loaded
     * @return false function was not loaded
     */
-   bool AOTLoadAFunction(wabt::interp::Environment *env, wabt::Index ind,wabt::interp::Thread* t);
+   bool AOTLoadAFunction(wabt::interp::Environment *env, wabt::Index ind, wabt::interp::Thread *t);
    /**
     * @brief Working from an assumption the dependencies need to be compiled before compiling the method
     *
@@ -140,9 +151,9 @@ class AOTManager
     * @param func  - Defined Function - reference to builders etc
     * @return int - 0 for dependencies failed, 1 for set continuing compilation
     */
-   int CheckDependenciesCompiled(wabt::interp::Environment *env, wabt::Index ind, wabt::interp::DefinedFunc *func,wabt::interp::Thread* t);
+   int CheckDependenciesCompiled(wabt::interp::Environment *env, wabt::Index ind, wabt::interp::DefinedFunc *func, wabt::interp::Thread *t);
 
-   void setNeedsEntry(bool needsEntry){ needsEntryPointGeneration = needsEntry;}
+   void setNeedsEntry(bool needsEntry) { needsEntryPointGeneration = needsEntry; }
 
  protected:
    /**
@@ -163,7 +174,7 @@ class AOTManager
    /**
     * @brief func_index_ is a map that contains pairs of
     * function builders and type dictionaries for a given
-    * offset from the beginning of the code section 
+    * offset from the beginning of the code section
     * in a wabt binary, that is recorded at fn->offset
     */
    std::map<uint32_t, std::pair<AOTFunctionBuilder *,
@@ -171,10 +182,12 @@ class AOTManager
        func_index_;
 
    bool something_was_loaded;
+   int depth_of_traversal;
    unsigned int _indexOfAFuncStartedAOTManager;
    std::vector<std::pair<std::string, FunctionImport>> import_index_;
    // For stopping the recursive traversal
    std::vector<int> visited_this_traversal;
+   std::vector<int> already_loaded;
    };
    }   // namespace aot
    }   // namespace wabt

@@ -5584,7 +5584,7 @@ ExecResult Executor::RunFunction(Index func_index, const TypedValues& args) {
             {
             int numberOfReturnValues =  env_->GetFuncSignature(fn->sig_index)->result_types.size();
 
-            if (numberOfReturnValues = 1)
+            if (numberOfReturnValues == 1)
               {
                 Type returnType =  env_->GetFuncSignature(fn->sig_index)->result_types[0];
                 switch (returnType)

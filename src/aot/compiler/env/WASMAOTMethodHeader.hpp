@@ -63,6 +63,7 @@ public:
       dependenciesMaxSize = 0;
       lastUsedIdxInDependenciesArray = 0;
       dependenciesCompiled = 0;
+      compilationIsSupported = true;
       methodName[0]=0;
       };
 
@@ -96,6 +97,22 @@ public:
     * @return the wabt::aot::AOTMeta*
     */
    wabt::aot::AOTMeta *getAdditionalData();
+
+   /**
+    * @brief return is compilation supported
+    * 
+    * @return true 
+    * @return false 
+    */
+   bool isCompilationSupported();
+
+   /**
+    * @brief Set the Compilation Is Supported object
+    * 
+    * @param value 
+    */
+   void setCompilationIsSupported(bool value);
+
    void assignName(const char* methodName);
    /**
     * @brief To build a graph, adds a dependency to the calling AOT Meta.
@@ -150,6 +167,14 @@ protected:
     * we want to keep track of the last used index in dependencies array.
     */
    unsigned int lastUsedIdxInDependenciesArray;
+
+   /**
+    * @brief This variable is to indicate that the process of compilation should not
+    * be reattempted as we're not supporting this compilation
+    * 
+    */
+   bool compilationIsSupported;
+
    };
    } // namespace WASM
 #endif
