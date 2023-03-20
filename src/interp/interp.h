@@ -520,6 +520,11 @@ class Environment {
   bool enable_load_thunk = false;
   char *infile = nullptr;
   uint32_t jit_threshold = 1;
+  /**
+   * @brief if this is true, then compilation only occurs when dependencies are resolved
+   * Otherwise, loading only occurs when dependencies are resolved
+   */
+  bool aot_resolved_to_load = false;
   bool enable_aot_entry = false;
   bool enable_aot_hardcoded = false;
   bool enable_aot_libffi = false;

@@ -301,89 +301,95 @@ void *wabt::aot::AOTManager::AOTCompileAFunction(wabt::interp::Environment *env,
           * within aot manager at appropriate offset
           * Some things may be cached by not recreating AOTManagers, huh?
           */
-         CheckDependenciesCompiled(env, ind, static_cast<DefinedFunc *>(func), t);
-         /** If the function was not compiled, then try compiling it*/
-         auto &builder = this->getFB(fn->offset);
-         void *function = nullptr;
-         internal_compileMethodBuilder(&builder, &function);
+         if (CheckDependenciesCompiled(env, ind, static_cast<DefinedFunc *>(func), t) != 0 || env->aot_resolved_to_load)
+            {
+            /** If the function was not compiled, then try compiling it*/
+            auto &builder = this->getFB(fn->offset);
+            void *function = nullptr;
+            internal_compileMethodBuilder(&builder, &function);
 
 #ifndef WASM_SHARED_CACHE // This is an ELF-enabled runtime
-         // TODO verify if should set it here and or somewhere else?
-         WABTAOTCompilerLib::shouldReEmitELF = 1;
+            // TODO verify if should set it here and or somewhere else?
+            WABTAOTCompilerLib::shouldReEmitELF = 1;
 #endif
-         if (function == NULL)
-            {                                                                      /* was not able to compile, for example the dependencies were not resolved */
-            _loadStoreDriver->storeHeaderForCompiledMethod(fn->dbg_name_.c_str()); /* Update the dependencies */
-            /** in the version where we do not fail compilation when dependencies are
-             * not resolved, should be unreachable.
-             * If it reaches here, check if dependenciesCompiled is not cached
-             */
-            return NULL;
-            }
-         else /* compilation was a success */
-            {
-            /** This line is necessary as the memory in the OMR method to method header
-             * map is not managed by std::string, and to be able to do a lookup by key,
-             * we need to have the memory allocated longer than the original string exists
-             */
-            char *fn_name = strdup(fn->dbg_name_.c_str());
-            /** An optimization, in the case we compiled a method, we can try loading the method, right?
-             */
-            TR::AOTMethodHeader *header = _loadStoreDriver->getRegisteredAOTMethodHeader(fn->dbg_name_.c_str());
-            header->dependenciesCompiled = 0;
-            /* store the compiled function and header */
-            storeCodeEntry(fn_name);
-            /** If need to generate an entry point */
-            if (this->needsEntryPointGeneration == true)
+            if (function == NULL)
+               {                                                                      /* was not able to compile, for example the dependencies were not resolved */
+               _loadStoreDriver->storeHeaderForCompiledMethod(fn->dbg_name_.c_str()); /* Update the dependencies */
+               /** in the version where we do not fail compilation when dependencies are
+                * not resolved, should be unreachable.
+                * If it reaches here, check if dependenciesCompiled is not cached
+                */
+               return NULL;
+               }
+            else /* compilation was a success */
                {
-               void *entryFunction = nullptr;
-               char *entryPointName = WABTAOTCompilerLib::generateEntryPointName(fn);
-               char *entryPointNameForString = strdup(entryPointName);
-               std::string entryFunctionNameForBuilder = std::string(entryPointNameForString);
-               entryFunction = getCodeEntry(entryPointName);
-               if (!entryFunction) /* was not able to load the function */
+               /** This line is necessary as the memory in the OMR method to method header
+                * map is not managed by std::string, and to be able to do a lookup by key,
+                * we need to have the memory allocated longer than the original string exists
+                */
+               char *fn_name = strdup(fn->dbg_name_.c_str());
+               /** An optimization, in the case we compiled a method, we can try loading the method, right?
+                */
+               TR::AOTMethodHeader *header = _loadStoreDriver->getRegisteredAOTMethodHeader(fn->dbg_name_.c_str());
+               header->dependenciesCompiled = 0;
+               /* store the compiled function and header */
+               storeCodeEntry(fn_name);
+               AOTGetCompiledFunction(env,ind);
+               /** If need to generate an entry point */
+               if (this->needsEntryPointGeneration == true)
                   {
-                  /**
-                   * @brief Create a function builder for the entry point. Probably need
-                   * to separate it to an individual function, as this code appears in
-                   * many places
-                   */
-                  AOTTypeDictionary *types = new (PERSISTENT_NEW) AOTTypeDictionary();
-                  AOTFunctionBuilder *entryBuilder = new (PERSISTENT_NEW) AOTFunctionBuilder(t, fn,
-                                                                                             std::move(entryFunctionNameForBuilder),
-                                                                                             types,
-                                                                                             *env, *this, true);
-                  internal_compileMethodBuilder(entryBuilder, &entryFunction);
-                  if (entryFunction == NULL)
-                     { /* was not able to compile the entry point, for example the dependencies were not resolved */
-                     return NULL;
-                     }
-                  else /* compilation was a success */
+                  void *entryFunction = nullptr;
+                  char *entryPointName = WABTAOTCompilerLib::generateEntryPointName(fn);
+                  char *entryPointNameForString = strdup(entryPointName);
+                  std::string entryFunctionNameForBuilder = std::string(entryPointNameForString);
+                  entryFunction = getCodeEntry(entryPointName);
+                  if (!entryFunction) /* was not able to load the function */
                      {
-                     char *fn_name = strdup(entryPointName);
-                     /* store the compiled function */
-                     storeCodeEntry(fn_name);
-                     /* load the function, to double check it was actually stored */
-                     entryFunction = getCodeEntry(entryPointName);
-                     assert(entryFunction != NULL);
+                     /**
+                      * @brief Create a function builder for the entry point. Probably need
+                      * to separate it to an individual function, as this code appears in
+                      * many places
+                      */
+                     AOTTypeDictionary *types = new (PERSISTENT_NEW) AOTTypeDictionary();
+                     AOTFunctionBuilder *entryBuilder = new (PERSISTENT_NEW) AOTFunctionBuilder(t, fn,
+                                                                                                std::move(entryFunctionNameForBuilder),
+                                                                                                types,
+                                                                                                *env, *this, true);
+                     internal_compileMethodBuilder(entryBuilder, &entryFunction);
+                     if (entryFunction == NULL)
+                        { /* was not able to compile the entry point, for example the dependencies were not resolved */
+                        return NULL;
+                        }
+                     else /* compilation was a success */
+                        {
+                        char *fn_name = strdup(entryPointName);
+                        /* store the compiled function */
+                        storeCodeEntry(fn_name);
+                        /* load the function, to double check it was actually stored */
+                        entryFunction = getCodeEntry(entryPointName);
+                        assert(entryFunction != NULL);
+                        }
                      }
                   }
                }
             }
          }
-      /** If function is compiled (either before or just now)*/
-      visited_this_traversal.clear();
-      /* try loading the function */
-      loadingResult = AOTLoadAFunction(env, ind, t);
-      fn->entry_fn_ = reinterpret_cast<wabt::interp::AOTedFunction>(fn);
-      if (this->needsEntryPointGeneration == true)
+      if (func->is_compiled == true)
          {
-               char *entryPointName = WABTAOTCompilerLib::generateEntryPointName(fn);
-               void *entryFunction = getCodeEntry(entryPointName);
-               bool loadingResult = AOTGetCompiledFunction(env, ind);
-               _loadStoreDriver->relocateRegisteredMethod(entryPointName);
-               /** Created a separate entry for entry function */
-               fn->entry_fn_ = reinterpret_cast<wabt::interp::AOTedFunction>(entryFunction);
+         /** If function is compiled (either before or just now)*/
+         visited_this_traversal.clear();
+         /* try loading the function */
+         loadingResult = AOTLoadAFunction(env, ind, t);
+         fn->entry_fn_ = reinterpret_cast<wabt::interp::AOTedFunction>(fn);
+         if (this->needsEntryPointGeneration == true)
+            {
+            char *entryPointName = WABTAOTCompilerLib::generateEntryPointName(fn);
+            void *entryFunction = getCodeEntry(entryPointName);
+            bool loadingResult = AOTGetCompiledFunction(env, ind);
+            _loadStoreDriver->relocateRegisteredMethod(entryPointName);
+            /** Created a separate entry for entry function */
+            fn->entry_fn_ = reinterpret_cast<wabt::interp::AOTedFunction>(entryFunction);
+            }
          }
       }
    else
