@@ -2417,7 +2417,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder *b,
       {
       auto *value = Pop(b, "i32");
       Push(b, "i64",
-           b->UnsignedConvertTo(Int64, value));
+           b->ConvertTo(Int64, value));
       //     pc);
       break;
       }
