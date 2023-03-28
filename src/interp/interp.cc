@@ -1803,18 +1803,19 @@ Result Environment::TryAOT(Thread* t,  DefinedFunc* func, Index ind){
       //   }
       // }
       }
-   aotManager->broadcastNames();
-   // Need to fix imports probably.
-   // aotManager->broadcastImports();
-   auto func_count = this->GetFuncCount();
-   modulee->aot_compiled_functions.reserve(func_count);
-   void *function = aotManager->AOTCompileAFunction(this, ind, fn,t);
-   if (function != NULL)
-    {
-    modulee->aot_compiled_functions.push_back(function);
-    }
+
+      aotManager->broadcastNames();
+      // Need to fix imports probably.
+      // aotManager->broadcastImports();
+      // auto func_count = this->GetFuncCount()*2;
+      // modulee->aot_compiled_functions.reserve(func_count);
+      void *function = aotManager->AOTCompileAFunction(this, ind, fn,t);
+      // if (function != NULL)
+      //   {
+      //   modulee->aot_compiled_functions.push_back(function);
+      //   }
    }
-   return Result::Ok;
+     return Result::Ok;
    }
 
 
