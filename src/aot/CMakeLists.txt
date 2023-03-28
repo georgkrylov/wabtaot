@@ -18,6 +18,7 @@ add_library(wabtaotcomp STATIC
   trap-with.cc
   aot-type-dictionary.cc
   aot-function-builder.cc
+  StaticAnalyzer.cc
   aot-compiler-lib.cc
   aot-manager.cc)
 

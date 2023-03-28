@@ -25,10 +25,10 @@ namespace interp {
 //     uint32_t keep_count;
 //   };
 #define WABT_TABLE_ENTRY_SIZE \
-  (sizeof(IstreamOffset) + sizeof(uint32_t) + sizeof(uint32_t))
+  (sizeof(wabt::interp::IstreamOffset) + sizeof(uint32_t) + sizeof(uint32_t))
 #define WABT_TABLE_ENTRY_OFFSET_OFFSET 0
-#define WABT_TABLE_ENTRY_DROP_OFFSET sizeof(IstreamOffset)
-#define WABT_TABLE_ENTRY_KEEP_OFFSET (sizeof(IstreamOffset) + sizeof(uint32_t))
+#define WABT_TABLE_ENTRY_DROP_OFFSET sizeof(wabt::interp::IstreamOffset)
+#define WABT_TABLE_ENTRY_KEEP_OFFSET (sizeof(wabt::interp::IstreamOffset) + sizeof(uint32_t))
 
 template <typename T>
 inline T ReadUxAt(const uint8_t* pc) {

@@ -1757,27 +1757,10 @@ Result Environment::TryAOT(Thread* t,  DefinedFunc* func, Index ind){
 
    WABTAOTCompilerLib::registerAllImports(*aotManager, *this);
    DefinedModule *modulee;
-   Index moduleIndex = WABTAOTCompilerLib::getModuleIndexByFunctionIndex(*this, ind);
-   modulee = reinterpret_cast<DefinedModule *>(this->GetModule(moduleIndex));
    if (fn->is_compiled == false && fn->is_host == false)
       {
       // Two here is hardcoded as em-module.hpp appends two modules and there's an env module
 
-      /**This line is used to construct debug name, limited to 8 symbols as relocation infrastructure does not
-       * support longer names
-       */
-      std::string name;
-      WABTAOTCompilerLib::generateFunctionName(this,ind,name);
-
-      AOTTypeDictionary *types = new (PERSISTENT_NEW) AOTTypeDictionary();
-      // static AOTTypeDictionary types;
-      AOTFunctionBuilder *builder = new (PERSISTENT_NEW) AOTFunctionBuilder(t, fn,
-                                                                            std::move(name),
-                                                                            types,
-                                                                            *this, *aotManager);
-
-      // builder->pu
-      aotManager->push_back_FB(fn->offset, builder, types);
       if (enable_aot_entry)
         {
         aotManager->setNeedsEntry(true);
@@ -1789,10 +1772,16 @@ Result Environment::TryAOT(Thread* t,  DefinedFunc* func, Index ind){
       /** Trying to assign debug name, might be problematic if that's an import
        * Two here is hardcoded as em-module.hpp appends two modules and there's an env module
        */
-      WABTAOTCompilerLib::generateFunctionName(this,ind,name);
-      reinterpret_cast<DefinedFunc *>(fn)->dbg_name_ =name;
-      reinterpret_cast<DefinedModule *>(this->GetModule(moduleIndex))->funcs.emplace_back(fn);
+      if (strcmp(reinterpret_cast<DefinedFunc *>(fn)->dbg_name_.c_str(),"???")==0)
+        {
 
+        Index moduleIndex = WABTAOTCompilerLib::getModuleIndexByFunctionIndex(*this, ind);
+        modulee = reinterpret_cast<DefinedModule *>(this->GetModule(moduleIndex));
+        std::string name;
+        WABTAOTCompilerLib::generateFunctionName(this,ind,name);
+        reinterpret_cast<DefinedFunc *>(fn)->dbg_name_ =name;
+        reinterpret_cast<DefinedModule *>(this->GetModule(moduleIndex))->funcs.emplace_back(fn);
+        }
       }
    else
       {
@@ -5575,6 +5564,7 @@ ExecResult Executor::RunFunction(Index func_index, const TypedValues& args) {
         env_->TryAOT(&thread_, fn, func_index);
         if (fn->is_loaded)
           {
+          envPointer=env_;
           if (env_->enable_aot_entry)
             {
             fn->entry_fn_();
@@ -5583,7 +5573,6 @@ ExecResult Executor::RunFunction(Index func_index, const TypedValues& args) {
             else if (env_->enable_aot_hardcoded)
             {
             int numberOfReturnValues =  env_->GetFuncSignature(fn->sig_index)->result_types.size();
-
             if (numberOfReturnValues == 1)
               {
                 Type returnType =  env_->GetFuncSignature(fn->sig_index)->result_types[0];

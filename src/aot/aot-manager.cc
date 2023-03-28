@@ -3,6 +3,7 @@
 #include "aot-function-builder.h"
 #include "env/AOTLoadStoreDriver.hpp"
 #include "env/AOTMethodHeader.hpp"
+#include "src/aot/StaticAnalyzer.hpp"
 #include "src/jit/environment.h"
 void wabt::aot::AOTManager::broadcastNames()
    {
@@ -164,28 +165,6 @@ int wabt::aot::AOTManager::CheckDependenciesCompiled(wabt::interp::Environment *
                visited_this_traversal.emplace_back(dependenciesArray[i]);
                }
             }
-
-         /** This could be an idea for a compilation queue -it is a queue after all */
-         if (header->getCompiledCodeSize() == 0)
-            {
-            AOTTypeDictionary *types = new (PERSISTENT_NEW) AOTTypeDictionary();
-            for (unsigned int i = 0; i < dependenciesMaxSize; i++)
-               {
-               /* dependencies were compiled  the first time*/
-               std::string name;
-               header->dependenciesCompiled = 0;
-               WABTAOTCompilerLib::generateFunctionName(env, dependenciesArray[i], name);
-
-               AOTFunctionBuilder *builder = new (PERSISTENT_NEW) AOTFunctionBuilder(t, reinterpret_cast<DefinedFunc *>(envPointer->GetFunc(dependenciesArray[i])),
-                                                                                     std::move(name),
-                                                                                     types,
-                                                                                     *envPointer, *this);
-               int indexToDefine = reinterpret_cast<DefinedFunc *>(envPointer->GetFunc(dependenciesArray[i]))->offset;
-               push_back_FB(indexToDefine, builder, types);
-               char *fn_name = strdup(env->GetFunc(dependenciesArray[i])->dbg_name_.c_str());
-               defineExternalFunctionToJit(fn_name, dependenciesArray[i]);
-               }
-            }
          }
       }
 
@@ -290,6 +269,8 @@ void *wabt::aot::AOTManager::AOTCompileAFunction(wabt::interp::Environment *env,
          {
          _loadStoreDriver->createAndRegisterAOTMethodHeader(func->dbg_name_.c_str(), NULL, 0, NULL, 0);
          _loadStoreDriver->storeHeaderForCompiledMethod(func->dbg_name_.c_str());
+         header = _loadStoreDriver->getRegisteredAOTMethodHeader(func->dbg_name_.c_str());
+         wabt::aot::StaticAnalyzer::ForwardPassForCalls(this, env, ind, t);
          }
       else if (header->isCompilationSupported() == false)
          {
@@ -303,6 +284,49 @@ void *wabt::aot::AOTManager::AOTCompileAFunction(wabt::interp::Environment *env,
           */
          if (CheckDependenciesCompiled(env, ind, static_cast<DefinedFunc *>(func), t) != 0 || env->aot_resolved_to_load)
             {
+
+            /**This line is used to construct debug name, limited to 8 symbols as relocation infrastructure does not
+             * support longer names
+             */
+            std::string name;
+            WABTAOTCompilerLib::generateFunctionName(env, ind, name);
+
+            AOTTypeDictionary *types = new (PERSISTENT_NEW) AOTTypeDictionary();
+            // static AOTTypeDictionary types;
+            AOTFunctionBuilder *thisbuilder = new (PERSISTENT_NEW) AOTFunctionBuilder(t, fn,
+                                                                                      std::move(name),
+                                                                                      types,
+                                                                                      *env, *this);
+
+            this->push_back_FB(fn->offset, thisbuilder, types);
+            /** This could be an idea for a compilation queue -it is a queue after all */
+            /** Questionable, if I should fail check, do I try to define?
+             * Yes for rtl, but not for rtc?
+             * TODO FIX ME
+             */
+            unsigned int dependenciesMaxSize = header->getDependenciesArraySize();
+            unsigned int *dependenciesArray = header->getDependenciesArray();
+            if (header->getCompiledCodeSize() == 0)
+               {
+               AOTTypeDictionary *types = new (PERSISTENT_NEW) AOTTypeDictionary();
+               for (unsigned int i = 0; i < dependenciesMaxSize; i++)
+                  {
+                  /* are attempted to be compiled  the first time*/
+                  std::string name;
+                  header->dependenciesCompiled = 0;
+                  WABTAOTCompilerLib::generateFunctionName(env, dependenciesArray[i], name);
+
+                  AOTFunctionBuilder *builder = new (PERSISTENT_NEW) AOTFunctionBuilder(t, reinterpret_cast<DefinedFunc *>(envPointer->GetFunc(dependenciesArray[i])),
+                                                                                        std::move(name),
+                                                                                        types,
+                                                                                        *envPointer, *this);
+                  int indexToDefine = reinterpret_cast<DefinedFunc *>(envPointer->GetFunc(dependenciesArray[i]))->offset;
+                  push_back_FB(indexToDefine, builder, types);
+                  char *fn_name = strdup(env->GetFunc(dependenciesArray[i])->dbg_name_.c_str());
+                  defineExternalFunctionToJit(fn_name, dependenciesArray[i]);
+                  }
+               }
+
             /** If the function was not compiled, then try compiling it*/
             auto &builder = this->getFB(fn->offset);
             void *function = nullptr;
@@ -334,7 +358,7 @@ void *wabt::aot::AOTManager::AOTCompileAFunction(wabt::interp::Environment *env,
                header->dependenciesCompiled = 0;
                /* store the compiled function and header */
                storeCodeEntry(fn_name);
-               AOTGetCompiledFunction(env,ind);
+               AOTGetCompiledFunction(env, ind);
                /** If need to generate an entry point */
                if (this->needsEntryPointGeneration == true)
                   {

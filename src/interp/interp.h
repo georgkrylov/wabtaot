@@ -51,6 +51,7 @@ namespace aot {
 class AOTFunctionBuilder;
 class AOTManager;
 class WABTAOTCompilerLib;
+class StaticAnalyzer;
 }
 
 namespace interp {
@@ -717,6 +718,7 @@ class Environment {
   friend jit::Result_t jit::HostCallThunk(jit::ThreadInfo*, Index);
   friend class wabt::aot::AOTFunctionBuilder;
   friend class wabt::aot::AOTManager;
+  friend class wabt::aot::StaticAnalyzer;
 
   Result TryJit(Thread* t, DefinedFunc* fn, Index ind);
 
@@ -816,6 +818,7 @@ class Thread {
   friend jit::Result_t jit::InterpThunk(jit::ThreadInfo*, Index);
   friend class wabt::aot::AOTFunctionBuilder;
   friend class wabt::aot::WABTAOTCompilerLib;
+  friend class wabt::aot::StaticAnalyzer;
   friend class ThreadOffset;
   friend class Executor;
   const uint8_t* GetIstream() const { return env_->istream_->data.data(); }
