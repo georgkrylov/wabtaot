@@ -153,16 +153,18 @@ int wabt::aot::AOTManager::CheckDependenciesCompiled(wabt::interp::Environment *
                   {
                   DefinedFunc *funcc = reinterpret_cast<DefinedFunc *>(env->GetFunc(dependenciesArray[i]));
                   shouldFailCheck &= CheckDependenciesCompiled(env, dependenciesArray[i], funcc, t);
-                  shouldFailCheck &= CheckDependenciesCompiled(env, dependenciesArray[i], funcc, t);
                   }
                }
             else
                {
-               /** When a method is compiled we know its dependencies */
-               /** Idea here is to add for loading only if the dependencies are not compiled */
-               DefinedFunc *funcc = reinterpret_cast<DefinedFunc *>(env->GetFunc(dependenciesArray[i]));
-               shouldFailCheck &= CheckDependenciesCompiled(env, dependenciesArray[i], funcc, t);
-               visited_this_traversal.emplace_back(dependenciesArray[i]);
+               if (func->is_loaded == false && func->is_compiled == true)
+                  {
+                  /** When a method is compiled we know its dependencies */
+                  /** Idea here is to add for loading only if the dependencies are not compiled */
+                  DefinedFunc *funcc = reinterpret_cast<DefinedFunc *>(env->GetFunc(dependenciesArray[i]));
+                  shouldFailCheck &= CheckDependenciesCompiled(env, dependenciesArray[i], funcc, t);
+                  visited_this_traversal.emplace_back(dependenciesArray[i]);
+                  }
                }
             }
          }
@@ -259,11 +261,23 @@ void *wabt::aot::AOTManager::AOTCompileAFunction(wabt::interp::Environment *env,
       envPointer = env;
       }
    Func *func = (env->GetFunc(ind));
+#if defined(unneeded)
+   // this is a temporary fix for the memories, as the environment
+   
+            std::string name;
+            WABTAOTCompilerLib::generateFunctionName(env, ind, name);
 
+            AOTTypeDictionary *types = new (PERSISTENT_NEW) AOTTypeDictionary();
+            // static AOTTypeDictionary types;
+            AOTFunctionBuilder *thisbuilder = new (PERSISTENT_NEW) AOTFunctionBuilder(t, fn,
+                                                                                      std::move(name),
+                                                                                      types,
+                                                                                      *env, *this);
+#endif
    if (!func->is_loaded)
       {
       /** First, try loading a function, the result of the function is ignored **/
-      bool loadingResult = AOTGetCompiledFunction(env, ind);
+
       TR::AOTMethodHeader *header = _loadStoreDriver->getRegisteredAOTMethodHeader(func->dbg_name_.c_str());
       if (header == NULL)
          {
@@ -276,7 +290,8 @@ void *wabt::aot::AOTManager::AOTCompileAFunction(wabt::interp::Environment *env,
          {
          return NULL;
          }
-      if (func->is_compiled == false)
+      bool loadingResult = AOTGetCompiledFunction(env, ind);
+      if (func->is_compiled == false && func->is_host == false)
          {
          /**Have to call this because it creates function builders
           * within aot manager at appropriate offset

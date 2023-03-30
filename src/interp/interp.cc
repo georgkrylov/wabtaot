@@ -1745,7 +1745,7 @@ Result Environment::TryAOT(Thread* t,  DefinedFunc* func, Index ind){
   if (!enable_aot) {
     return Result::Ok;
   }
-   DefinedFunc* fn = cast<DefinedFunc>(func);
+  Func* fn = static_cast<Func*>(func);
    // Looks like AOTManager in aot-cd.cc is aware of all functions, whereas TryAOT currently recreates AOTManager every time
    // Such awareness allows calls
    if (fn->is_compiled == false){
@@ -1772,14 +1772,15 @@ Result Environment::TryAOT(Thread* t,  DefinedFunc* func, Index ind){
       /** Trying to assign debug name, might be problematic if that's an import
        * Two here is hardcoded as em-module.hpp appends two modules and there's an env module
        */
-      if (strcmp(reinterpret_cast<DefinedFunc *>(fn)->dbg_name_.c_str(),"???")==0)
+      if (strcmp(func->dbg_name_.c_str(),"???")==0 ||  strcmp(fn->dbg_name_.c_str(),"???")==0 || strcmp(func->dbg_name_.c_str(),fn->dbg_name_.c_str())!=0 )
         {
 
         Index moduleIndex = WABTAOTCompilerLib::getModuleIndexByFunctionIndex(*this, ind);
         modulee = reinterpret_cast<DefinedModule *>(this->GetModule(moduleIndex));
         std::string name;
         WABTAOTCompilerLib::generateFunctionName(this,ind,name);
-        reinterpret_cast<DefinedFunc *>(fn)->dbg_name_ =name;
+        fn->dbg_name_ =name;
+        func->dbg_name_ = name;
         reinterpret_cast<DefinedModule *>(this->GetModule(moduleIndex))->funcs.emplace_back(fn);
         }
       }
@@ -1809,11 +1810,12 @@ Result Environment::TryAOT(Thread* t,  DefinedFunc* func, Index ind){
       // aotManager->broadcastImports();
       // auto func_count = this->GetFuncCount()*2;
       // modulee->aot_compiled_functions.reserve(func_count);
-      void *function = aotManager->AOTCompileAFunction(this, ind, fn,t);
+      void *function = aotManager->AOTCompileAFunction(this, ind, func,t);
       // if (function != NULL)
       //   {
       //   modulee->aot_compiled_functions.push_back(function);
       //   }
+      delete aotManager;
    }
      return Result::Ok;
    }
@@ -3646,28 +3648,32 @@ Result Thread::Run(int num_instructions) {
           CHECK_TRAP(PushCall(pc));
           GOTO(fn->offset);
           CHECK_TRAP(env_->TryJit(this, fn, func_index));
-          // CHECK_TRAP(env_->TryAOT(this, fn, func_index));
+          CHECK_TRAP(env_->TryAOT(this, fn, func_index));
 
-          // if (fn->aot_fn_) 
-          // {
+          if (fn->is_loaded) 
+          {
 
-          // //         if (true == TryAOT(t, ind,fn)){
-          // // // printf("TryAOT returned 0\n");
-          //       // unsigned int numberOfParameters = env_->GetFuncSignature(func_index)->param_types.size();
-          //       // int params_array[numberOfParameters];
-          //       // for (int i = 0; i < numberOfParameters; i++){
-          //       //   params_array[i] = Pop().i32;
-          //       // }
-          // void (*p) (...) = fn->aot_fn_;
-          // if (env_->enable_aot_entry)
-          //   {
-          //    unsigned long long q =reinterpret_cast<unsigned long (*)()>(p)();
-          //   } 
-          // else if (env_->enable_aot_libffi)
-          //   {
-          //     generateLibFFICall(env_,fn,this);
-          //   }
-          // }
+          //         if (true == TryAOT(t, ind,fn)){
+          // // printf("TryAOT returned 0\n");
+                // unsigned int numberOfParameters = env_->GetFuncSignature(func_index)->param_types.size();
+                // int params_array[numberOfParameters];
+                // for (int i = 0; i < numberOfParameters; i++){
+                //   params_array[i] = Pop().i32;
+                // }
+          void (*p) (...) = fn->aot_fn_;
+          if (! env_->enable_aot_hardcoded){
+          if (env_->enable_aot_entry)
+            {
+            fn->entry_fn_();
+            } 
+          else if (env_->enable_aot_libffi)
+            {
+              generateLibFFICall(env_,fn,this);
+            }
+            GOTO(PopCall());
+            break;
+          }
+          }
           if (fn->jit_fn_) {
             in_jit_ = true;
 
