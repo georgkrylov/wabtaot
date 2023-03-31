@@ -119,7 +119,7 @@ int wabt::aot::AOTManager::CheckDependenciesCompiled(wabt::interp::Environment *
        */
       if (header->dependenciesCompiled == 1)
          {
-         shouldFailCheck = 0;
+         return 0;
          }
       else if (header->dependenciesCompiled == 0)
          {
@@ -143,7 +143,7 @@ int wabt::aot::AOTManager::CheckDependenciesCompiled(wabt::interp::Environment *
                   _loadStoreDriver->storeHeaderForCompiledMethod(fn_name);
                   // /* to prevent further traversal from this thing*/
                   header->dependenciesCompiled = 1;
-                  shouldFailCheck = 0;
+                  return 0;
                   }
                else if (func->is_loaded == true)
                   {
@@ -152,7 +152,9 @@ int wabt::aot::AOTManager::CheckDependenciesCompiled(wabt::interp::Environment *
                else if (func->is_loaded == false && func->is_compiled == true)
                   {
                   DefinedFunc *funcc = reinterpret_cast<DefinedFunc *>(env->GetFunc(dependenciesArray[i]));
-                  shouldFailCheck &= CheckDependenciesCompiled(env, dependenciesArray[i], funcc, t);
+                  if (CheckDependenciesCompiled(env, dependenciesArray[i], funcc, t) == 0)
+                     return 0;
+                  shouldFailCheck &= 1;
                   }
                }
             else
@@ -162,8 +164,9 @@ int wabt::aot::AOTManager::CheckDependenciesCompiled(wabt::interp::Environment *
                   /** When a method is compiled we know its dependencies */
                   /** Idea here is to add for loading only if the dependencies are not compiled */
                   DefinedFunc *funcc = reinterpret_cast<DefinedFunc *>(env->GetFunc(dependenciesArray[i]));
-                  shouldFailCheck &= CheckDependenciesCompiled(env, dependenciesArray[i], funcc, t);
-                  visited_this_traversal.emplace_back(dependenciesArray[i]);
+                  if (CheckDependenciesCompiled(env, dependenciesArray[i], funcc, t) == 0)
+                     return 0;
+                  shouldFailCheck &= 1;
                   }
                }
             }
@@ -284,9 +287,12 @@ void *wabt::aot::AOTManager::AOTCompileAFunction(wabt::interp::Environment *env,
          _loadStoreDriver->createAndRegisterAOTMethodHeader(func->dbg_name_.c_str(), NULL, 0, NULL, 0);
          _loadStoreDriver->storeHeaderForCompiledMethod(func->dbg_name_.c_str());
          header = _loadStoreDriver->getRegisteredAOTMethodHeader(func->dbg_name_.c_str());
-         wabt::aot::StaticAnalyzer::ForwardPassForCalls(this, env, ind, t);
          }
-      else if (header->isCompilationSupported() == false)
+      if (header->isDependenciesScanned()==false){
+         wabt::aot::StaticAnalyzer::ForwardPassForCalls(this, env, ind, t);
+         _loadStoreDriver->storeHeaderForCompiledMethod(func->dbg_name_.c_str());
+      }
+      if (header->isCompilationSupported() == false)
          {
          return NULL;
          }
@@ -297,6 +303,7 @@ void *wabt::aot::AOTManager::AOTCompileAFunction(wabt::interp::Environment *env,
           * within aot manager at appropriate offset
           * Some things may be cached by not recreating AOTManagers, huh?
           */
+         visited_this_traversal.clear();
          if (CheckDependenciesCompiled(env, ind, static_cast<DefinedFunc *>(func), t) != 0 || env->aot_resolved_to_load)
             {
 

@@ -26,6 +26,13 @@ void WASM::AOTMethodHeader::setCompilationIsSupported(bool value){
    compilationIsSupported=value;
 }
 
+void WASM::AOTMethodHeader::setDependenciesScanned(bool value){
+   dependenciesScanned=value;
+}
+bool WASM::AOTMethodHeader::isDependenciesScanned(){
+   return dependenciesScanned;
+}
+
 bool WASM::AOTMethodHeader::isCompilationSupported(){
    return compilationIsSupported;
 }
@@ -45,7 +52,8 @@ size_t WASM::AOTMethodHeader::sizeOfSerializedVersion()
    // sizeof(char)*8 - name of the method
    // sizeof short - dependencies compiled
    // sizeof bool - compilationIsNotSupported
-   return sizeof(size_t) + 2 * sizeof(uint32_t) + self()->getCompiledCodeSize() + self()->getRelocationsSize() + sizeof(unsigned int) + sizeof(int) + lastUsedIdxInDependenciesArray * sizeof(int)+sizeof(char)*8 + sizeof(uint8_t)+sizeof(bool);
+   // sizeof bool - dependenciesScanned
+   return sizeof(size_t) + 2 * sizeof(uint32_t) + self()->getCompiledCodeSize() + self()->getRelocationsSize() + sizeof(unsigned int) + sizeof(int) + lastUsedIdxInDependenciesArray * sizeof(int)+sizeof(char)*8 + sizeof(uint8_t)+sizeof(bool)+sizeof(bool);
    }
 
 void WASM::AOTMethodHeader::serializeMethod(uint8_t *buffer, size_t bufferSize)
@@ -106,9 +114,12 @@ void WASM::AOTMethodHeader::serializeMethod(uint8_t *buffer, size_t bufferSize)
    memcpy(ptr,&(self()->dependenciesCompiled),sizeof(uint8_t));
    
    ptr+= sizeof(uint8_t);
+
+   memcpy(ptr,&(self()->compilationIsSupported),sizeof(bool));
+   ptr+= sizeof(bool);
+   memcpy(ptr,&(self()->dependenciesScanned),sizeof(bool));
    // Now the buffer contains all the data relevant to the
    // method header.
-   memcpy(ptr,&(self()->compilationIsSupported),sizeof(bool));
    }
 
 WASM::AOTMethodHeader::AOTMethodHeader(uint8_t *serializedMethodData)
@@ -148,6 +159,8 @@ WASM::AOTMethodHeader::AOTMethodHeader(uint8_t *serializedMethodData)
    self()->dependenciesCompiled = *(reinterpret_cast<unsigned int *>(serializedMethodData));
    serializedMethodData+= sizeof(bool);
    self()->compilationIsSupported = *(reinterpret_cast<bool*>(serializedMethodData));
+   serializedMethodData+= sizeof(bool);
+   self()->dependenciesScanned = *(reinterpret_cast<bool*>(serializedMethodData));
    size_t computedSize = self()->sizeOfSerializedVersion();
 
    TR_ASSERT(computedSize == storedSize, "Stored and Computed MethodHeader sizes mismatch, possible message corruption \n");

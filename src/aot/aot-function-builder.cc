@@ -1476,6 +1476,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder *b,
                   {
                   /** For now, to avoid trying to compile */
                   hdr->setCompilationIsSupported(false);
+                  return false;
                   }
                }
             int size = env_.GetFuncSignature(fn->sig_index)->param_types.size();

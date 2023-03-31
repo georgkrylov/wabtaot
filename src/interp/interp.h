@@ -322,7 +322,8 @@ struct DefinedFunc : Func {
         offset(kInvalidIstreamOffset),
 #endif
         local_decl_count(0),
-        local_count(0) {}
+        local_count(0),
+        size(0) {}
 
   static bool classof(const Func* func) {
 #if not defined(unneeded)
@@ -354,7 +355,7 @@ struct DefinedFunc : Func {
 #endif
   Index local_decl_count;
   Index local_count;
-
+  uint64_t size;
   // first the parameter types, and then the local types.
   // the number of local types is given by local_count.
   std::vector<Type> param_and_local_types;

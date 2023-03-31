@@ -63,6 +63,7 @@ public:
       dependenciesMaxSize = 0;
       lastUsedIdxInDependenciesArray = 0;
       dependenciesCompiled = 0;
+      dependenciesScanned = false;
       compilationIsSupported = true;
       methodName[0]=0;
       };
@@ -106,12 +107,28 @@ public:
     */
    bool isCompilationSupported();
 
+
    /**
     * @brief Set the Compilation Is Supported object
     * 
     * @param value 
     */
    void setCompilationIsSupported(bool value);
+
+   /**
+    * @brief return is dependenciesScanned
+    * 
+    * @return true 
+    * @return false 
+    */
+   bool isDependenciesScanned();
+
+      /**
+    * @brief Set the Compilation Is Supported object
+    * 
+    * @param value 
+    */
+   void setDependenciesScanned(bool value);
 
    void assignName(const char* methodName);
    /**
@@ -161,7 +178,11 @@ protected:
     * we want to keep track of the maximum size of the array.
     */
    unsigned int dependenciesMaxSize;
-
+   /**
+    * @brief As we are going to serialize and deserialize the dependencies array,
+    * we want to know if the dependencies were scanned
+    */
+   bool dependenciesScanned;
    /**
     * @brief As we are going to serialize and deserialize the dependencies array,
     * we want to keep track of the last used index in dependencies array.

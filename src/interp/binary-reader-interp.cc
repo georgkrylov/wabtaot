@@ -1333,7 +1333,9 @@ wabt::Result BinaryReaderInterp::EndFunctionBody(Index index) {
   CHECK_RESULT(typechecker_.EndFunction());
   CHECK_RESULT(EmitDropKeep(drop_count, keep_count));
   CHECK_RESULT(EmitOpcode(Opcode::Return));
+  auto* func = cast<DefinedFunc>(GetFuncByModuleIndex(index));
   PopLabel();
+  func->size =GetIstreamOffset()-func->offset;
   current_func_ = nullptr;
   return wabt::Result::Ok;
 }
