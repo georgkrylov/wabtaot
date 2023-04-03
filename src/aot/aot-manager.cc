@@ -107,7 +107,7 @@ int wabt::aot::AOTManager::CheckDependenciesCompiled(wabt::interp::Environment *
    int shouldFailCheck = 0;
    if (std::find(visited_this_traversal.begin(), visited_this_traversal.end(), ind) != visited_this_traversal.end())
       return 1;
-   char* thisFuncName =  header->getMethodName();
+   char *thisFuncName = header->getMethodName();
    visited_this_traversal.emplace_back(ind);
    if (header != NULL)
       {
@@ -132,6 +132,10 @@ int wabt::aot::AOTManager::CheckDependenciesCompiled(wabt::interp::Environment *
              */
 
             Func *func = (env->GetFunc(dependenciesArray[i]));
+            if (func->is_host)
+               {
+               continue;
+               }
             if (func->is_compiled == false)
                {
                /** Need to do that, maybe it was not fetched just yet, but compiled before */
@@ -259,6 +263,7 @@ void *wabt::aot::AOTManager::AOTCompileAFunction(wabt::interp::Environment *env,
       {
       _loadStoreDriver = reinterpret_cast<TR::AOTLoadStoreDriver *>(getLoadStoreDriver());
       WABTAOTCompilerLib::setLoadStoreDriver(_loadStoreDriver);
+      WABTAOTCompilerLib::envPointer = env;
       visited_this_traversal.clear();
       }
    if (envPointer == NULL)
@@ -269,15 +274,15 @@ void *wabt::aot::AOTManager::AOTCompileAFunction(wabt::interp::Environment *env,
 #if defined(unneeded)
    // this is a temporary fix for the memories, as the environment
    // Is needed for callindirect aot-rtl (aot-rtc will fail to compile)
-            std::string name;
-            WABTAOTCompilerLib::generateFunctionName(env, ind, name);
+   std::string name;
+   WABTAOTCompilerLib::generateFunctionName(env, ind, name);
 
-            AOTTypeDictionary *types = new (PERSISTENT_NEW) AOTTypeDictionary();
-            // static AOTTypeDictionary types;
-            AOTFunctionBuilder *thisbuilder = new (PERSISTENT_NEW) AOTFunctionBuilder(t, fn,
-                                                                                      std::move(name),
-                                                                                      types,
-                                                                                      *env, *this);
+   AOTTypeDictionary *types = new (PERSISTENT_NEW) AOTTypeDictionary();
+   // static AOTTypeDictionary types;
+   AOTFunctionBuilder *thisbuilder = new (PERSISTENT_NEW) AOTFunctionBuilder(t, fn,
+                                                                             std::move(name),
+                                                                             types,
+                                                                             *env, *this);
 #endif
    if (!func->is_loaded)
       {
@@ -290,10 +295,11 @@ void *wabt::aot::AOTManager::AOTCompileAFunction(wabt::interp::Environment *env,
          _loadStoreDriver->storeHeaderForCompiledMethod(func->dbg_name_.c_str());
          header = _loadStoreDriver->getRegisteredAOTMethodHeader(func->dbg_name_.c_str());
          }
-      if (header->isDependenciesScanned()==false){
+      if (header->isDependenciesScanned() == false)
+         {
          wabt::aot::StaticAnalyzer::ForwardPassForCalls(this, env, ind, t);
          _loadStoreDriver->storeHeaderForCompiledMethod(func->dbg_name_.c_str());
-      }
+         }
       if (header->isCompilationSupported() == false)
          {
          return NULL;

@@ -49,6 +49,7 @@ int WABTAOTCompilerLib::approximateFirstFunctionInAModule(interp::Environment &e
       }
    return result;
    }
+uint32_t printaa(int32_t a, int32_t b, int32_t c, int32_t d);
 
 void WABTAOTCompilerLib::preSetCodeEntries(wabt::interp::Executor *executor, wabt::interp::Thread *thread)
    {
@@ -67,17 +68,18 @@ void WABTAOTCompilerLib::preSetCodeEntries(wabt::interp::Executor *executor, wab
       }
    wabt::interp::Environment &env(*thread->env_);
    /** Setting utility functions */
-   setCodeEntry("trapWith", reinterpret_cast<void *>(trapWith));
+   setCodeEntry("trapWit", reinterpret_cast<void *>(trapWith));
+   setCodeEntry("fd_writ",reinterpret_cast<void*>(printaa));
    double (*sqr)(double) = sqrt;
    setCodeEntry("sqrt", reinterpret_cast<void *>(sqr));
    setCodeEntry("sqrtf", reinterpret_cast<void *>(sqrtf));
    double (*cpsign)(double, double) = copysign;
-   setCodeEntry("copysign", reinterpret_cast<void *>(cpsign));
-   setCodeEntry("copysignf", reinterpret_cast<void *>(copysignf));
+   setCodeEntry("cpsign", reinterpret_cast<void *>(cpsign));
+   setCodeEntry("cpsignf", reinterpret_cast<void *>(copysignf));
    setCodeEntry("GrowMem", reinterpret_cast<void *>(wabt::aot::AOTFunctionBuilder::GrowMemory));
    setCodeEntry("MemSize", reinterpret_cast<void *>(wabt::aot::AOTFunctionBuilder::CalculateMemorySize));
-   setCodeEntry("CallIndi", reinterpret_cast<void *>(wabt::aot::AOTFunctionBuilder::AOTCallIndirectHelper));
-   setCodeEntry("Popcount", reinterpret_cast<void *>(static_cast<int (*)(unsigned)>(wabt::Popcount)));
+   setCodeEntry("CallInd", reinterpret_cast<void *>(wabt::aot::AOTFunctionBuilder::AOTCallIndirectHelper));
+   setCodeEntry("Popcoun", reinterpret_cast<void *>(static_cast<int (*)(unsigned)>(wabt::Popcount)));
    uint8_t *ptr = reinterpret_cast<uint8_t *>(&(thread->value_stack_top_));
    uint8_t *pptr = reinterpret_cast<uint8_t *>(malloc(sizeof(void *)));
    memcpy(pptr, &ptr, sizeof(void *));
@@ -120,6 +122,7 @@ void WABTAOTCompilerLib::preSetCodeEntries(wabt::interp::Executor *executor, wab
    }
 
 TR::AOTLoadStoreDriver *WABTAOTCompilerLib::_loadStoreDriver = NULL;
+wabt::interp::Environment *WABTAOTCompilerLib::envPointer = NULL;
 
 void WABTAOTCompilerLib::setLoadStoreDriver(TR::AOTLoadStoreDriver *driver)
    {
@@ -174,9 +177,10 @@ int WABTAOTCompilerLib::getModuleIndexByFunctionIndex(wabt::interp::Environment 
 
 uint32_t printaa(int32_t a, int32_t b, int32_t c, int32_t d)
    {
-   uint32_t bufferLoc = *(uint32_t *)(envPointer->GetMems()[0] + b);
-   char *buffer = envPointer->GetMems()[0] + bufferLoc;
-   uint32_t buffsize = *(uint32_t *)(envPointer->GetMems()[0] + b + 4);
+   wabt::interp::Environment* envPointer = WABTAOTCompilerLib::envPointer;
+   uint32_t bufferLoc = *(uint32_t *)(envPointer->GetMems()[1] + b);
+   char *buffer = envPointer->GetMems()[1] + bufferLoc;
+   uint32_t buffsize = *(uint32_t *)(envPointer->GetMems()[1] + b + 4);
    if (buffsize)
       {
       std::cout << std::string(buffer, buffsize);

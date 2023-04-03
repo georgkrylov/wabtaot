@@ -181,6 +181,7 @@ class WABTAOTCompilerLib
     */
    static int shouldReEmitELF;
 #endif
+   static Environment *envPointer;
    static int registeredImportsOnce;
    static TR::AOTLoadStoreDriver* _loadStoreDriver;
    };

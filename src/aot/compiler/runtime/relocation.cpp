@@ -83,6 +83,7 @@ WASM::RelocationRecordMethodCallAddress::computeTargetMethodAddress(TR::Relocati
    char methodName[8]{};
    memset(methodName,0,8*sizeof(char));
    memcpy(methodName,&callTargetAddress,8);
+   methodName[7]=0;
    callTargetAddress = reinterpret_cast<uint8_t*>(reinterpret_cast<TR::RelocationRuntime *>(reloRuntime)->runtimeItemAddress(methodName));
    if (!callTargetAddress) throw std::runtime_error(std::string("symbol not defined: ")+std::string(reinterpret_cast<char*>(methodName)));
    return callTargetAddress;

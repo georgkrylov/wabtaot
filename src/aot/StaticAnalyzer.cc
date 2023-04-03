@@ -169,12 +169,30 @@ bool wabt::aot::StaticAnalyzer::ScanOpcodeAt(wabt::interp::DefinedFunc *fn, wabt
                   TR::AOTMethodHeader *hdr = WABTAOTCompilerLib::getLoadStoreDriver()->getRegisteredAOTMethodHeader(callingFunc->dbg_name_.c_str());
                   if (hdr == NULL) /** Export for example */
                      {
-                     return false; /** shouldnt reach here tbh */
+                     WABTAOTCompilerLib::getLoadStoreDriver()->createAndRegisterAOTMethodHeader(callingFunc->dbg_name_.c_str(), NULL, 0, NULL, 0);
+                     WABTAOTCompilerLib::getLoadStoreDriver()->storeHeaderForCompiledMethod(callingFunc->dbg_name_.c_str());
+                     hdr = WABTAOTCompilerLib::getLoadStoreDriver()->getRegisteredAOTMethodHeader(callingFunc->dbg_name_.c_str());
                      }
                   else
                      {
                      /** For now, to avoid trying to compile */
-                     hdr->setCompilationIsSupported(false);
+                     /* hdr->setCompilationIsSupported(false); */
+
+                     unsigned int indexOfTheFunctionBeingCalled = meta_it->second.index;
+                     if (strcmp(fn->dbg_name_.c_str(), "???") == 0)
+                        {
+                        std::string name;
+                        WABTAOTCompilerLib::generateFunctionName(env_, indexOfTheFunctionBeingCalled, name);
+                        fn->dbg_name_ = name;
+                        }
+                     if (indexOfTheFunctionBeingCalled == callingFunction)
+                        {
+                        // do nothing and keep trying to compile; recursive call
+                        }
+                     else if (hdr->containsDependency(indexOfTheFunctionBeingCalled) == 1)
+                        {
+                        hdr->addDependency(indexOfTheFunctionBeingCalled);
+                        }
                      }
                   }
                }
@@ -257,9 +275,10 @@ bool wabt::aot::StaticAnalyzer::ScanOpcodeAt(wabt::interp::DefinedFunc *fn, wabt
             for (int i = 0; i < table->func_indexes.size(); i++)
                {
                Index indexOfTheFunctionBeingCalled = table->func_indexes[i];
-               if (indexOfTheFunctionBeingCalled >= env_->GetFuncCount()){
+               if (indexOfTheFunctionBeingCalled >= env_->GetFuncCount())
+                  {
                   continue;
-               }
+                  }
                DefinedFunc *fn = reinterpret_cast<DefinedFunc *>(env_->GetFunc(indexOfTheFunctionBeingCalled));
                if (strcmp(fn->dbg_name_.c_str(), "???") == 0)
                   {

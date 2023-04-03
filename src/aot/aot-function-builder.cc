@@ -56,9 +56,9 @@ int32_t closs(int32_t a)
  */
 uint32_t printaaa(int32_t a, int32_t b, int32_t c, int32_t d)
    {
-   uint32_t bufferLoc = *(uint32_t *)(envPointer->GetMems()[1] + b);
-   char *buffer = envPointer->GetMems()[1] + bufferLoc;
-   uint32_t buffsize = *(uint32_t *)(envPointer->GetMems()[1] + b + 4);
+   uint32_t bufferLoc = *(uint32_t *)(envPointer->GetMems()[0] + b);
+   char *buffer = envPointer->GetMems()[0] + bufferLoc;
+   uint32_t buffsize = *(uint32_t *)(envPointer->GetMems()[0] + b + 4);
    if (buffsize)
       {
       std::cout << std::string(buffer, buffsize);
@@ -214,6 +214,7 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread *thread, interp::DefinedFu
                   Float,
                   1,
                   Float);
+   defined_names_.push_back("sqrtf");
    DefineFunction("copysignf", __FILE__, "0",
                   reinterpret_cast<void *>(static_cast<float (*)(float, float)>(copysignf)),
                   Double,
@@ -267,6 +268,7 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread *thread, interp::DefinedFu
                   Int32,
                   Int32,
                   Int32);
+   defined_names_.push_back("fd_write");
    DefineFunction("emscripten_notify_memory_growth", __FILE__, "34",
                   reinterpret_cast<void *>((1)),
                   NoType,
@@ -1479,9 +1481,9 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder *b,
                   }
                else
                   {
-                  /** For now, to avoid trying to compile */
-                  hdr->setCompilationIsSupported(false);
-                  return false;
+                  // /** For now, to avoid trying to compile */
+                  // hdr->setCompilationIsSupported(false);
+                  // return false;
                   }
                }
             int size = env_.GetFuncSignature(fn->sig_index)->param_types.size();
@@ -1496,12 +1498,12 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder *b,
                }
             // thread_->CallHost(reinterpret_cast<wabt::interp::HostFunc*>(env_.GetFunc(offset)));
             // auto tmp = thread_->Pop().i32;
-            for (auto t = env_.GetFuncSignature(fn->sig_index)->result_types.rbegin();
-                 t != env_.GetFuncSignature(fn->sig_index)->result_types.rend(); t++)
-               {
-               TR::IlValue *value = b->ConstInt32(0);
+            TR::IlValue *value = b->Call(fn->dbg_name_.c_str(),size,args);
+            // for (auto t = env_.GetFuncSignature(fn->sig_index)->result_types.rbegin();
+            //      t != env_.GetFuncSignature(fn->sig_index)->result_types.rend(); t++)
+            //    {
                pushReturnValue(fn, b, value);
-               }
+               // }
 
             // delete args;
             break;
