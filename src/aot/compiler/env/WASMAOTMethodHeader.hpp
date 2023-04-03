@@ -107,6 +107,12 @@ public:
     */
    bool isCompilationSupported();
 
+   /**
+    * @brief Get the Method Name object
+    * 
+    * @return char* 
+    */
+   char* getMethodName(){return methodName;}
 
    /**
     * @brief Set the Compilation Is Supported object

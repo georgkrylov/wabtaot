@@ -477,6 +477,11 @@ uint64_t AOTFunctionBuilder::AOTCallIndirectHelper(Index table_index, Index sig_
       // auto result = static_cast<Result_t>(th->CallHost(cast<HostFunc>(func)));
       // if (result != static_cast<Result_t>(interp::Result::Ok))
       // return result;
+      /** For now, to avoid trying to compile */
+      // hdr->setCompilationIsSupported(false);      
+      printf("Indirect call to host function\n");
+      exit(0);
+      return false;
       }
    else
       {
@@ -1606,13 +1611,13 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder *b,
             {
             return false; /** shouldnt reach here tbh */
             }
-         else
-            {
-            /** For now, to avoid trying to compile */
-            hdr->setCompilationIsSupported(false);
-            }
+         // else
+            // {
+            // /** For now, to avoid trying to compile */
+            // hdr->setCompilationIsSupported(false);
+            // }
          }
-      return false;
+      // return false;
       //    auto th_addr = b->ConstAddress(thread_);
       auto table_index = b->ConstInt64(ReadU32(&pc));
       auto sig = ReadU32(&pc);

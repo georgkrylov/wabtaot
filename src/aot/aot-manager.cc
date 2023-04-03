@@ -107,6 +107,7 @@ int wabt::aot::AOTManager::CheckDependenciesCompiled(wabt::interp::Environment *
    int shouldFailCheck = 0;
    if (std::find(visited_this_traversal.begin(), visited_this_traversal.end(), ind) != visited_this_traversal.end())
       return 1;
+   char* thisFuncName =  header->getMethodName();
    visited_this_traversal.emplace_back(ind);
    if (header != NULL)
       {
@@ -216,6 +217,7 @@ bool wabt::aot::AOTManager::AOTLoadAFunction(wabt::interp::Environment *env, wab
                int next_index = *it;
                loadingResult &= AOTGetCompiledFunction(env, next_index);
                }
+            /** Should not ever be false, as checking dependencies will fail*/
             if (loadingResult == false)
                return false;
             for (auto it = visited_this_traversal.begin(); it < visited_this_traversal.end(); it++)
@@ -266,7 +268,7 @@ void *wabt::aot::AOTManager::AOTCompileAFunction(wabt::interp::Environment *env,
    Func *func = (env->GetFunc(ind));
 #if defined(unneeded)
    // this is a temporary fix for the memories, as the environment
-   
+   // Is needed for callindirect aot-rtl (aot-rtc will fail to compile)
             std::string name;
             WABTAOTCompilerLib::generateFunctionName(env, ind, name);
 

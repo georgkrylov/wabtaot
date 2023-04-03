@@ -13,13 +13,13 @@ bool wabt::aot::StaticAnalyzer::ForwardPassForCalls(wabt::aot::AOTManager *manag
    const uint8_t *istream = _thread->GetIstream();
    const uint8_t *pc = &istream[func->offset];
    int callingFunction = manager->getFunctionThatManagerWasCreatedFor();
-               auto callingAOTMeta = env->aot_meta_.find(callingFunction);
-               if (callingAOTMeta != env->aot_meta_.end())
-                  {
-                  wabt::interp::DefinedFunc *callingFunc = cast<wabt::interp::DefinedFunc>(callingAOTMeta->second.wasm_fn);
-                  TR::AOTMethodHeader *hdr = WABTAOTCompilerLib::getLoadStoreDriver()->getRegisteredAOTMethodHeader(callingFunc->dbg_name_.c_str());
-                  hdr->setDependenciesScanned(true);
-                  }
+   auto callingAOTMeta = env->aot_meta_.find(callingFunction);
+   if (callingAOTMeta != env->aot_meta_.end())
+      {
+      wabt::interp::DefinedFunc *callingFunc = cast<wabt::interp::DefinedFunc>(callingAOTMeta->second.wasm_fn);
+      TR::AOTMethodHeader *hdr = WABTAOTCompilerLib::getLoadStoreDriver()->getRegisteredAOTMethodHeader(callingFunc->dbg_name_.c_str());
+      hdr->setDependenciesScanned(true);
+      }
    if (StaticAnalyzer::ScanOpcodeAt(func, manager, env, istream, pc) == false)
       {
       // printf("Failed to read function %s\n", func->dbg_name_.c_str());
@@ -35,11 +35,11 @@ bool wabt::aot::StaticAnalyzer::ForwardPassForCalls(wabt::aot::AOTManager *manag
 bool wabt::aot::StaticAnalyzer::ScanOpcodeAt(wabt::interp::DefinedFunc *fn, wabt::aot::AOTManager *manager, wabt::interp::Environment *env_, const uint8_t *istream,
                                              const uint8_t *pc)
    {
-      int dummy =0; 
-      //** Maybe it does not account with the artificially inserted bytecodes? */
-   const uint8_t *end_pc =  pc+fn->size;
+   int dummy = 0;
+   //** Maybe it does not account with the artificially inserted bytecodes? */
+   const uint8_t *end_pc = pc + fn->size;
    Index last_br_num_targets;
-   while (pc<end_pc)
+   while (pc < end_pc)
       {
 
       Opcode opcode = interp::ReadOpcode(&pc);
@@ -89,7 +89,7 @@ bool wabt::aot::StaticAnalyzer::ScanOpcodeAt(wabt::interp::DefinedFunc *fn, wabt
 
       case Opcode::Return:
          {
-         dummy +=1;
+         dummy += 1;
          break;
          }
 
@@ -179,29 +179,88 @@ bool wabt::aot::StaticAnalyzer::ScanOpcodeAt(wabt::interp::DefinedFunc *fn, wabt
                   }
                }
 
-         else
-            {
-            /** TODO will need to iterate among all dependencies and check if they are compiled
-             * and return false if they are not. Dependencies are also added here  **/
-            int callingFunction = manager->getFunctionThatManagerWasCreatedFor();
-            /**
-             * @brief  Probably need to do an async compilation? Or define functions?
-             *
-             */
-            auto callingAOTMeta = env_->aot_meta_.find(callingFunction);
-            if (callingAOTMeta != env_->aot_meta_.end())
+            else
                {
-               DefinedFunc *callingFunc = cast<DefinedFunc>(callingAOTMeta->second.wasm_fn);
-               TR::AOTMethodHeader *hdr = WABTAOTCompilerLib::getLoadStoreDriver()->getRegisteredAOTMethodHeader(callingFunc->dbg_name_.c_str());
-               if (hdr == NULL) /** Export for example */
+               /** TODO will need to iterate among all dependencies and check if they are compiled
+                * and return false if they are not. Dependencies are also added here  **/
+               int callingFunction = manager->getFunctionThatManagerWasCreatedFor();
+               /**
+                * @brief  Probably need to do an async compilation? Or define functions?
+                *
+                */
+               auto callingAOTMeta = env_->aot_meta_.find(callingFunction);
+               if (callingAOTMeta != env_->aot_meta_.end())
                   {
-                  WABTAOTCompilerLib::getLoadStoreDriver()->createAndRegisterAOTMethodHeader(callingFunc->dbg_name_.c_str(), NULL, 0, NULL, 0);
-                  WABTAOTCompilerLib::getLoadStoreDriver()->storeHeaderForCompiledMethod(callingFunc->dbg_name_.c_str());
-                  hdr = WABTAOTCompilerLib::getLoadStoreDriver()->getRegisteredAOTMethodHeader(callingFunc->dbg_name_.c_str());
+                  DefinedFunc *callingFunc = cast<DefinedFunc>(callingAOTMeta->second.wasm_fn);
+                  TR::AOTMethodHeader *hdr = WABTAOTCompilerLib::getLoadStoreDriver()->getRegisteredAOTMethodHeader(callingFunc->dbg_name_.c_str());
+                  if (hdr == NULL) /** Export for example */
+                     {
+                     WABTAOTCompilerLib::getLoadStoreDriver()->createAndRegisterAOTMethodHeader(callingFunc->dbg_name_.c_str(), NULL, 0, NULL, 0);
+                     WABTAOTCompilerLib::getLoadStoreDriver()->storeHeaderForCompiledMethod(callingFunc->dbg_name_.c_str());
+                     hdr = WABTAOTCompilerLib::getLoadStoreDriver()->getRegisteredAOTMethodHeader(callingFunc->dbg_name_.c_str());
+                     }
+
+                  unsigned int indexOfTheFunctionBeingCalled = meta_it->second.index;
+                  if (strcmp(fn->dbg_name_.c_str(), "???") == 0)
+                     {
+                     std::string name;
+                     WABTAOTCompilerLib::generateFunctionName(env_, indexOfTheFunctionBeingCalled, name);
+                     fn->dbg_name_ = name;
+                     }
+                  if (indexOfTheFunctionBeingCalled == callingFunction)
+                     {
+                     // do nothing and keep trying to compile; recursive call
+                     }
+                  else if (hdr->containsDependency(indexOfTheFunctionBeingCalled) == 1)
+                     {
+                     hdr->addDependency(indexOfTheFunctionBeingCalled);
+                     }
                   }
+               else
+                  {
+                  /* Cannot find function that started compilation,
+                  it is either the exported function or something
+                  is wrong
+                  */
+                  //  assert(false);
+                  }
+               }
+            }
+         break;
+         }
 
+      case Opcode::CallIndirect:
+         {
+         Index table_index = ReadU32(&pc);
+         Table *table = &env_->tables_[table_index];
+         Index sig_index = ReadU32(&pc);
+         int callingFunction = manager->getFunctionThatManagerWasCreatedFor();
+         auto callingAOTMeta = env_->aot_meta_.find(callingFunction);
 
-               unsigned int indexOfTheFunctionBeingCalled = meta_it->second.index;
+         if (fn == NULL)
+            {
+            printf("Need to assign a function to aot meta\n");
+            exit(0);
+            }
+
+         if (callingAOTMeta != env_->aot_meta_.end())
+            {
+            DefinedFunc *callingFunc = cast<DefinedFunc>(callingAOTMeta->second.wasm_fn);
+            TR::AOTMethodHeader *hdr = WABTAOTCompilerLib::getLoadStoreDriver()->getRegisteredAOTMethodHeader(callingFunc->dbg_name_.c_str());
+            if (hdr == NULL) /** Export for example */
+               {
+               WABTAOTCompilerLib::getLoadStoreDriver()->createAndRegisterAOTMethodHeader(callingFunc->dbg_name_.c_str(), NULL, 0, NULL, 0);
+               WABTAOTCompilerLib::getLoadStoreDriver()->storeHeaderForCompiledMethod(callingFunc->dbg_name_.c_str());
+               hdr = WABTAOTCompilerLib::getLoadStoreDriver()->getRegisteredAOTMethodHeader(callingFunc->dbg_name_.c_str());
+               }
+
+            for (int i = 0; i < table->func_indexes.size(); i++)
+               {
+               Index indexOfTheFunctionBeingCalled = table->func_indexes[i];
+               if (indexOfTheFunctionBeingCalled >= env_->GetFuncCount()){
+                  continue;
+               }
+               DefinedFunc *fn = reinterpret_cast<DefinedFunc *>(env_->GetFunc(indexOfTheFunctionBeingCalled));
                if (strcmp(fn->dbg_name_.c_str(), "???") == 0)
                   {
                   std::string name;
@@ -217,23 +276,7 @@ bool wabt::aot::StaticAnalyzer::ScanOpcodeAt(wabt::interp::DefinedFunc *fn, wabt
                   hdr->addDependency(indexOfTheFunctionBeingCalled);
                   }
                }
-            else
-               {
-               /* Cannot find function that started compilation,
-               it is either the exported function or something
-               is wrong
-               */
-               //  assert(false);
-               }
             }
-            }
-         break;
-         }
-
-      case Opcode::CallIndirect:
-         {
-         auto table_index = wabt::interp::ReadU32(&pc);
-         auto sig = wabt::interp::ReadU32(&pc);
          break;
          }
 
@@ -671,16 +714,18 @@ bool wabt::aot::StaticAnalyzer::ScanOpcodeAt(wabt::interp::DefinedFunc *fn, wabt
       case Opcode::I32TruncF64S:
          break;
 
-      case Opcode::InterpData:{
+      case Opcode::InterpData:
+         {
          uint32_t tsk = wabt::interp::ReadU32(&pc);
-         for (Index i = 0 ; i <= last_br_num_targets; i++){
+         for (Index i = 0; i <= last_br_num_targets; i++)
+            {
             uint32_t tsktsk = wabt::interp::ReadU32(&pc);
             uint32_t tsktskts = wabt::interp::ReadU32(&pc);
             uint32_t tsktsktsk = wabt::interp::ReadU32(&pc);
-         }
-         dummy+=1;
+            }
+         dummy += 1;
          break;
-      }
+         }
       case Opcode::I32TruncF64U:
          break;
 
@@ -742,8 +787,9 @@ bool wabt::aot::StaticAnalyzer::ScanOpcodeAt(wabt::interp::DefinedFunc *fn, wabt
          return false;
          }
       }
-      /** This is to prevent optimizing the switch case out */
-   if (dummy > 10000000){
+   /** This is to prevent optimizing the switch case out */
+   if (dummy > 10000000)
+      {
       return false;
-   }
+      }
    }
