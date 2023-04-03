@@ -37,7 +37,7 @@
 #include "src/common.h"
 #include "src/opcode.h"
 #include "src/stream.h"
-
+#include <array>
 #include "../aot/compiler/env/aot-meta.hpp"
 
 namespace wabt {
@@ -737,7 +737,6 @@ class Environment {
   std::unique_ptr<OutputBuffer> istream_;
   BindingHash module_bindings_;
   BindingHash registered_module_bindings_;
-  aot::AOTManager* aotManager = NULL;
   std::vector<jit::JITedFunction> jit_funcs_;
   /** Introducing this as an idea to hold aot functions
    * in the environment, possibly can be deleted later
@@ -746,6 +745,7 @@ class Environment {
    * be at higher opt level */
   std::vector<interp::AOTedFunction> aot_funcs_;
   jit::JitEnvironment jit_env_;
+  std::map<int,wabt::aot::AOTManager*> aotManagers;
   /** Could be later turned into methodHeader, or tied
    * with it.
    */
