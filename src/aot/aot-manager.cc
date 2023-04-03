@@ -271,19 +271,7 @@ void *wabt::aot::AOTManager::AOTCompileAFunction(wabt::interp::Environment *env,
       envPointer = env;
       }
    Func *func = (env->GetFunc(ind));
-#if defined(unneeded)
-   // this is a temporary fix for the memories, as the environment
-   // Is needed for callindirect aot-rtl (aot-rtc will fail to compile)
-   std::string name;
-   WABTAOTCompilerLib::generateFunctionName(env, ind, name);
 
-   AOTTypeDictionary *types = new (PERSISTENT_NEW) AOTTypeDictionary();
-   // static AOTTypeDictionary types;
-   AOTFunctionBuilder *thisbuilder = new (PERSISTENT_NEW) AOTFunctionBuilder(t, fn,
-                                                                             std::move(name),
-                                                                             types,
-                                                                             *env, *this);
-#endif
    if (!func->is_loaded)
       {
       /** First, try loading a function, the result of the function is ignored **/

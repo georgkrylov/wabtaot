@@ -215,19 +215,19 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread *thread, interp::DefinedFu
                   1,
                   Float);
    defined_names_.push_back("sqrtf");
-   DefineFunction("copysignf", __FILE__, "0",
+   DefineFunction("cpsignf", __FILE__, "0",
                   reinterpret_cast<void *>(static_cast<float (*)(float, float)>(copysignf)),
-                  Double,
+                  Float,
                   2,
-                  Double,
-                  Double);
+                  Float,
+                  Float);
 
    DefineFunction("sqrt", __FILE__, "0",
                   reinterpret_cast<void *>(static_cast<double (*)(double)>(sqrt)),
                   Double,
                   1,
                   Double);
-   DefineFunction("copysign", __FILE__, "0",
+   DefineFunction("cpsign", __FILE__, "0",
                   reinterpret_cast<void *>(static_cast<double (*)(double, double)>(copysign)),
                   Double,
                   2,
@@ -454,7 +454,7 @@ uint64_t AOTFunctionBuilder::AOTCallIndirectHelper(Index table_index, Index sig_
    {
    using namespace wabt::interp;
 
-   Environment *env = envPointer;
+   Environment *env = WABTAOTCompilerLib::envPointer;
 
    //  Index table_index = reinterpret_cast<Index>(params[0]);
    Table *table = &env->tables_[table_index];
@@ -560,7 +560,7 @@ uint64_t AOTFunctionBuilder::AOTCallIndirectHelper(Index table_index, Index sig_
 uint32_t AOTFunctionBuilder::CalculateMemorySize(uint32_t index)
    {
    // printf("Grow by: %ud",grow_pages);
-   Memory *memory = envPointer->GetMemory(index);
+   Memory *memory = WABTAOTCompilerLib::envPointer->GetMemory(index);
    uint32_t old_page_size = memory->page_limits.initial;
    return old_page_size;
    }
@@ -577,7 +577,7 @@ uint32_t AOTFunctionBuilder::PrintSomething(uint32_t index)
 uint32_t AOTFunctionBuilder::GrowMemory(uint32_t mem, uint32_t grow_pages)
    {
    // printf("Grow by: %ud",grow_pages);
-   Memory *memory = envPointer->GetMemory(mem);
+   Memory *memory = WABTAOTCompilerLib::envPointer->GetMemory(mem);
 
    uint32_t old_page_size = memory->page_limits.initial;
    uint32_t new_page_size = old_page_size + grow_pages;
@@ -2280,8 +2280,8 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder *b,
 
    case Opcode::F32Copysign:
       EmitBinaryOp<float>(b, [&](TR::IlValue *lhs, TR::IlValue *rhs)
-                        //   { return b->Call("copysignf", 2, lhs, rhs); });
-                          { return b->ConvertTo(Float,b->Call("copysignf", 2, b->ConvertTo(Double,lhs), b->ConvertTo(Double,rhs))); });
+                          { return b->Call("cpsignf", 2, lhs, rhs); });
+                        //   { return b->ConvertTo(Float,b->Call("cpsignf", 2, b->ConvertTo(Double,lhs), b->ConvertTo(Double,rhs))); });
       break;
 
    case Opcode::F32Eq:
@@ -2371,7 +2371,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder *b,
 
    case Opcode::F64Copysign:
       EmitBinaryOp<double>(b, [&](TR::IlValue *lhs, TR::IlValue *rhs)
-                           { return b->Call("copysign", 2, lhs, rhs); });
+                           { return b->Call("cpsign", 2, lhs, rhs); });
       break;
 
    case Opcode::F64Eq:

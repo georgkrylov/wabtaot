@@ -373,7 +373,7 @@ void WABTAOTCompilerLib::registerMethods(wabt::aot::AOTManager &aotManager, inte
          auto *fn = dynamic_cast<wabt::interp::DefinedFunc *>(env.GetFunc(i));
          AOTTypeDictionary *types = new (PERSISTENT_NEW) AOTTypeDictionary();
          // static AOTTypeDictionary types;
-         std::string name = "f" + std::to_string(i + env.getOffsetForAOTFunctionNaming()) + "m" + module->name.substr(0, 3);
+         std::string name = "f" + std::to_string(i + env.getOffsetForAOTFunctionNaming()) + "m" + module->name.substr(0, 2);
          AOTFunctionBuilder *builder = new (PERSISTENT_NEW) AOTFunctionBuilder(&thread, fn,
                                                                                std::move(name),
                                                                                types,
@@ -381,9 +381,9 @@ void WABTAOTCompilerLib::registerMethods(wabt::aot::AOTManager &aotManager, inte
 
          aotManager.push_back_FB(fn->offset, builder, types);
 
-         env.GetFunc(i)->dbg_name_ = "f" + std::to_string(i + env.getOffsetForAOTFunctionNaming()) + "m" + module->name.substr(0, 3);
+         env.GetFunc(i)->dbg_name_ = "f" + std::to_string(i + env.getOffsetForAOTFunctionNaming()) + "m" + module->name.substr(0, 2);
          //** Trying to assign debug name, might be problematic if that's an import **/
-         reinterpret_cast<DefinedFunc *>(env.GetFunc(i))->dbg_name_ = "f" + std::to_string(i + env.getOffsetForAOTFunctionNaming()) + "m" + module->name.substr(0, 3);
+         reinterpret_cast<DefinedFunc *>(env.GetFunc(i))->dbg_name_ = "f" + std::to_string(i + env.getOffsetForAOTFunctionNaming()) + "m" + module->name.substr(0, 2);
          module->funcs.emplace_back(env.GetFunc(i));
          }
       else
