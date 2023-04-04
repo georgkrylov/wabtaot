@@ -12,15 +12,18 @@ bool wabt::aot::StaticAnalyzer::ForwardPassForCalls(wabt::aot::AOTManager *manag
    auto offset = func->offset;
    const uint8_t *istream = _thread->GetIstream();
    const uint8_t *pc = &istream[func->offset];
+   TR::AOTMethodHeader *hdr ;
    int callingFunction = manager->getFunctionThatManagerWasCreatedFor();
    auto callingAOTMeta = env->aot_meta_.find(callingFunction);
    if (callingAOTMeta != env->aot_meta_.end())
       {
       wabt::interp::DefinedFunc *callingFunc = cast<wabt::interp::DefinedFunc>(callingAOTMeta->second.wasm_fn);
-      TR::AOTMethodHeader *hdr = WABTAOTCompilerLib::getLoadStoreDriver()->getRegisteredAOTMethodHeader(callingFunc->dbg_name_.c_str());
+      hdr = WABTAOTCompilerLib::getLoadStoreDriver()->getRegisteredAOTMethodHeader(callingFunc->dbg_name_.c_str());
       hdr->setDependenciesScanned(true);
       }
-   if (StaticAnalyzer::ScanOpcodeAt(func, manager, env, istream, pc) == false)
+   int bytecodeCount = StaticAnalyzer::ScanOpcodeAt(func, manager, env, istream, pc);
+   hdr->setMethodCost(bytecodeCount);
+   if (bytecodeCount = -1)
       {
       // printf("Failed to read function %s\n", func->dbg_name_.c_str());
       return false;
@@ -32,10 +35,11 @@ bool wabt::aot::StaticAnalyzer::ForwardPassForCalls(wabt::aot::AOTManager *manag
       }
    }
 
-bool wabt::aot::StaticAnalyzer::ScanOpcodeAt(wabt::interp::DefinedFunc *fn, wabt::aot::AOTManager *manager, wabt::interp::Environment *env_, const uint8_t *istream,
-                                             const uint8_t *pc)
+int wabt::aot::StaticAnalyzer::ScanOpcodeAt(wabt::interp::DefinedFunc *fn, wabt::aot::AOTManager *manager, wabt::interp::Environment *env_, const uint8_t *istream,
+                                            const uint8_t *pc)
    {
-   int dummy = 0;
+   /** To compensate for +1 that is added in return for debug purposes, as well as if -1 is returned there's an issue*/
+   int bytecodeCount = -1;
    //** Maybe it does not account with the artificially inserted bytecodes? */
    const uint8_t *end_pc = pc + fn->size;
    Index last_br_num_targets;
@@ -44,7 +48,7 @@ bool wabt::aot::StaticAnalyzer::ScanOpcodeAt(wabt::interp::DefinedFunc *fn, wabt
 
       Opcode opcode = interp::ReadOpcode(&pc);
       assert(!opcode.IsInvalid());
-
+      bytecodeCount += 1;
       switch (opcode)
          {
       case Opcode::Select:
@@ -89,7 +93,7 @@ bool wabt::aot::StaticAnalyzer::ScanOpcodeAt(wabt::interp::DefinedFunc *fn, wabt
 
       case Opcode::Return:
          {
-         dummy += 1;
+         bytecodeCount += 1;
          break;
          }
 
@@ -742,7 +746,7 @@ bool wabt::aot::StaticAnalyzer::ScanOpcodeAt(wabt::interp::DefinedFunc *fn, wabt
             uint32_t tsktskts = wabt::interp::ReadU32(&pc);
             uint32_t tsktsktsk = wabt::interp::ReadU32(&pc);
             }
-         dummy += 1;
+         bytecodeCount += 1;
          break;
          }
       case Opcode::I32TruncF64U:
@@ -803,12 +807,8 @@ bool wabt::aot::StaticAnalyzer::ScanOpcodeAt(wabt::interp::DefinedFunc *fn, wabt
          break;
 
       default:
-         return false;
+         return -1;
          }
       }
-   /** This is to prevent optimizing the switch case out */
-   if (dummy > 10000000)
-      {
-      return false;
-      }
+   return bytecodeCount;
    }

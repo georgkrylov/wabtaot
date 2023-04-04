@@ -66,6 +66,8 @@ public:
       dependenciesScanned = false;
       compilationIsSupported = true;
       methodName[0]=0;
+      methodCost = 0; 
+      chainCost = 0;
       };
 
    AOTMethodHeader(uint8_t *serializedMethodData);
@@ -136,6 +138,34 @@ public:
     */
    void setDependenciesScanned(bool value);
 
+   /**
+    * @brief Set the Method Cost object
+    * 
+    * @param value 
+    */
+   void setMethodCost(int value);
+
+   /**
+    * @brief Get the Method Cost object
+    * 
+    * @return int 
+    */
+   int getMethodCost();
+
+      /**
+    * @brief Set the Method Chain Cost
+    * 
+    * @param value 
+    */
+   void setMethodChainCost(int value);
+
+   /**
+    * @brief Get the Method Chain Cost
+    * 
+    * @return int 
+    */
+   int getMethodChainCost();
+   
    void assignName(const char* methodName);
    /**
     * @brief To build a graph, adds a dependency to the calling AOT Meta.
@@ -202,6 +232,18 @@ protected:
     */
    bool compilationIsSupported;
 
+   /**
+    * @brief Cost of the method, for example in bytecodes
+    * should be zero if the method is compiled and assigned
+    * by the static analyzer pass if not
+    */
+   int methodCost;
+
+   /**
+    * @brief a value that is not cached, defaults to cost of the
+    * method and then is updated by all dependencies cost
+    */
+   int chainCost;
    };
    } // namespace WASM
 #endif

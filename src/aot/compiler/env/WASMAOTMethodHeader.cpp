@@ -10,7 +10,6 @@ WASM::AOTMethodHeader::self()
    return reinterpret_cast<TR::AOTMethodHeader *>(this);
    }
 
-
 WASM::AOTMethodHeader::~AOTMethodHeader()
    {
    if (dependencies != NULL && dependenciesMaxSize != 0)
@@ -22,20 +21,43 @@ WASM::AOTMethodHeader::~AOTMethodHeader()
       }
    }
 
-void WASM::AOTMethodHeader::setCompilationIsSupported(bool value){
-   compilationIsSupported=value;
-}
+void WASM::AOTMethodHeader::setMethodCost(int value)
+   {
+   methodCost = value;
+   }
 
-void WASM::AOTMethodHeader::setDependenciesScanned(bool value){
-   dependenciesScanned=value;
-}
-bool WASM::AOTMethodHeader::isDependenciesScanned(){
+void WASM::AOTMethodHeader::setMethodChainCost(int value)
+   {
+   chainCost = value;
+   }
+
+void WASM::AOTMethodHeader::setCompilationIsSupported(bool value)
+   {
+   compilationIsSupported = value;
+   }
+
+void WASM::AOTMethodHeader::setDependenciesScanned(bool value)
+   {
+   dependenciesScanned = value;
+   }
+bool WASM::AOTMethodHeader::isDependenciesScanned()
+   {
    return dependenciesScanned;
-}
+   }
 
-bool WASM::AOTMethodHeader::isCompilationSupported(){
+bool WASM::AOTMethodHeader::isCompilationSupported()
+   {
    return compilationIsSupported;
-}
+   }
+int WASM::AOTMethodHeader::getMethodCost()
+   {
+   return methodCost;
+   }
+int WASM::AOTMethodHeader::getMethodChainCost()
+   {
+   return chainCost;
+   }
+
 size_t WASM::AOTMethodHeader::sizeOfSerializedVersion()
    {
    // An examplar computation of size  of serialized version
@@ -53,7 +75,8 @@ size_t WASM::AOTMethodHeader::sizeOfSerializedVersion()
    // sizeof short - dependencies compiled
    // sizeof bool - compilationIsNotSupported
    // sizeof bool - dependenciesScanned
-   return sizeof(size_t) + 2 * sizeof(uint32_t) + self()->getCompiledCodeSize() + self()->getRelocationsSize() + sizeof(unsigned int) + sizeof(int) + lastUsedIdxInDependenciesArray * sizeof(int)+sizeof(char)*8 + sizeof(uint8_t)+sizeof(bool)+sizeof(bool);
+   // sizeof int - cost of method
+   return sizeof(size_t) + 2 * sizeof(uint32_t) + self()->getCompiledCodeSize() + self()->getRelocationsSize() + sizeof(unsigned int) + sizeof(int) + lastUsedIdxInDependenciesArray * sizeof(int) + sizeof(char) * 8 + sizeof(uint8_t) + sizeof(bool) + sizeof(bool) + sizeof(int);
    }
 
 void WASM::AOTMethodHeader::serializeMethod(uint8_t *buffer, size_t bufferSize)
@@ -105,19 +128,21 @@ void WASM::AOTMethodHeader::serializeMethod(uint8_t *buffer, size_t bufferSize)
       {
       // store additional data, this could be a method promoted to omr
       memcpy(ptr, dependencies, lastUsedIdxInDependenciesArray * sizeof(unsigned int));
-      ptr+=lastUsedIdxInDependenciesArray * sizeof(unsigned int);
+      ptr += lastUsedIdxInDependenciesArray * sizeof(unsigned int);
       }
-   memcpy(ptr,self()->methodName,8*sizeof(char));
+   memcpy(ptr, self()->methodName, 8 * sizeof(char));
 
-   ptr += sizeof(8*sizeof(char));
+   ptr += sizeof(8 * sizeof(char));
 
-   memcpy(ptr,&(self()->dependenciesCompiled),sizeof(uint8_t));
-   
-   ptr+= sizeof(uint8_t);
+   memcpy(ptr, &(self()->dependenciesCompiled), sizeof(uint8_t));
 
-   memcpy(ptr,&(self()->compilationIsSupported),sizeof(bool));
-   ptr+= sizeof(bool);
-   memcpy(ptr,&(self()->dependenciesScanned),sizeof(bool));
+   ptr += sizeof(uint8_t);
+
+   memcpy(ptr, &(self()->compilationIsSupported), sizeof(bool));
+   ptr += sizeof(bool);
+   memcpy(ptr, &(self()->dependenciesScanned), sizeof(bool));
+   ptr += sizeof(bool);
+   memcpy(ptr, &(self()->methodCost), sizeof(int));
    // Now the buffer contains all the data relevant to the
    // method header.
    }
@@ -146,21 +171,26 @@ WASM::AOTMethodHeader::AOTMethodHeader(uint8_t *serializedMethodData)
    memcpy(dependencies, serializedMethodData, sizeof(unsigned int) * dependenciesMaxSize);
    self()->lastUsedIdxInDependenciesArray = dependenciesMaxSize;
    // offset the method data and by the size of dependencies array times type
-   serializedMethodData+=sizeof(unsigned int) * dependenciesMaxSize;
+   serializedMethodData += sizeof(unsigned int) * dependenciesMaxSize;
    // adjust index to be zero based again indicate that max size was updated
    self()->dependenciesMaxSize += 5;
 
    // copy method name
-   memcpy(self()->methodName,serializedMethodData,sizeof(char)*8);
+   memcpy(self()->methodName, serializedMethodData, sizeof(char) * 8);
 
    // offset the method data and by the size of name array times type
-   serializedMethodData+=sizeof(char)*8;
-   
-   self()->dependenciesCompiled = *(reinterpret_cast<unsigned int *>(serializedMethodData));
-   serializedMethodData+= sizeof(bool);
-   self()->compilationIsSupported = *(reinterpret_cast<bool*>(serializedMethodData));
-   serializedMethodData+= sizeof(bool);
-   self()->dependenciesScanned = *(reinterpret_cast<bool*>(serializedMethodData));
+   serializedMethodData += sizeof(char) * 8;
+
+   self()->dependenciesCompiled = *(reinterpret_cast<uint8_t *>(serializedMethodData));
+   serializedMethodData += sizeof(uint8_t);
+   self()->compilationIsSupported = *(reinterpret_cast<bool *>(serializedMethodData));
+   serializedMethodData += sizeof(bool);
+   self()->dependenciesScanned = *(reinterpret_cast<bool *>(serializedMethodData));
+   serializedMethodData += sizeof(bool);
+   self()->methodCost = *(reinterpret_cast<int *>(serializedMethodData));
+
+   // NOT a cached but computed variable, needs to be set though!
+   self()->chainCost = methodCost;
    size_t computedSize = self()->sizeOfSerializedVersion();
 
    TR_ASSERT(computedSize == storedSize, "Stored and Computed MethodHeader sizes mismatch, possible message corruption \n");
@@ -212,10 +242,10 @@ void WASM::AOTMethodHeader::addDependency(unsigned int dep)
    lastUsedIdxInDependenciesArray++;
    }
 
-void WASM::AOTMethodHeader::assignName(const char* methodName)
+void WASM::AOTMethodHeader::assignName(const char *methodName)
    {
-   memcpy(self()->methodName,methodName,8*sizeof(char));
-   self()->methodName[7]=0;
+   memcpy(self()->methodName, methodName, 8 * sizeof(char));
+   self()->methodName[7] = 0;
    }
 
 int WASM::AOTMethodHeader::containsDependency(unsigned int dep)

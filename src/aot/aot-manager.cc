@@ -115,9 +115,7 @@ int wabt::aot::AOTManager::CheckDependenciesCompiled(wabt::interp::Environment *
       unsigned int dependenciesMaxSize = header->getDependenciesArraySize();
       unsigned int *dependenciesArray = header->getDependenciesArray();
       shouldFailCheck = 1;
-      /** Something was loaded is a variable used when loading needs to continue
-       * after a method was loaded, but previously was thought it is impossible
-       */
+
       if (header->dependenciesCompiled == 1)
          {
          return 0;
@@ -204,7 +202,6 @@ bool wabt::aot::AOTManager::AOTLoadAFunction(wabt::interp::Environment *env, wab
       {
       /** General Idea Maybe should cache values of the function previously being compiled or previously
        * being loaded in the AOTMethodHeader? */
-      depth_of_traversal++;
       if (func->is_compiled) /* was able to find a compiled code for the function */
          {
          // if (std::find(visited_this_traversal.begin(),visited_this_traversal.end(),ind) == visited_this_traversal.end())
@@ -257,7 +254,14 @@ bool wabt::aot::AOTManager::AOTLoadAFunction(wabt::interp::Environment *env, wab
 
 void *wabt::aot::AOTManager::AOTCompileAFunction(wabt::interp::Environment *env, wabt::Index ind, wabt::interp::DefinedFunc *fn, wabt::interp::Thread *t)
    {
-   depth_of_traversal = 0;
+   if (1 == 1)
+      {
+      return AOTCompileAFunctionUsingDependencies(env, ind, fn, t);
+      }
+   }
+
+void *wabt::aot::AOTManager::AOTCompileAFunctionUsingDependencies(wabt::interp::Environment *env, wabt::Index ind, wabt::interp::DefinedFunc *fn, wabt::interp::Thread *t)
+   {
    /** If we haven't acquired a LoadStoreDriver yet */
    if (_loadStoreDriver == NULL)
       {
@@ -276,17 +280,17 @@ void *wabt::aot::AOTManager::AOTCompileAFunction(wabt::interp::Environment *env,
       {
       /** First, try loading a function, the result of the function is ignored **/
 
-      TR::AOTMethodHeader *header = _loadStoreDriver->getRegisteredAOTMethodHeader(func->dbg_name_.c_str());
+      TR::AOTMethodHeader *header = _loadStoreDriver->getRegisteredAOTMethodHeader(fn->dbg_name_.c_str());
       if (header == NULL)
          {
-         _loadStoreDriver->createAndRegisterAOTMethodHeader(func->dbg_name_.c_str(), NULL, 0, NULL, 0);
-         _loadStoreDriver->storeHeaderForCompiledMethod(func->dbg_name_.c_str());
-         header = _loadStoreDriver->getRegisteredAOTMethodHeader(func->dbg_name_.c_str());
+         _loadStoreDriver->createAndRegisterAOTMethodHeader(fn->dbg_name_.c_str(), NULL, 0, NULL, 0);
+         _loadStoreDriver->storeHeaderForCompiledMethod(fn->dbg_name_.c_str());
+         header = _loadStoreDriver->getRegisteredAOTMethodHeader(fn->dbg_name_.c_str());
          }
       if (header->isDependenciesScanned() == false)
          {
          wabt::aot::StaticAnalyzer::ForwardPassForCalls(this, env, ind, t);
-         _loadStoreDriver->storeHeaderForCompiledMethod(func->dbg_name_.c_str());
+         _loadStoreDriver->storeHeaderForCompiledMethod(fn->dbg_name_.c_str());
          }
       if (header->isCompilationSupported() == false)
          {
@@ -300,23 +304,9 @@ void *wabt::aot::AOTManager::AOTCompileAFunction(wabt::interp::Environment *env,
           * Some things may be cached by not recreating AOTManagers, huh?
           */
          visited_this_traversal.clear();
-         if (CheckDependenciesCompiled(env, ind, static_cast<DefinedFunc *>(func), t) != 0 || env->aot_resolved_to_load)
+         if (CheckDependenciesCompiled(env, ind, fn, t) != 0 || env->aot_resolved_to_load)
             {
-
-            /**This line is used to construct debug name, limited to 8 symbols as relocation infrastructure does not
-             * support longer names
-             */
-            std::string name;
-            WABTAOTCompilerLib::generateFunctionName(env, ind, name);
-
-            AOTTypeDictionary *types = new (PERSISTENT_NEW) AOTTypeDictionary();
-            // static AOTTypeDictionary types;
-            AOTFunctionBuilder *thisbuilder = new (PERSISTENT_NEW) AOTFunctionBuilder(t, fn,
-                                                                                      std::move(name),
-                                                                                      types,
-                                                                                      *env, *this);
-
-            this->push_back_FB(fn->offset, thisbuilder, types);
+            CreateAndDefineBuilder(env, ind, fn, t);
             /** This could be an idea for a compilation queue -it is a queue after all */
             /** Questionable, if I should fail check, do I try to define?
              * Yes for rtl, but not for rtc?
@@ -326,21 +316,13 @@ void *wabt::aot::AOTManager::AOTCompileAFunction(wabt::interp::Environment *env,
             unsigned int *dependenciesArray = header->getDependenciesArray();
             if (header->getCompiledCodeSize() == 0)
                {
-               AOTTypeDictionary *types = new (PERSISTENT_NEW) AOTTypeDictionary();
                for (unsigned int i = 0; i < dependenciesMaxSize; i++)
                   {
-                  /* are attempted to be compiled  the first time*/
-                  std::string name;
+                  DefinedFunc *depFn = reinterpret_cast<DefinedFunc *>(envPointer->GetFunc(dependenciesArray[i]));
                   header->dependenciesCompiled = 0;
-                  WABTAOTCompilerLib::generateFunctionName(env, dependenciesArray[i], name);
-
-                  AOTFunctionBuilder *builder = new (PERSISTENT_NEW) AOTFunctionBuilder(t, reinterpret_cast<DefinedFunc *>(envPointer->GetFunc(dependenciesArray[i])),
-                                                                                        std::move(name),
-                                                                                        types,
-                                                                                        *envPointer, *this);
-                  int indexToDefine = reinterpret_cast<DefinedFunc *>(envPointer->GetFunc(dependenciesArray[i]))->offset;
-                  push_back_FB(indexToDefine, builder, types);
-                  char *fn_name = strdup(env->GetFunc(dependenciesArray[i])->dbg_name_.c_str());
+                  CreateAndDefineBuilder(env, dependenciesArray[i], depFn, t);
+                  Func *fn = envPointer->GetFunc(dependenciesArray[i]);
+                  char *fn_name = strdup(fn->dbg_name_.c_str());
                   defineExternalFunctionToJit(fn_name, dependenciesArray[i]);
                   }
                }
@@ -422,9 +404,15 @@ void *wabt::aot::AOTManager::AOTCompileAFunction(wabt::interp::Environment *env,
          visited_this_traversal.clear();
          /* try loading the function */
          loadingResult = AOTLoadAFunction(env, ind, t);
+
          fn->entry_fn_ = reinterpret_cast<wabt::interp::AOTedFunction>(fn);
          if (this->needsEntryPointGeneration == true)
             {
+            // FOR AOT-ENTRY and JIT compatibility
+            if (fn->tried_jit_ == true)
+               {
+               return NULL;
+               }
             char *entryPointName = WABTAOTCompilerLib::generateEntryPointName(fn);
             void *entryFunction = getCodeEntry(entryPointName);
             bool loadingResult = AOTGetCompiledFunction(env, ind);
@@ -439,4 +427,30 @@ void *wabt::aot::AOTManager::AOTCompileAFunction(wabt::interp::Environment *env,
       /*The function was loaded*/
       return NULL;
       }
+   }
+wabt::aot::AOTTypeDictionary *wabt::aot::AOTManager::types_ = NULL;
+
+void wabt::aot::AOTManager::CreateAndDefineBuilder(wabt::interp::Environment *env, wabt::Index ind, wabt::interp::DefinedFunc *fn, wabt::interp::Thread *t)
+   {
+   /**This line is used to construct debug name, limited to 8 symbols as relocation infrastructure does not
+    * support longer names
+    */
+   std::string name;
+   if (strcmp(fn->dbg_name_.c_str(), "???") == 0)
+      {
+      std::string name;
+      WABTAOTCompilerLib::generateFunctionName(env, ind, name);
+      fn->dbg_name_ = name;
+      }
+   WABTAOTCompilerLib::generateFunctionName(env, ind, name);
+   if (types_ == NULL)
+      {
+      types_ = new (PERSISTENT_NEW) AOTTypeDictionary();
+      }
+   AOTFunctionBuilder *thisbuilder = new (PERSISTENT_NEW) AOTFunctionBuilder(t, fn,
+                                                                             std::move(name),
+                                                                             types_,
+                                                                             *env, *this);
+
+   this->push_back_FB(fn->offset, thisbuilder, types_);
    }

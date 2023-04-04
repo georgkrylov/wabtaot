@@ -1782,7 +1782,6 @@ Result Environment::TryAOT(Thread* t,  DefinedFunc* func, Index ind){
         modulee = reinterpret_cast<DefinedModule *>(this->GetModule(moduleIndex));
         std::string name;
         WABTAOTCompilerLib::generateFunctionName(this,ind,name);
-        fn->dbg_name_ =name;
         func->dbg_name_ = name;
         reinterpret_cast<DefinedModule *>(this->GetModule(moduleIndex))->funcs.emplace_back(fn);
         }
@@ -1808,7 +1807,7 @@ Result Environment::TryAOT(Thread* t,  DefinedFunc* func, Index ind){
       // }
       }
 
-      aotManager->broadcastNames();
+      // aotManager->broadcastNames();
       // Need to fix imports probably.
       // aotManager->broadcastImports();
       // auto func_count = this->GetFuncCount()*2;
@@ -3423,7 +3422,7 @@ Result Thread::Run(int num_instructions) {
 
           GOTO(PopCall());
           break;
-        }
+        } else {
         CHECK_TRAP(env_->TryJit(this, fn, func_index));
 
         if (fn->jit_fn_) {
@@ -3448,6 +3447,7 @@ Result Thread::Run(int num_instructions) {
 
           in_jit_ = false;
           GOTO(PopCall());
+        }
         }
         break;
       }

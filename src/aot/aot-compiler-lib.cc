@@ -178,9 +178,9 @@ int WABTAOTCompilerLib::getModuleIndexByFunctionIndex(wabt::interp::Environment 
 uint32_t printaa(int32_t a, int32_t b, int32_t c, int32_t d)
    {
    wabt::interp::Environment* envPointer = WABTAOTCompilerLib::envPointer;
-   uint32_t bufferLoc = *(uint32_t *)(envPointer->GetMems()[1] + b);
-   char *buffer = envPointer->GetMems()[1] + bufferLoc;
-   uint32_t buffsize = *(uint32_t *)(envPointer->GetMems()[1] + b + 4);
+   uint32_t bufferLoc = *(uint32_t *)(envPointer->GetMems()[0] + b);
+   char *buffer = envPointer->GetMems()[0] + bufferLoc;
+   uint32_t buffsize = *(uint32_t *)(envPointer->GetMems()[0] + b + 4);
    if (buffsize)
       {
       std::cout << std::string(buffer, buffsize);
