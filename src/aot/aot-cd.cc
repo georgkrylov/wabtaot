@@ -469,7 +469,7 @@ int main(int argc, char **argv)
    envPointer = &env;
    wabt::aot::WABTAOTCompilerLib compilerLib = wabt::aot::WABTAOTCompilerLib();
    char *src_filename;
-
+   compilerLib.envPointer=&env;
    uint32_t build_type = 0;
 #ifndef WASM_SHARED_CACHE
    /** Adding emscripten adds two modules, hence affects value of i */

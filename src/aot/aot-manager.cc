@@ -362,38 +362,7 @@ void *wabt::aot::AOTManager::AOTCompileAFunctionUsingDependencies(wabt::interp::
                /** If need to generate an entry point */
                if (this->needsEntryPointGeneration == true)
                   {
-                  void *entryFunction = nullptr;
-                  char *entryPointName = WABTAOTCompilerLib::generateEntryPointName(fn);
-                  char *entryPointNameForString = strdup(entryPointName);
-                  std::string entryFunctionNameForBuilder = std::string(entryPointNameForString);
-                  entryFunction = getCodeEntry(entryPointName);
-                  if (!entryFunction) /* was not able to load the function */
-                     {
-                     /**
-                      * @brief Create a function builder for the entry point. Probably need
-                      * to separate it to an individual function, as this code appears in
-                      * many places
-                      */
-                     AOTTypeDictionary *types = new (PERSISTENT_NEW) AOTTypeDictionary();
-                     AOTFunctionBuilder *entryBuilder = new (PERSISTENT_NEW) AOTFunctionBuilder(t, fn,
-                                                                                                std::move(entryFunctionNameForBuilder),
-                                                                                                types,
-                                                                                                *env, *this, true);
-                     internal_compileMethodBuilder(entryBuilder, &entryFunction);
-                     if (entryFunction == NULL)
-                        { /* was not able to compile the entry point, for example the dependencies were not resolved */
-                        return NULL;
-                        }
-                     else /* compilation was a success */
-                        {
-                        char *fn_name = strdup(entryPointName);
-                        /* store the compiled function */
-                        storeCodeEntry(fn_name);
-                        /* load the function, to double check it was actually stored */
-                        entryFunction = getCodeEntry(entryPointName);
-                        assert(entryFunction != NULL);
-                        }
-                     }
+                  CompileEntryFunction(env, ind, fn, t);
                   }
                }
             }
@@ -453,4 +422,35 @@ void wabt::aot::AOTManager::CreateAndDefineBuilder(wabt::interp::Environment *en
                                                                              *env, *this);
 
    this->push_back_FB(fn->offset, thisbuilder, types_);
+   }
+
+void wabt::aot::AOTManager::CompileEntryFunction(wabt::interp::Environment *env, wabt::Index ind, wabt::interp::DefinedFunc *fn, wabt::interp::Thread *t)
+   {
+   void *entryFunction = nullptr;
+   char *entryPointName = WABTAOTCompilerLib::generateEntryPointName(fn);
+   char *entryPointNameForString = strdup(entryPointName);
+   std::string entryFunctionNameForBuilder = std::string(entryPointNameForString);
+   entryFunction = getCodeEntry(entryPointName);
+   if (!entryFunction) /* was not able to load the function */
+      {
+      /**
+       * @brief Create a function builder for the entry point. Probably need
+       * to separate it to an individual function, as this code appears in
+       * many places
+       */
+      AOTFunctionBuilder *entryBuilder = new (PERSISTENT_NEW) AOTFunctionBuilder(t, fn,
+                                                                                 std::move(entryFunctionNameForBuilder),
+                                                                                 types_,
+                                                                                 *env, *this, true);
+      internal_compileMethodBuilder(entryBuilder, &entryFunction);
+      /* was not able to compile the entry point, for example the dependencies were not resolved */
+      assert(entryFunction != NULL);
+      /* compilation was a success */
+      char *fn_name = strdup(entryPointName);
+      /* store the compiled function */
+      storeCodeEntry(fn_name);
+      /* load the function, to double check it was actually stored */
+      entryFunction = getCodeEntry(entryPointName);
+      assert(entryFunction != NULL);
+      }
    }

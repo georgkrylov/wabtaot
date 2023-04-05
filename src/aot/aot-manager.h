@@ -175,12 +175,15 @@ class AOTManager
     */
    int CheckDependenciesCompiled(wabt::interp::Environment *env, wabt::Index ind, wabt::interp::DefinedFunc *func, wabt::interp::Thread *t);
 
+   void CompileEntryFunction(wabt::interp::Environment *env, wabt::Index ind, wabt::interp::DefinedFunc *fn, wabt::interp::Thread *t);
+
    void setNeedsEntry(bool needsEntry) { needsEntryPointGeneration = needsEntry; }
    /**
     * @brief Single typeDictionary object for all compilations to avoid multiple things
-    * 
+    *
     */
    static AOTTypeDictionary *types_;
+
  protected:
    /**
     * @brief This pointer is necessary to be able to load and store
@@ -213,7 +216,6 @@ class AOTManager
    std::vector<std::pair<std::string, FunctionImport>> import_index_;
    // For stopping the recursive traversal
    std::vector<int> visited_this_traversal;
-
    };
    }   // namespace aot
    }   // namespace wabt
