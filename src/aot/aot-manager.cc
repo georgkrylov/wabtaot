@@ -254,7 +254,7 @@ bool wabt::aot::AOTManager::AOTLoadAFunction(wabt::interp::Environment *env, wab
 
 void *wabt::aot::AOTManager::AOTCompileAFunction(wabt::interp::Environment *env, wabt::Index ind, wabt::interp::DefinedFunc *fn, wabt::interp::Thread *t)
    {
-   if (1 == 1)
+   if (env->aot_compile_all == false)
       {
       return AOTCompileAFunctionUsingDependencies(env, ind, fn, t);
       }
@@ -276,7 +276,7 @@ void *wabt::aot::AOTManager::AOTCompileAFunctionUsingDependencies(wabt::interp::
       }
    Func *func = (env->GetFunc(ind));
 
-   if (!func->is_loaded)
+   if (!func->is_loaded && fn->jit_fn_==nullptr)
       {
       /** First, try loading a function, the result of the function is ignored **/
 
@@ -287,7 +287,7 @@ void *wabt::aot::AOTManager::AOTCompileAFunctionUsingDependencies(wabt::interp::
          _loadStoreDriver->storeHeaderForCompiledMethod(fn->dbg_name_.c_str());
          header = _loadStoreDriver->getRegisteredAOTMethodHeader(fn->dbg_name_.c_str());
          }
-      if (header->isDependenciesScanned() == false)
+      if (header->isDependenciesScanned() == false && env->enable_aot_analysis)
          {
          wabt::aot::StaticAnalyzer::ForwardPassForCalls(this, env, ind, t);
          _loadStoreDriver->storeHeaderForCompiledMethod(fn->dbg_name_.c_str());
@@ -304,7 +304,7 @@ void *wabt::aot::AOTManager::AOTCompileAFunctionUsingDependencies(wabt::interp::
           * Some things may be cached by not recreating AOTManagers, huh?
           */
          visited_this_traversal.clear();
-         if (CheckDependenciesCompiled(env, ind, fn, t) != 0 || env->aot_resolved_to_load)
+         if (CheckDependenciesCompiled(env, ind, fn, t) != 0 || (env->aot_resolved_to_load) )
             {
             CreateAndDefineBuilder(env, ind, fn, t);
             /** This could be an idea for a compilation queue -it is a queue after all */
@@ -322,8 +322,10 @@ void *wabt::aot::AOTManager::AOTCompileAFunctionUsingDependencies(wabt::interp::
                   header->dependenciesCompiled = 0;
                   CreateAndDefineBuilder(env, dependenciesArray[i], depFn, t);
                   Func *fn = envPointer->GetFunc(dependenciesArray[i]);
-                  char *fn_name = strdup(fn->dbg_name_.c_str());
-                  defineExternalFunctionToJit(fn_name, dependenciesArray[i]);
+                  char *fn_name2;
+
+                  fn_name2 = strdup(depFn->dbg_name_.c_str());
+                  defineExternalFunctionToJit(fn_name2, dependenciesArray[i]);
                   }
                }
 
@@ -367,7 +369,7 @@ void *wabt::aot::AOTManager::AOTCompileAFunctionUsingDependencies(wabt::interp::
                }
             }
          }
-      if (func->is_compiled == true)
+      if (func->is_compiled == true && fn->jit_fn_==nullptr)
          {
          /** If function is compiled (either before or just now)*/
          visited_this_traversal.clear();
@@ -405,11 +407,14 @@ void wabt::aot::AOTManager::CreateAndDefineBuilder(wabt::interp::Environment *en
     * support longer names
     */
    std::string name;
-   if (strcmp(fn->dbg_name_.c_str(), "???") == 0)
+   if (!fn->is_host)
       {
-      std::string name;
-      WABTAOTCompilerLib::generateFunctionName(env, ind, name);
-      fn->dbg_name_ = name;
+      if (strcmp(fn->dbg_name_.c_str(), "???") == 0)
+         {
+         std::string name;
+         WABTAOTCompilerLib::generateFunctionName(env, ind, name);
+         fn->dbg_name_ = name;
+         }
       }
    WABTAOTCompilerLib::generateFunctionName(env, ind, name);
    if (types_ == NULL)

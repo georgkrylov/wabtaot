@@ -67,7 +67,7 @@ class AOTManager
 
    AOTFunctionBuilder &getFB(uint32_t i)
       {
-      return *func_index_[i].first;
+      return *func_index_.at(i).first;
       }
 
    /**

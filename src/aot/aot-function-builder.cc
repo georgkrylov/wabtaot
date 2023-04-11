@@ -4,17 +4,17 @@
 #include "src/interp/interp-internal.h"
 #include "src/interp/interp.h"
 #include "trap-with.h"
-//#include "/home/petar/wasmjit-omr/third_party/omr/compiler/ilgen/VirtualMachineOperandStack.hpp"
-//#include "infra/Assert.hpp"
+// #include "/home/petar/wasmjit-omr/third_party/omr/compiler/ilgen/VirtualMachineOperandStack.hpp"
+// #include "infra/Assert.hpp"
 #include "aot-compiler-lib.hpp"
 #include "env/AOTLoadStoreDriver.hpp"
 #include "env/AOTMethodHeader.hpp"
 #include "ilgen/VirtualMachineState.hpp"
 
- #include <tgmath.h>
 #include <iostream>
 #include <limits>
 #include <string.h>
+#include <tgmath.h>
 #include <type_traits>
 
 namespace wabt
@@ -87,7 +87,6 @@ bool AOTFunctionBuilder::generateCallFromInterpToAOT(TR::IlBuilder *b, Index ind
    auto *addres_of_index_of_value_stack_top = b->Load("vstop");
    auto *value_stack_base_addr = b->Load("vsdata");
    auto *value_stack_top_index = b->LoadAt(pInt32Type, addres_of_index_of_value_stack_top);
-
 
    /**
     * @brief Effectively, equal to sizeof (union Value) described in interp.h
@@ -393,11 +392,11 @@ void AOTFunctionBuilder::defineFunction(const std::string &name, interp::Defined
     * we need to check if the function was defined before. If it was - early return */
    bool defined_function_before_ = false;
 
-   for (auto& elem:defined_names_)
+   for (auto &elem : defined_names_)
       {
-      if (name.compare(elem)==0)
+      if (name.compare(elem) == 0)
          {
-         defined_function_before_= true;
+         defined_function_before_ = true;
          }
       }
 
@@ -421,7 +420,7 @@ void AOTFunctionBuilder::defineFunction(const std::string &name, interp::Defined
 
    /** So the JitBuilder knows about the function now
     */
-   char* namee = strdup(name.c_str());
+   char *namee = strdup(name.c_str());
    DefineFunction(namee, __FILE__, "0",
                   reinterpret_cast<void *>(18), // this is a magic number that makes trampoline lookup work.
                   result_type,
@@ -480,7 +479,7 @@ uint64_t AOTFunctionBuilder::AOTCallIndirectHelper(Index table_index, Index sig_
       // if (result != static_cast<Result_t>(interp::Result::Ok))
       // return result;
       /** For now, to avoid trying to compile */
-      // hdr->setCompilationIsSupported(false);      
+      // hdr->setCompilationIsSupported(false);
       printf("Indirect call to host function\n");
       exit(0);
       return false;
@@ -1300,7 +1299,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder *b,
       auto nextBuilder = static_cast<TR::IlBuilder *>(workItems_[workItems_.size() - 1].builder);
       b->AddSuccessorBuilder(&workItems_[workItems_.size() - 1].builder);
       b->TableSwitch(b->Load("SelectionVar"), &nextBuilder, false, num_targets, cases);
-      delete [] cases;
+      delete[] cases;
       return true;
       }
 
@@ -1473,18 +1472,34 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder *b,
             auto callingAOTMeta = env_.aot_meta_.find(callingFunction);
             if (callingAOTMeta != env_.aot_meta_.end())
                {
-               DefinedFunc*  callingFunc = cast<DefinedFunc>(callingAOTMeta->second.wasm_fn);
-               TR::AOTMethodHeader* hdr =  WABTAOTCompilerLib::getLoadStoreDriver()->getRegisteredAOTMethodHeader(callingFunc->dbg_name_.c_str());
-               if (hdr==NULL) /** Export for example */
+               DefinedFunc *callingFunc = cast<DefinedFunc>(callingAOTMeta->second.wasm_fn);
+               TR::AOTMethodHeader *hdr = WABTAOTCompilerLib::getLoadStoreDriver()->getRegisteredAOTMethodHeader(callingFunc->dbg_name_.c_str());
+               if (hdr == NULL) /** Export for example */
                   {
                   return false; /** shouldnt reach here tbh */
                   }
                else
                   {
-                  // /** For now, to avoid trying to compile */
-                  // hdr->setCompilationIsSupported(false);
-                  // return false;
+                  unsigned int indexOfTheFunctionBeingCalled = meta_it->second.index;
+                  if (strcmp(fn->dbg_name_.c_str(), "???") == 0)
+                     {
+                     std::string name;
+                     WABTAOTCompilerLib::generateFunctionName(&env_, indexOfTheFunctionBeingCalled, name);
+                     fn->dbg_name_ = name;
+                     }
+                  if (indexOfTheFunctionBeingCalled == callingFunction)
+                     {
+                     // do nothing and keep trying to compile; recursive call
+                     }
+                  else if (hdr->containsDependency(indexOfTheFunctionBeingCalled) == 1)
+                     {
+                     hdr->addDependency(indexOfTheFunctionBeingCalled);
+                     }
                   }
+               }
+            if (this->lookupFunction(fn->dbg_name_.c_str()) == NULL)
+               {
+               return false;
                }
             int size = env_.GetFuncSignature(fn->sig_index)->param_types.size();
             TR::IlValue **args = new TR::IlValue *[size]();
@@ -1498,14 +1513,14 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder *b,
                }
             // thread_->CallHost(reinterpret_cast<wabt::interp::HostFunc*>(env_.GetFunc(offset)));
             // auto tmp = thread_->Pop().i32;
-            TR::IlValue *value = b->Call(fn->dbg_name_.c_str(),size,args);
+            TR::IlValue *value = b->Call(fn->dbg_name_.c_str(), size, args);
             // for (auto t = env_.GetFuncSignature(fn->sig_index)->result_types.rbegin();
             //      t != env_.GetFuncSignature(fn->sig_index)->result_types.rend(); t++)
             //    {
-               pushReturnValue(fn, b, value);
-               // }
+            pushReturnValue(fn, b, value);
+            // }
 
-            // delete args;
+            delete[] args;
             break;
             }
          else
@@ -1522,9 +1537,9 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder *b,
             auto callingAOTMeta = env_.aot_meta_.find(callingFunction);
             if (callingAOTMeta != env_.aot_meta_.end())
                {
-               DefinedFunc*  callingFunc = cast<DefinedFunc>(callingAOTMeta->second.wasm_fn);
-               TR::AOTMethodHeader* hdr =  WABTAOTCompilerLib::getLoadStoreDriver()->getRegisteredAOTMethodHeader(callingFunc->dbg_name_.c_str());
-               if (hdr==NULL) /** Export for example */
+               DefinedFunc *callingFunc = cast<DefinedFunc>(callingAOTMeta->second.wasm_fn);
+               TR::AOTMethodHeader *hdr = WABTAOTCompilerLib::getLoadStoreDriver()->getRegisteredAOTMethodHeader(callingFunc->dbg_name_.c_str());
+               if (hdr == NULL) /** Export for example */
                   {
                   return false; /** shouldnt reach here tbh */
                   }
@@ -1534,7 +1549,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder *b,
                   if (strcmp(fn->dbg_name_.c_str(), "???") == 0)
                      {
                      std::string name;
-                     WABTAOTCompilerLib::generateFunctionName(&env_,indexOfTheFunctionBeingCalled,name);
+                     WABTAOTCompilerLib::generateFunctionName(&env_, indexOfTheFunctionBeingCalled, name);
                      fn->dbg_name_ = name;
                      }
                   if (indexOfTheFunctionBeingCalled == callingFunction)
@@ -1556,15 +1571,16 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder *b,
                //  assert(false);
                }
 
-            if (this->lookupFunction(fn->dbg_name_.c_str()) == NULL ){
+            if (this->lookupFunction(fn->dbg_name_.c_str()) == NULL)
+               {
                return false;
-            }
+               }
             // printf("sig index within module is %u",fn->sig_index);
             // printf("offset is %u\n",reinterpret_cast<DefinedFunc*>(fn)->offset);
             // auto *fn = env_.GetFunc(offset);
 
             // This line retrieves the function we want to call.
-            auto &builder = aotManager_.getFB(fn->offset);
+            // auto &builder = aotManager_.getFB(fn->offset);
             // std::vector<TR::IlValue*> args;
             int size = env_.GetFuncSignature(fn->sig_index)->param_types.size();
             // TR::IlValue **args1 = new TR::IlValue*[size]();
@@ -1587,7 +1603,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder *b,
 
             auto *value = b->Call(fn->dbg_name_.c_str(), size, args);
             pushReturnValue(fn, b, value);
-            delete [] args;
+            delete[] args;
             //	aotManager_.addCallToRegistry(fn_name_,builder.fn_name_);
             }
          }
@@ -1607,18 +1623,23 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder *b,
       auto callingAOTMeta = env_.aot_meta_.find(callingFunction);
       if (callingAOTMeta != env_.aot_meta_.end())
          {
-         DefinedFunc*  callingFunc = cast<DefinedFunc>(callingAOTMeta->second.wasm_fn);
-         TR::AOTMethodHeader* hdr =  WABTAOTCompilerLib::getLoadStoreDriver()->getRegisteredAOTMethodHeader(callingFunc->dbg_name_.c_str());
-         if (hdr==NULL) /** Export for example */
+         DefinedFunc *callingFunc = cast<DefinedFunc>(callingAOTMeta->second.wasm_fn);
+         TR::AOTMethodHeader *hdr = WABTAOTCompilerLib::getLoadStoreDriver()->getRegisteredAOTMethodHeader(callingFunc->dbg_name_.c_str());
+         if (hdr == NULL) /** Export for example */
             {
             return false; /** shouldnt reach here tbh */
             }
-         // else
-            // {
-            // /** For now, to avoid trying to compile */
-            // hdr->setCompilationIsSupported(false);
-            // }
+         else
+            {
+            /** If we cannot analyze callindirect, we have to fail compilation for now*/
+            if (env_.enable_aot_analysis == false)
+               {
+               hdr->setCompilationIsSupported(false);
+               return false;
+               }
+            }
          }
+
       // return false;
       //    auto th_addr = b->ConstAddress(thread_);
       auto table_index = b->ConstInt64(ReadU32(&pc));
@@ -2281,7 +2302,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder *b,
    case Opcode::F32Copysign:
       EmitBinaryOp<float>(b, [&](TR::IlValue *lhs, TR::IlValue *rhs)
                           { return b->Call("cpsignf", 2, lhs, rhs); });
-                        //   { return b->ConvertTo(Float,b->Call("cpsignf", 2, b->ConvertTo(Double,lhs), b->ConvertTo(Double,rhs))); });
+      //   { return b->ConvertTo(Float,b->Call("cpsignf", 2, b->ConvertTo(Double,lhs), b->ConvertTo(Double,rhs))); });
       break;
 
    case Opcode::F32Eq:
@@ -2659,7 +2680,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder *b,
       { Pop(b, "i32") };
       auto *value = b->Call("Popcount", 1, args);
       Push(b, "i32", value);
-      delete [] args;
+      delete[] args;
       break;
       }
 
