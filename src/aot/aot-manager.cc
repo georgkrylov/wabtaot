@@ -260,6 +260,148 @@ void *wabt::aot::AOTManager::AOTCompileAFunction(wabt::interp::Environment *env,
       }
    }
 
+void *wabt::aot::AOTManager::AOTCompileFunctionsUsingTokens(wabt::interp::Environment *env, wabt::Index ind, wabt::interp::DefinedFunc *fn, wabt::interp::Thread *t)
+   {
+   /** If we haven't acquired a LoadStoreDriver yet */
+   if (_loadStoreDriver == NULL)
+      {
+      _loadStoreDriver = reinterpret_cast<TR::AOTLoadStoreDriver *>(getLoadStoreDriver());
+      WABTAOTCompilerLib::setLoadStoreDriver(_loadStoreDriver);
+      WABTAOTCompilerLib::envPointer = env;
+      visited_this_traversal.clear();
+      }
+   if (envPointer == NULL)
+      {
+      envPointer = env;
+      }
+   Func *func = (env->GetFunc(ind));
+
+   if (!func->is_loaded)
+      {
+      /** First, try loading a function, the result of the function is ignored **/
+
+      TR::AOTMethodHeader *header = _loadStoreDriver->getRegisteredAOTMethodHeader(fn->dbg_name_.c_str());
+      if (header == NULL)
+         {
+         _loadStoreDriver->createAndRegisterAOTMethodHeader(fn->dbg_name_.c_str(), NULL, 0, NULL, 0);
+         _loadStoreDriver->storeHeaderForCompiledMethod(fn->dbg_name_.c_str());
+         header = _loadStoreDriver->getRegisteredAOTMethodHeader(fn->dbg_name_.c_str());
+         }
+      if (header->getMethodChainCost() == 0)
+         {
+         visited_this_traversal.clear();
+         wabt::aot::StaticAnalyzer::ComputeChainsCosts(this, env, ind, t);
+         visited_this_traversal.clear();
+         }
+      if (header->getMethodChainCost() > _tokensLeft)
+         {
+         if (header->isCompilationSupported() == false)
+            {
+            return NULL;
+            }
+         bool loadingResult = AOTGetCompiledFunction(env, ind);
+         if (func->is_compiled == false && func->is_host == false)
+            {
+            /**Have to call this because it creates function builders
+             * within aot manager at appropriate offset
+             * Some things may be cached by not recreating AOTManagers, huh?
+             */
+            visited_this_traversal.clear();
+            if (CheckDependenciesCompiled(env, ind, fn, t) != 0 || env->aot_resolved_to_load)
+               {
+               CreateAndDefineBuilder(env, ind, fn, t);
+               /** This could be an idea for a compilation queue -it is a queue after all */
+               /** Questionable, if I should fail check, do I try to define?
+                * Yes for rtl, but not for rtc?
+                * TODO FIX ME
+                */
+               unsigned int dependenciesMaxSize = header->getDependenciesArraySize();
+               unsigned int *dependenciesArray = header->getDependenciesArray();
+               if (header->getCompiledCodeSize() == 0)
+                  {
+                  for (unsigned int i = 0; i < dependenciesMaxSize; i++)
+                     {
+                     DefinedFunc *depFn = reinterpret_cast<DefinedFunc *>(envPointer->GetFunc(dependenciesArray[i]));
+                     header->dependenciesCompiled = 0;
+                     CreateAndDefineBuilder(env, dependenciesArray[i], depFn, t);
+                     Func *fn = envPointer->GetFunc(dependenciesArray[i]);
+                     char *fn_name = strdup(fn->dbg_name_.c_str());
+                     defineExternalFunctionToJit(fn_name, dependenciesArray[i]);
+                     }
+                  }
+
+               /** If the function was not compiled, then try compiling it*/
+               auto &builder = this->getFB(fn->offset);
+               void *function = nullptr;
+               internal_compileMethodBuilder(&builder, &function);
+
+#ifndef WASM_SHARED_CACHE // This is an ELF-enabled runtime
+               // TODO verify if should set it here and or somewhere else?
+               WABTAOTCompilerLib::shouldReEmitELF = 1;
+#endif
+               if (function == NULL)
+                  {                                                                      /* was not able to compile, for example the dependencies were not resolved */
+                  _loadStoreDriver->storeHeaderForCompiledMethod(fn->dbg_name_.c_str()); /* Update the dependencies */
+                  /** in the version where we do not fail compilation when dependencies are
+                   * not resolved, should be unreachable.
+                   * If it reaches here, check if dependenciesCompiled is not cached
+                   */
+                  return NULL;
+                  }
+               else /* compilation was a success */
+                  {
+                  /** This line is necessary as the memory in the OMR method to method header
+                   * map is not managed by std::string, and to be able to do a lookup by key,
+                   * we need to have the memory allocated longer than the original string exists
+                   */
+                  char *fn_name = strdup(fn->dbg_name_.c_str());
+                  /** An optimization, in the case we compiled a method, we can try loading the method, right?
+                   */
+                  TR::AOTMethodHeader *header = _loadStoreDriver->getRegisteredAOTMethodHeader(fn->dbg_name_.c_str());
+                  header->dependenciesCompiled = 0;
+                  /* store the compiled function and header */
+                  storeCodeEntry(fn_name);
+                  AOTGetCompiledFunction(env, ind);
+                  /** If need to generate an entry point */
+                  if (this->needsEntryPointGeneration == true)
+                     {
+                     CompileEntryFunction(env, ind, fn, t);
+                     }
+                  }
+               }
+            }
+         if (func->is_compiled == true)
+            {
+            /** If function is compiled (either before or just now)*/
+            visited_this_traversal.clear();
+            /* try loading the function */
+            loadingResult = AOTLoadAFunction(env, ind, t);
+
+            fn->entry_fn_ = reinterpret_cast<wabt::interp::AOTedFunction>(fn);
+            if (this->needsEntryPointGeneration == true)
+               {
+               // FOR AOT-ENTRY and JIT compatibility
+               if (fn->tried_jit_ == true)
+                  {
+                  return NULL;
+                  }
+               char *entryPointName = WABTAOTCompilerLib::generateEntryPointName(fn);
+               void *entryFunction = getCodeEntry(entryPointName);
+               bool loadingResult = AOTGetCompiledFunction(env, ind);
+               _loadStoreDriver->relocateRegisteredMethod(entryPointName);
+               /** Created a separate entry for entry function */
+               fn->entry_fn_ = reinterpret_cast<wabt::interp::AOTedFunction>(entryFunction);
+               }
+            }
+         }
+      }
+   else
+      {
+      /*The function was loaded*/
+      return NULL;
+      }
+   }
+
 void *wabt::aot::AOTManager::AOTCompileAFunctionUsingDependencies(wabt::interp::Environment *env, wabt::Index ind, wabt::interp::DefinedFunc *fn, wabt::interp::Thread *t)
    {
    /** If we haven't acquired a LoadStoreDriver yet */

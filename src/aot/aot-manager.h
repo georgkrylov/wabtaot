@@ -51,7 +51,9 @@ class AOTManager
        : needsEntryPointGeneration(false),
          entryPointFunction(NULL),
          _indexOfAFuncStartedAOTManager(0),
-         _loadStoreDriver(NULL){};
+         _loadStoreDriver(NULL),
+         _tokensLeft(0)
+         {};
 
    void push_back_FB(uint32_t offset, AOTFunctionBuilder *b,
                      AOTTypeDictionary *t)
@@ -146,6 +148,20 @@ class AOTManager
    void *AOTCompileAFunctionUsingDependencies(wabt::interp::Environment *env, wabt::Index ind, wabt::interp::DefinedFunc *func, wabt::interp::Thread *t);
 
    /**
+    * @brief Function that tries to load the code, if the code is
+    * was compiled before or calls for compiling the DefinedFunction
+    * Two assumptions are in place: compile on call, compile only called, use static analysis,
+    * parameterized by rtl, traverse dependencies
+    *
+    * @param env environment within threads
+    * @param ind position in the environment
+    * @param func The defined function we want to compile
+    * @param thread pointer to the thread that started a compilation
+    * @return void* pointer to the compiled function returned (or, in case of the interpreter, unused?)
+    * by JitBuilder
+    */
+   void *AOTCompileFunctionsUsingTokens(wabt::interp::Environment *env, wabt::Index ind, wabt::interp::DefinedFunc *func, wabt::interp::Thread *t);
+   /**
     * @brief Runs get code entry, updates names if it can,
     * updates things all over the place
     *
@@ -184,6 +200,8 @@ class AOTManager
     */
    static AOTTypeDictionary *types_;
 
+   // For stopping the recursive traversal
+   std::vector<int> visited_this_traversal;
  protected:
    /**
     * @brief This pointer is necessary to be able to load and store
@@ -214,8 +232,8 @@ class AOTManager
 
    unsigned int _indexOfAFuncStartedAOTManager;
    std::vector<std::pair<std::string, FunctionImport>> import_index_;
-   // For stopping the recursive traversal
-   std::vector<int> visited_this_traversal;
+
+   int _tokensLeft;
    };
    }   // namespace aot
    }   // namespace wabt

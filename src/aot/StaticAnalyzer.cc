@@ -12,9 +12,8 @@ bool wabt::aot::StaticAnalyzer::ForwardPassForCalls(wabt::aot::AOTManager *manag
    auto offset = func->offset;
    const uint8_t *istream = _thread->GetIstream();
    const uint8_t *pc = &istream[func->offset];
-   TR::AOTMethodHeader *hdr ;
-   int callingFunction = manager->getFunctionThatManagerWasCreatedFor();
-   auto callingAOTMeta = env->aot_meta_.find(callingFunction);
+   TR::AOTMethodHeader *hdr;
+   auto callingAOTMeta = env->aot_meta_.find(ind);
    if (callingAOTMeta != env->aot_meta_.end())
       {
       wabt::interp::DefinedFunc *callingFunc = cast<wabt::interp::DefinedFunc>(callingAOTMeta->second.wasm_fn);
@@ -32,6 +31,35 @@ bool wabt::aot::StaticAnalyzer::ForwardPassForCalls(wabt::aot::AOTManager *manag
       {
       // printf("Read the function %s succesfully\n", func->dbg_name_.c_str());
       return true;
+      }
+   }
+
+bool wabt::aot::StaticAnalyzer::ComputeChainsCosts(wabt::aot::AOTManager *manager, wabt::interp::Environment *env, wabt::Index ind, wabt::interp::Thread *_thread)
+   {
+   if (std::find(manager->visited_this_traversal.begin(), manager->visited_this_traversal.end(), ind) != manager->visited_this_traversal.end())
+      return true;
+   manager->visited_this_traversal.emplace_back(ind);
+   wabt::interp::DefinedFunc *func = cast<wabt::interp::DefinedFunc>(env->GetFunc(ind));
+   TR::AOTMethodHeader *hdr;
+   auto callingAOTMeta = env->aot_meta_.find(ind);
+   if (callingAOTMeta != env->aot_meta_.end())
+      {
+      wabt::interp::DefinedFunc *callingFunc = cast<wabt::interp::DefinedFunc>(callingAOTMeta->second.wasm_fn);
+      hdr = WABTAOTCompilerLib::getLoadStoreDriver()->getRegisteredAOTMethodHeader(callingFunc->dbg_name_.c_str());
+      if (hdr == NULL)
+         {
+         WABTAOTCompilerLib::getLoadStoreDriver()->createAndRegisterAOTMethodHeader(callingFunc->dbg_name_.c_str(), NULL, 0, NULL, 0);
+         WABTAOTCompilerLib::getLoadStoreDriver()->storeHeaderForCompiledMethod(callingFunc->dbg_name_.c_str());
+         hdr = WABTAOTCompilerLib::getLoadStoreDriver()->getRegisteredAOTMethodHeader(callingFunc->dbg_name_.c_str());
+         }
+      }
+   if (hdr->getMethodCost() == 0)
+      {
+      ForwardPassForCalls(manager, env, ind, _thread);
+      }
+   /** Needs to store each headers cost*/
+   if (hdr->getMethodChainCost() == 0)
+      {
       }
    }
 
