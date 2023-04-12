@@ -15,6 +15,7 @@
 namespace TR
    {
 class AOTLoadStoreDriver;
+class AOTMethodHeader;
    }
 
 namespace wabt
@@ -51,8 +52,7 @@ class AOTManager
        : needsEntryPointGeneration(false),
          entryPointFunction(NULL),
          _indexOfAFuncStartedAOTManager(0),
-         _loadStoreDriver(NULL),
-         _tokensLeft(0)
+         _loadStoreDriver(NULL)
          {};
 
    void push_back_FB(uint32_t offset, AOTFunctionBuilder *b,
@@ -193,6 +193,8 @@ class AOTManager
 
    void CompileEntryFunction(wabt::interp::Environment *env, wabt::Index ind, wabt::interp::DefinedFunc *fn, wabt::interp::Thread *t);
 
+   void PrepareMethodForCompilation(wabt::interp::Environment *env, wabt::Index ind, wabt::interp::DefinedFunc *fn, wabt::interp::Thread *t, TR::AOTMethodHeader*);
+
    void setNeedsEntry(bool needsEntry) { needsEntryPointGeneration = needsEntry; }
    /**
     * @brief Single typeDictionary object for all compilations to avoid multiple things
@@ -202,6 +204,9 @@ class AOTManager
 
    // For stopping the recursive traversal
    std::vector<int> visited_this_traversal;
+
+   static int _tokensLeft;
+
  protected:
    /**
     * @brief This pointer is necessary to be able to load and store
@@ -233,7 +238,7 @@ class AOTManager
    unsigned int _indexOfAFuncStartedAOTManager;
    std::vector<std::pair<std::string, FunctionImport>> import_index_;
 
-   int _tokensLeft;
+
    };
    }   // namespace aot
    }   // namespace wabt

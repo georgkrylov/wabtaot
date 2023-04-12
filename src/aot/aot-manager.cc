@@ -254,14 +254,6 @@ bool wabt::aot::AOTManager::AOTLoadAFunction(wabt::interp::Environment *env, wab
 
 void *wabt::aot::AOTManager::AOTCompileAFunction(wabt::interp::Environment *env, wabt::Index ind, wabt::interp::DefinedFunc *fn, wabt::interp::Thread *t)
    {
-   if (env->aot_compile_all == false)
-      {
-      return AOTCompileAFunctionUsingDependencies(env, ind, fn, t);
-      }
-   }
-
-void *wabt::aot::AOTManager::AOTCompileFunctionsUsingTokens(wabt::interp::Environment *env, wabt::Index ind, wabt::interp::DefinedFunc *fn, wabt::interp::Thread *t)
-   {
    /** If we haven't acquired a LoadStoreDriver yet */
    if (_loadStoreDriver == NULL)
       {
@@ -274,6 +266,20 @@ void *wabt::aot::AOTManager::AOTCompileFunctionsUsingTokens(wabt::interp::Enviro
       {
       envPointer = env;
       }
+   /** We cannot compile all without analysis*/
+   if (env->aot_compile_all == false || env->enable_aot_analysis == false)
+      {
+      return AOTCompileAFunctionUsingDependencies(env, ind, fn, t);
+      }
+   else
+      {
+      return AOTCompileFunctionsUsingTokens(env, ind, fn, t);
+      }
+   }
+
+int wabt::aot::AOTManager::_tokensLeft = 0;
+void *wabt::aot::AOTManager::AOTCompileFunctionsUsingTokens(wabt::interp::Environment *env, wabt::Index ind, wabt::interp::DefinedFunc *fn, wabt::interp::Thread *t)
+   {
    Func *func = (env->GetFunc(ind));
 
    if (!func->is_loaded)
@@ -290,15 +296,17 @@ void *wabt::aot::AOTManager::AOTCompileFunctionsUsingTokens(wabt::interp::Enviro
       if (header->getMethodChainCost() == 0)
          {
          visited_this_traversal.clear();
-         wabt::aot::StaticAnalyzer::ComputeChainsCosts(this, env, ind, t);
+         int computedChainsCost = wabt::aot::StaticAnalyzer::ComputeChainsCosts(this, env, ind, t);
          visited_this_traversal.clear();
          }
-      if (header->getMethodChainCost() > _tokensLeft)
+      while (header->getMethodChainCost() > _tokensLeft)
          {
+
          if (header->isCompilationSupported() == false)
             {
             return NULL;
             }
+
          bool loadingResult = AOTGetCompiledFunction(env, ind);
          if (func->is_compiled == false && func->is_host == false)
             {
@@ -307,34 +315,16 @@ void *wabt::aot::AOTManager::AOTCompileFunctionsUsingTokens(wabt::interp::Enviro
              * Some things may be cached by not recreating AOTManagers, huh?
              */
             visited_this_traversal.clear();
+
+            visited_this_traversal.clear();
             if (CheckDependenciesCompiled(env, ind, fn, t) != 0 || env->aot_resolved_to_load)
                {
-               CreateAndDefineBuilder(env, ind, fn, t);
-               /** This could be an idea for a compilation queue -it is a queue after all */
-               /** Questionable, if I should fail check, do I try to define?
-                * Yes for rtl, but not for rtc?
-                * TODO FIX ME
-                */
-               unsigned int dependenciesMaxSize = header->getDependenciesArraySize();
-               unsigned int *dependenciesArray = header->getDependenciesArray();
-               if (header->getCompiledCodeSize() == 0)
-                  {
-                  for (unsigned int i = 0; i < dependenciesMaxSize; i++)
-                     {
-                     DefinedFunc *depFn = reinterpret_cast<DefinedFunc *>(envPointer->GetFunc(dependenciesArray[i]));
-                     header->dependenciesCompiled = 0;
-                     CreateAndDefineBuilder(env, dependenciesArray[i], depFn, t);
-                     Func *fn = envPointer->GetFunc(dependenciesArray[i]);
-                     char *fn_name = strdup(fn->dbg_name_.c_str());
-                     defineExternalFunctionToJit(fn_name, dependenciesArray[i]);
-                     }
-                  }
-
+               PrepareMethodForCompilation(env, ind, fn, t, header);
                /** If the function was not compiled, then try compiling it*/
                auto &builder = this->getFB(fn->offset);
                void *function = nullptr;
                internal_compileMethodBuilder(&builder, &function);
-
+               _tokensLeft -= header->getMethodCost();
 #ifndef WASM_SHARED_CACHE // This is an ELF-enabled runtime
                // TODO verify if should set it here and or somewhere else?
                WABTAOTCompilerLib::shouldReEmitELF = 1;
@@ -346,7 +336,7 @@ void *wabt::aot::AOTManager::AOTCompileFunctionsUsingTokens(wabt::interp::Enviro
                    * not resolved, should be unreachable.
                    * If it reaches here, check if dependenciesCompiled is not cached
                    */
-                  return NULL;
+                  continue;
                   }
                else /* compilation was a success */
                   {
@@ -369,56 +359,46 @@ void *wabt::aot::AOTManager::AOTCompileFunctionsUsingTokens(wabt::interp::Enviro
                      }
                   }
                }
-            }
-         if (func->is_compiled == true)
-            {
-            /** If function is compiled (either before or just now)*/
-            visited_this_traversal.clear();
-            /* try loading the function */
-            loadingResult = AOTLoadAFunction(env, ind, t);
 
-            fn->entry_fn_ = reinterpret_cast<wabt::interp::AOTedFunction>(fn);
-            if (this->needsEntryPointGeneration == true)
+            if (func->is_compiled == true)
                {
-               // FOR AOT-ENTRY and JIT compatibility
-               if (fn->tried_jit_ == true)
+               /** If function is compiled (either before or just now)*/
+               visited_this_traversal.clear();
+               /* try loading the function */
+               loadingResult = AOTLoadAFunction(env, ind, t);
+
+               fn->entry_fn_ = reinterpret_cast<wabt::interp::AOTedFunction>(fn);
+               if (this->needsEntryPointGeneration == true)
                   {
-                  return NULL;
+                  // FOR AOT-ENTRY and JIT compatibility
+                  if (fn->tried_jit_ == true)
+                     {
+                     continue;
+                     }
+                  char *entryPointName = WABTAOTCompilerLib::generateEntryPointName(fn);
+                  void *entryFunction = getCodeEntry(entryPointName);
+                  bool loadingResult = AOTGetCompiledFunction(env, ind);
+                  _loadStoreDriver->relocateRegisteredMethod(entryPointName);
+                  /** Created a separate entry for entry function */
+                  fn->entry_fn_ = reinterpret_cast<wabt::interp::AOTedFunction>(entryFunction);
                   }
-               char *entryPointName = WABTAOTCompilerLib::generateEntryPointName(fn);
-               void *entryFunction = getCodeEntry(entryPointName);
-               bool loadingResult = AOTGetCompiledFunction(env, ind);
-               _loadStoreDriver->relocateRegisteredMethod(entryPointName);
-               /** Created a separate entry for entry function */
-               fn->entry_fn_ = reinterpret_cast<wabt::interp::AOTedFunction>(entryFunction);
                }
             }
          }
       }
-   else
-      {
-      /*The function was loaded*/
-      return NULL;
-      }
+      else
+         {
+         /*The function was loaded*/
+         return NULL;
+         }
    }
 
 void *wabt::aot::AOTManager::AOTCompileAFunctionUsingDependencies(wabt::interp::Environment *env, wabt::Index ind, wabt::interp::DefinedFunc *fn, wabt::interp::Thread *t)
    {
-   /** If we haven't acquired a LoadStoreDriver yet */
-   if (_loadStoreDriver == NULL)
-      {
-      _loadStoreDriver = reinterpret_cast<TR::AOTLoadStoreDriver *>(getLoadStoreDriver());
-      WABTAOTCompilerLib::setLoadStoreDriver(_loadStoreDriver);
-      WABTAOTCompilerLib::envPointer = env;
-      visited_this_traversal.clear();
-      }
-   if (envPointer == NULL)
-      {
-      envPointer = env;
-      }
+
    Func *func = (env->GetFunc(ind));
 
-   if (!func->is_loaded && fn->jit_fn_==nullptr)
+   if (!func->is_loaded && fn->jit_fn_ == nullptr)
       {
       /** First, try loading a function, the result of the function is ignored **/
 
@@ -446,31 +426,9 @@ void *wabt::aot::AOTManager::AOTCompileAFunctionUsingDependencies(wabt::interp::
           * Some things may be cached by not recreating AOTManagers, huh?
           */
          visited_this_traversal.clear();
-         if (CheckDependenciesCompiled(env, ind, fn, t) != 0 || (env->aot_resolved_to_load) )
+         if (CheckDependenciesCompiled(env, ind, fn, t) != 0 || (env->aot_resolved_to_load))
             {
-            CreateAndDefineBuilder(env, ind, fn, t);
-            /** This could be an idea for a compilation queue -it is a queue after all */
-            /** Questionable, if I should fail check, do I try to define?
-             * Yes for rtl, but not for rtc?
-             * TODO FIX ME
-             */
-            unsigned int dependenciesMaxSize = header->getDependenciesArraySize();
-            unsigned int *dependenciesArray = header->getDependenciesArray();
-            if (header->getCompiledCodeSize() == 0)
-               {
-               for (unsigned int i = 0; i < dependenciesMaxSize; i++)
-                  {
-                  DefinedFunc *depFn = reinterpret_cast<DefinedFunc *>(envPointer->GetFunc(dependenciesArray[i]));
-                  header->dependenciesCompiled = 0;
-                  CreateAndDefineBuilder(env, dependenciesArray[i], depFn, t);
-                  Func *fn = envPointer->GetFunc(dependenciesArray[i]);
-                  char *fn_name2;
-
-                  fn_name2 = strdup(depFn->dbg_name_.c_str());
-                  defineExternalFunctionToJit(fn_name2, dependenciesArray[i]);
-                  }
-               }
-
+            PrepareMethodForCompilation(env, ind, fn, t, header);
             /** If the function was not compiled, then try compiling it*/
             auto &builder = this->getFB(fn->offset);
             void *function = nullptr;
@@ -511,7 +469,7 @@ void *wabt::aot::AOTManager::AOTCompileAFunctionUsingDependencies(wabt::interp::
                }
             }
          }
-      if (func->is_compiled == true && fn->jit_fn_==nullptr)
+      if (func->is_compiled == true && fn->jit_fn_ == nullptr)
          {
          /** If function is compiled (either before or just now)*/
          visited_this_traversal.clear();
@@ -541,7 +499,33 @@ void *wabt::aot::AOTManager::AOTCompileAFunctionUsingDependencies(wabt::interp::
       return NULL;
       }
    }
-wabt::aot::AOTTypeDictionary *wabt::aot::AOTManager::types_ = NULL;
+wabt::aot::AOTTypeDictionary *wabt::aot::AOTManager::types_ = 0;
+
+void wabt::aot::AOTManager::PrepareMethodForCompilation(wabt::interp::Environment *env, wabt::Index ind, wabt::interp::DefinedFunc *fn, wabt::interp::Thread *t, TR::AOTMethodHeader *header)
+   {
+   CreateAndDefineBuilder(env, ind, fn, t);
+   /** This could be an idea for a compilation queue -it is a queue after all */
+   /** Questionable, if I should fail check, do I try to define?
+    * Yes for rtl, but not for rtc?
+    * TODO FIX ME
+    */
+   unsigned int dependenciesMaxSize = header->getDependenciesArraySize();
+   unsigned int *dependenciesArray = header->getDependenciesArray();
+   if (header->getCompiledCodeSize() == 0)
+      {
+      for (unsigned int i = 0; i < dependenciesMaxSize; i++)
+         {
+         DefinedFunc *depFn = reinterpret_cast<DefinedFunc *>(envPointer->GetFunc(dependenciesArray[i]));
+         header->dependenciesCompiled = 0;
+         CreateAndDefineBuilder(env, dependenciesArray[i], depFn, t);
+         Func *fn = envPointer->GetFunc(dependenciesArray[i]);
+         char *fn_name2;
+
+         fn_name2 = strdup(depFn->dbg_name_.c_str());
+         defineExternalFunctionToJit(fn_name2, dependenciesArray[i]);
+         }
+      }
+   }
 
 void wabt::aot::AOTManager::CreateAndDefineBuilder(wabt::interp::Environment *env, wabt::Index ind, wabt::interp::DefinedFunc *fn, wabt::interp::Thread *t)
    {

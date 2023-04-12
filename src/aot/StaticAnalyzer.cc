@@ -34,10 +34,14 @@ bool wabt::aot::StaticAnalyzer::ForwardPassForCalls(wabt::aot::AOTManager *manag
       }
    }
 
-bool wabt::aot::StaticAnalyzer::ComputeChainsCosts(wabt::aot::AOTManager *manager, wabt::interp::Environment *env, wabt::Index ind, wabt::interp::Thread *_thread)
+int wabt::aot::StaticAnalyzer::ComputeChainsCosts(wabt::aot::AOTManager *manager, wabt::interp::Environment *env, wabt::Index ind, wabt::interp::Thread *_thread)
    {
+
+   int accummulatedMethodsCost = 0;
+
    if (std::find(manager->visited_this_traversal.begin(), manager->visited_this_traversal.end(), ind) != manager->visited_this_traversal.end())
-      return true;
+      return accummulatedMethodsCost;
+
    manager->visited_this_traversal.emplace_back(ind);
    wabt::interp::DefinedFunc *func = cast<wabt::interp::DefinedFunc>(env->GetFunc(ind));
    TR::AOTMethodHeader *hdr;
@@ -57,10 +61,23 @@ bool wabt::aot::StaticAnalyzer::ComputeChainsCosts(wabt::aot::AOTManager *manage
       {
       ForwardPassForCalls(manager, env, ind, _thread);
       }
+   accummulatedMethodsCost = hdr->getMethodCost();
+   if (manager->_tokensLeft < accummulatedMethodsCost)
+      {
+      manager->_tokensLeft = accummulatedMethodsCost;
+      }
+   unsigned int dependenciesMaxSize = hdr->getDependenciesArraySize();
+   unsigned int *dependenciesArray = hdr->getDependenciesArray();
+   for (unsigned int i = 0; i < dependenciesMaxSize; i++)
+      {
+      accummulatedMethodsCost += ComputeChainsCosts(manager, env, dependenciesArray[i], _thread);
+      }
    /** Needs to store each headers cost*/
    if (hdr->getMethodChainCost() == 0)
       {
+      hdr->setMethodChainCost(accummulatedMethodsCost);
       }
+   return accummulatedMethodsCost;
    }
 
 int wabt::aot::StaticAnalyzer::ScanOpcodeAt(wabt::interp::DefinedFunc *fn, wabt::aot::AOTManager *manager, wabt::interp::Environment *env_, const uint8_t *istream,
