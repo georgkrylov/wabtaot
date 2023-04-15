@@ -3649,8 +3649,8 @@ Result Thread::Run(int num_instructions) {
 
           CHECK_TRAP(PushCall(pc));
           GOTO(fn->offset);
-          CHECK_TRAP(env_->TryJit(this, fn, func_index));
           CHECK_TRAP(env_->TryAOT(this, fn, func_index));
+      
 
           if (fn->is_loaded) 
           {
@@ -3675,6 +3675,9 @@ Result Thread::Run(int num_instructions) {
             GOTO(PopCall());
             break;
           }
+          }else
+          {
+          CHECK_TRAP(env_->TryJit(this, fn, func_index));
           }
           if (fn->jit_fn_) {
             in_jit_ = true;
