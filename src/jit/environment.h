@@ -42,6 +42,7 @@ class JitEnvironment {
 public:
   std::vector<unsigned int> *offsets = 0;
   JitEnvironment();
+  void initialize();
   ~JitEnvironment();
 private:
   static unsigned short instance_count_;

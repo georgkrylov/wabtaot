@@ -713,7 +713,8 @@ class Environment {
   void FillMemories();
   void FillTables();
   uint64_t *indirectCallParams = new uint64_t[8]();
-
+public:
+  jit::JitEnvironment jit_env_;
  private:
   friend class Thread;
   friend class wabt::jit::FunctionBuilder;
@@ -746,7 +747,7 @@ class Environment {
    * to be equivalent. Or reintroduced when jit will 
    * be at higher opt level */
   std::vector<interp::AOTedFunction> aot_funcs_;
-  jit::JitEnvironment jit_env_;
+
   std::map<int,wabt::aot::AOTManager*> aotManagers;
   /** Could be later turned into methodHeader, or tied
    * with it.
