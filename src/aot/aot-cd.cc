@@ -30,7 +30,8 @@
 #include <string>
 #include <time.h>
 #include <unistd.h>
-
+#include <chrono>
+using namespace std::chrono;
 int realArgc;
 char **realArgv;
 using namespace wabt;
@@ -431,6 +432,7 @@ int main(int argc, char **argv)
       std::cout << "usage: wabtaot <filename>\n";
       return -1;
       }
+   auto start = high_resolution_clock::now();
    // TODO rewrite using the infrastructure
    int run_all_exports = 0;
    std::vector<std::string> module_names;
@@ -535,4 +537,8 @@ int main(int argc, char **argv)
 #ifndef WASM_SHARED_CACHE
    wabt::aot::WABTAOTCompilerLib::createELFFile(src_filename);
 #endif
+  auto stop =high_resolution_clock::now();
+  auto duration =  duration_cast<nanoseconds>(stop - start);
+  std::cerr<<duration.count()<<",";
+  return 0;
    }
