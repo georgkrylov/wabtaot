@@ -455,6 +455,7 @@ int main(int argc, char **argv)
    args_arr = argv;
 
    Environment env;
+   env.enable_aot_analysis=true;
    env.jit_env_.initialize();
    s_stdout_stream = FileStream::CreateStdout();
    s_log_stream = nullptr;
