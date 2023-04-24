@@ -409,6 +409,10 @@ void *wabt::aot::AOTManager::AOTCompileAFunctionUsingDependencies(wabt::interp::
          _loadStoreDriver->storeHeaderForCompiledMethod(fn->dbg_name_.c_str());
          header = _loadStoreDriver->getRegisteredAOTMethodHeader(fn->dbg_name_.c_str());
          }
+      if (header->dependenciesCompiled == 1)
+         {
+         return NULL;
+         }
       if (header->isDependenciesScanned() == false && env->enable_aot_analysis)
          {
          wabt::aot::StaticAnalyzer::ForwardPassForCalls(this, env, ind, t);
