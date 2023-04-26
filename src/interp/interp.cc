@@ -2162,7 +2162,10 @@ Result Thread::Run(int num_instructions) {
 
         CHECK_TRAP(PushCall(pc));
         GOTO(fn->offset);
-        CHECK_TRAP(env_->TryAOT(this, fn, func_index));
+        if (fn->is_loaded == false) 
+          {
+          CHECK_TRAP(env_->TryAOT(this, fn, func_index));
+          }
 
         if (fn->is_loaded) {
 
@@ -3649,8 +3652,10 @@ Result Thread::Run(int num_instructions) {
 
           CHECK_TRAP(PushCall(pc));
           GOTO(fn->offset);
+          if (fn->is_loaded == false) 
+          {
           CHECK_TRAP(env_->TryAOT(this, fn, func_index));
-      
+          }
 
           if (fn->is_loaded) 
           {
