@@ -22,6 +22,7 @@
 #include "trap-with.h"
 
 #include <algorithm>
+#include <chrono>
 #include <dlfcn.h>
 #include <iomanip> // for the precision, for testing purposes
 #include <iostream>
@@ -30,7 +31,6 @@
 #include <string>
 #include <time.h>
 #include <unistd.h>
-#include <chrono>
 using namespace std::chrono;
 int realArgc;
 char **realArgv;
@@ -435,6 +435,7 @@ int main(int argc, char **argv)
    auto start = high_resolution_clock::now();
    // TODO rewrite using the infrastructure
    int run_all_exports = 0;
+   int timer = 0;
    std::vector<std::string> module_names;
    if (argc >= 2)
       {
@@ -449,13 +450,17 @@ int main(int argc, char **argv)
             {
             run_all_exports = 1;
             }
+         if (last_argument.compare("--measure-time") == 0)
+            {
+            timer = 1;
+            }
          }
       }
    numOfArgs = argc - 1;
    args_arr = argv;
 
    Environment env;
-   env.enable_aot_analysis=true;
+   env.enable_aot_analysis = true;
    env.jit_env_.initialize();
    s_stdout_stream = FileStream::CreateStdout();
    s_log_stream = nullptr;
@@ -464,8 +469,8 @@ int main(int argc, char **argv)
    /** Adding emscripten adds two modules, should count them in */
    module_names.emplace(module_names.begin(), "wasi_unstable");
    module_names.emplace(module_names.begin(), "env");
-   
-   uint32_t no_of_modules =  module_names.size();
+
+   uint32_t no_of_modules = module_names.size();
    for (uint32_t i = 2; i < no_of_modules; i++)
       {
       registerModules(module_names[i], &env);
@@ -473,7 +478,7 @@ int main(int argc, char **argv)
    envPointer = &env;
    wabt::aot::WABTAOTCompilerLib compilerLib = wabt::aot::WABTAOTCompilerLib();
    char *src_filename;
-   compilerLib.envPointer=&env;
+   compilerLib.envPointer = &env;
    uint32_t build_type = 0;
 #ifndef WASM_SHARED_CACHE
    /** Adding emscripten adds two modules, hence affects value of i */
@@ -494,8 +499,8 @@ int main(int argc, char **argv)
    /** Adding emscripten adds two modules, hence affects value of i */
    for (uint32_t i = 2; i < no_of_modules; i++)
       {
-      src_filename = (char*) calloc(sizeof(char),module_names[i].length()+1);
-      strcpy(src_filename,module_names[i].c_str());
+      src_filename = (char *)calloc(sizeof(char), module_names[i].length() + 1);
+      strcpy(src_filename, module_names[i].c_str());
 #ifndef WASM_SHARED_CACHE
       if (no_of_modules == 3) /* One plus two added by including emscripten */
          {
@@ -514,7 +519,7 @@ int main(int argc, char **argv)
          {
          wabt::aot::AOTManager aotManager;
          interp::Thread thread(&env);
-         wabt::aot::WABTAOTCompilerLib::preSetCodeEntries(nullptr,&thread);
+         wabt::aot::WABTAOTCompilerLib::preSetCodeEntries(nullptr, &thread);
          wabt::aot::WABTAOTCompilerLib::registerMethods(aotManager, env, module, const_cast<char *>(src_filename), thread);
          wabt::aot::WABTAOTCompilerLib::compileEverything(env, aotManager, module);
          }
@@ -538,8 +543,11 @@ int main(int argc, char **argv)
 #ifndef WASM_SHARED_CACHE
    wabt::aot::WABTAOTCompilerLib::createELFFile(src_filename);
 #endif
-  auto stop =high_resolution_clock::now();
-  auto duration =  duration_cast<nanoseconds>(stop - start);
-  std::cerr<<duration.count()<<",";
-  return 0;
+   auto stop = high_resolution_clock::now();
+   auto duration = duration_cast<nanoseconds>(stop - start);
+   if (timer == 1)
+      {
+      std::cerr << duration.count() << ",";
+      }
+   return 0;
    }
