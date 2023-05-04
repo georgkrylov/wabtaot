@@ -1468,7 +1468,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder *b,
          /* If we are calling the function that is host - do NOTHING */
          if (fn->is_host == true)
             {
-            int callingFunction = this->aotManager_.getFunctionThatManagerWasCreatedFor();
+            int callingFunction = this->fn_->ind;
             auto callingAOTMeta = env_.aot_meta_.find(callingFunction);
             if (callingAOTMeta != env_.aot_meta_.end())
                {
@@ -1529,7 +1529,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder *b,
              * and return false if they are not. Dependencies are also added here  **/
             // if ((strcmp(fn->dbg_name_.c_str(), "???") == 0  && fn->is_host == false))
             //    {
-            int callingFunction = this->aotManager_.getFunctionThatManagerWasCreatedFor();
+            int callingFunction =  this->fn_->ind;
             /**
              * @brief  Probably need to do an async compilation? Or define functions?
              *
@@ -1619,7 +1619,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder *b,
 
    case Opcode::CallIndirect:
       {
-      int callingFunction = this->aotManager_.getFunctionThatManagerWasCreatedFor();
+      int callingFunction =  this->fn_->ind;
       auto callingAOTMeta = env_.aot_meta_.find(callingFunction);
       if (callingAOTMeta != env_.aot_meta_.end())
          {

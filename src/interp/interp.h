@@ -342,6 +342,8 @@ struct DefinedFunc : Func {
 
 
   uint32_t num_calls_ = 0;
+  /* Added to record indices within the environment*/
+  wabt::Index ind = -1;
   bool tried_jit_ = false;
   jit::JITedFunction jit_fn_ = nullptr;
   interp::AOTedFunction aot_fn_ = nullptr;

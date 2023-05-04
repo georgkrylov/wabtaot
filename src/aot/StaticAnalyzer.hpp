@@ -31,7 +31,7 @@ class StaticAnalyzer
  public:
    StaticAnalyzer(){};
 
-   static int ScanOpcodeAt(wabt::interp::DefinedFunc* fn,wabt::aot::AOTManager* manager, wabt::interp::Environment* env, const uint8_t *istream, const uint8_t *pc);
+   static int ScanOpcodeAt(wabt::interp::DefinedFunc* fn,wabt::aot::AOTManager* manager, wabt::interp::Environment* env, const uint8_t *istream, const uint8_t *pc,wabt::Index ind);
    static bool ForwardPassForCalls(wabt::aot::AOTManager* manager,wabt::interp::Environment *env, wabt::Index ind, wabt::interp::Thread *_thread);
    static int ComputeChainsCosts(wabt::aot::AOTManager* manager,wabt::interp::Environment *env, wabt::Index ind, wabt::interp::Thread *_thread);
    };

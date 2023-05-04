@@ -190,7 +190,7 @@ WASM::AOTMethodHeader::AOTMethodHeader(uint8_t *serializedMethodData)
    self()->methodCost = *(reinterpret_cast<int *>(serializedMethodData));
 
    // NOT a cached but computed variable, needs to be set though!
-   self()->chainCost = methodCost;
+   self()->chainCost = 0;
    size_t computedSize = self()->sizeOfSerializedVersion();
 
    TR_ASSERT(computedSize == storedSize, "Stored and Computed MethodHeader sizes mismatch, possible message corruption \n");

@@ -20,9 +20,9 @@ bool wabt::aot::StaticAnalyzer::ForwardPassForCalls(wabt::aot::AOTManager *manag
       hdr = WABTAOTCompilerLib::getLoadStoreDriver()->getRegisteredAOTMethodHeader(callingFunc->dbg_name_.c_str());
       hdr->setDependenciesScanned(true);
       }
-   int bytecodeCount = StaticAnalyzer::ScanOpcodeAt(func, manager, env, istream, pc);
+   int bytecodeCount = StaticAnalyzer::ScanOpcodeAt(func, manager, env, istream, pc, ind);
    hdr->setMethodCost(bytecodeCount);
-   if (bytecodeCount = -1)
+   if (bytecodeCount == -1)
       {
       // printf("Failed to read function %s\n", func->dbg_name_.c_str());
       return false;
@@ -43,7 +43,18 @@ int wabt::aot::StaticAnalyzer::ComputeChainsCosts(wabt::aot::AOTManager *manager
       return accummulatedMethodsCost;
 
    manager->visited_this_traversal.emplace_back(ind);
-   wabt::interp::DefinedFunc *func = cast<wabt::interp::DefinedFunc>(env->GetFunc(ind));
+   wabt::interp::Func *fn = env->GetFunc(ind);
+   wabt::interp::DefinedFunc *func = cast<wabt::interp::DefinedFunc>(fn);
+   if (strcmp(func->dbg_name_.c_str(), "???") == 0 || strcmp(fn->dbg_name_.c_str(), "???") == 0 || strcmp(func->dbg_name_.c_str(), fn->dbg_name_.c_str()) != 0)
+      {
+
+      Index moduleIndex = WABTAOTCompilerLib::getModuleIndexByFunctionIndex(*env, ind);
+      auto modulee = reinterpret_cast<DefinedModule *>(env->GetModule(moduleIndex));
+      std::string name;
+      WABTAOTCompilerLib::generateFunctionName(env, ind, name);
+      func->dbg_name_ = name;
+      reinterpret_cast<DefinedModule *>(env->GetModule(moduleIndex))->funcs.emplace_back(fn);
+      }
    TR::AOTMethodHeader *hdr;
    auto callingAOTMeta = env->aot_meta_.find(ind);
    if (callingAOTMeta != env->aot_meta_.end())
@@ -61,8 +72,15 @@ int wabt::aot::StaticAnalyzer::ComputeChainsCosts(wabt::aot::AOTManager *manager
       {
       ForwardPassForCalls(manager, env, ind, _thread);
       }
-   accummulatedMethodsCost = hdr->getMethodCost();
-   if (manager->_tokensLeft < accummulatedMethodsCost)
+   if (hdr->getCompiledCodeSize() == 0)
+      {
+      accummulatedMethodsCost = hdr->getMethodCost();
+      if (manager->minCost > accummulatedMethodsCost || manager->minCost == -1)
+         {
+         manager->minCost = accummulatedMethodsCost;
+         }
+      }
+   if (manager->_tokensLeft == -1)
       {
       manager->_tokensLeft = accummulatedMethodsCost;
       }
@@ -81,7 +99,7 @@ int wabt::aot::StaticAnalyzer::ComputeChainsCosts(wabt::aot::AOTManager *manager
    }
 
 int wabt::aot::StaticAnalyzer::ScanOpcodeAt(wabt::interp::DefinedFunc *fn, wabt::aot::AOTManager *manager, wabt::interp::Environment *env_, const uint8_t *istream,
-                                            const uint8_t *pc)
+                                            const uint8_t *pc, wabt::Index ind)
    {
    /** To compensate for +1 that is added in return for debug purposes, as well as if -1 is returned there's an issue*/
    int bytecodeCount = -1;
@@ -210,8 +228,8 @@ int wabt::aot::StaticAnalyzer::ScanOpcodeAt(wabt::interp::DefinedFunc *fn, wabt:
             /* If we are calling the function that is host - do NOTHING */
             if (fn->is_host == true)
                {
-               int callingFunction = manager->getFunctionThatManagerWasCreatedFor();
-               auto callingAOTMeta = env_->aot_meta_.find(callingFunction);
+               int callingFunction = ind;
+               auto callingAOTMeta = env_->aot_meta_.find(ind);
                if (callingAOTMeta != env_->aot_meta_.end())
                   {
                   wabt::interp::DefinedFunc *callingFunc = cast<wabt::interp::DefinedFunc>(callingAOTMeta->second.wasm_fn);
@@ -250,7 +268,7 @@ int wabt::aot::StaticAnalyzer::ScanOpcodeAt(wabt::interp::DefinedFunc *fn, wabt:
                {
                /** TODO will need to iterate among all dependencies and check if they are compiled
                 * and return false if they are not. Dependencies are also added here  **/
-               int callingFunction = manager->getFunctionThatManagerWasCreatedFor();
+               int callingFunction = ind;
                /**
                 * @brief  Probably need to do an async compilation? Or define functions?
                 *
@@ -301,7 +319,7 @@ int wabt::aot::StaticAnalyzer::ScanOpcodeAt(wabt::interp::DefinedFunc *fn, wabt:
          Index table_index = ReadU32(&pc);
          Table *table = &env_->tables_[table_index];
          Index sig_index = ReadU32(&pc);
-         int callingFunction = manager->getFunctionThatManagerWasCreatedFor();
+         int callingFunction = ind;
          auto callingAOTMeta = env_->aot_meta_.find(callingFunction);
 
          if (fn == NULL)
