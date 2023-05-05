@@ -521,6 +521,7 @@ class Environment {
   bool enable_aot = true;
   bool enable_aot_analysis = true;
   bool aot_compile_all = false;
+  float aot_pressure = 0.5;
   bool trap_on_failed_comp = false;
   bool enable_load_from_dlib = false;
   bool enable_load_thunk = false;

@@ -267,7 +267,7 @@ void *wabt::aot::AOTManager::AOTCompileAFunction(wabt::interp::Environment *env,
       envPointer = env;
       }
    /** We cannot compile all without analysis*/
-   if (env->aot_compile_all == false || env->enable_aot_analysis == false)
+   if (env->aot_compile_all == false)
       {
       return AOTCompileAFunctionUsingDependencies(env, ind, fn, t);
       }
@@ -293,12 +293,12 @@ void *wabt::aot::AOTManager::AOTCompileFunctionsUsingTokens(wabt::interp::Enviro
          _loadStoreDriver->storeHeaderForCompiledMethod(fn->dbg_name_.c_str());
          header = _loadStoreDriver->getRegisteredAOTMethodHeader(fn->dbg_name_.c_str());
          }
-      
+
       if (header->getMethodChainCost() == 0)
          {
          visited_this_traversal.clear();
          int computedChainsCost = wabt::aot::StaticAnalyzer::ComputeChainsCosts(this, env, ind, t);
-         _tokensLeft=0.5*computedChainsCost; // Effectively - full AOT?
+         _tokensLeft = env->aot_pressure * computedChainsCost; // Parameterized, 1 will lead to full aot
          if (minCost > _tokensLeft)
             {
             _tokensLeft = minCost;
@@ -363,10 +363,10 @@ void *wabt::aot::AOTManager::AOTCompileFunctionsUsingTokens(wabt::interp::Enviro
             }
          unsigned int *dependenciesArray = header->getDependenciesArray();
          for (int i = 0; i < header->getDependenciesArraySize(); i++)
-               {
-               DefinedFunc *callFunc = reinterpret_cast<DefinedFunc *>(env->GetFunc(dependenciesArray[i]));
-               AOTCompileFunctionsUsingTokens(env, dependenciesArray[i], callFunc, t);
-               }
+            {
+            DefinedFunc *callFunc = reinterpret_cast<DefinedFunc *>(env->GetFunc(dependenciesArray[i]));
+            AOTCompileFunctionsUsingTokens(env, dependenciesArray[i], callFunc, t);
+            }
          }
       if (func->is_compiled == true)
          {
@@ -552,7 +552,7 @@ void wabt::aot::AOTManager::CreateAndDefineBuilder(wabt::interp::Environment *en
          fn->dbg_name_ = name;
          }
       }
-   fn->ind=ind;
+   fn->ind = ind;
    WABTAOTCompilerLib::generateFunctionName(env, ind, name);
    if (types_ == NULL)
       {
