@@ -53,7 +53,8 @@ class AOTManager
          entryPointFunction(NULL),
          _indexOfAFuncStartedAOTManager(0),
          _loadStoreDriver(NULL),
-         minCost(-1)
+         minCost(-1),
+         _setCostOnce(false)
          {};
 
    void push_back_FB(uint32_t offset, AOTFunctionBuilder *b,
@@ -209,6 +210,7 @@ class AOTManager
    static int _tokensLeft;
    /** Cost of the cheapest method in the chain, to be able to compile at least*/
    int minCost;
+   bool _setCostOnce;
  protected:
    /**
     * @brief This pointer is necessary to be able to load and store

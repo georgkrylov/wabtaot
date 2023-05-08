@@ -235,6 +235,11 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
    */
   static uint32_t CalculateMemorySize(uint32_t);
   static uint32_t PrintSomething(uint32_t);
+    /**
+   * @brief This design limits to one environment
+   *
+   */
+  static Environment* envPointer;
  private:
   struct BytecodeWorkItem {
     TR::BytecodeBuilder* builder;
@@ -314,11 +319,6 @@ class AOTFunctionBuilder : public TR::MethodBuilder {
 
   AOTTypeDictionary* types_;
   interp::Thread* thread_;
-  /**
-   * @brief This design limits to one environment
-   *
-   */
-  static Environment* envPointer;
   interp::DefinedFunc* fn_;
 
   std::string fn_name_;

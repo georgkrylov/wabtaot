@@ -224,6 +224,9 @@ bool wabt::aot::AOTManager::AOTLoadAFunction(wabt::interp::Environment *env, wab
             for (auto it = visited_this_traversal.begin(); it < visited_this_traversal.end(); it++)
                {
                auto fn = env->GetFunc(*it);
+               DefinedFunc *func = reinterpret_cast<DefinedFunc *>(fn);
+               if (func->tried_jit_ == true)
+                  return false;
                _loadStoreDriver->relocateRegisteredMethod(const_cast<char *>(fn->dbg_name_.c_str()));
                fn->is_loaded = true;
                }
@@ -273,18 +276,6 @@ void *wabt::aot::AOTManager::AOTCompileAFunction(wabt::interp::Environment *env,
       }
    else
       {
-      return AOTCompileFunctionsUsingTokens(env, ind, fn, t);
-      }
-   }
-
-int wabt::aot::AOTManager::_tokensLeft = -1;
-void *wabt::aot::AOTManager::AOTCompileFunctionsUsingTokens(wabt::interp::Environment *env, wabt::Index ind, wabt::interp::DefinedFunc *fn, wabt::interp::Thread *t)
-   {
-   Func *func = (env->GetFunc(ind));
-
-   if (!func->is_loaded)
-      {
-      /** First, try loading a function, the result of the function is ignored **/
 
       TR::AOTMethodHeader *header = _loadStoreDriver->getRegisteredAOTMethodHeader(fn->dbg_name_.c_str());
       if (header == NULL)
@@ -293,41 +284,79 @@ void *wabt::aot::AOTManager::AOTCompileFunctionsUsingTokens(wabt::interp::Enviro
          _loadStoreDriver->storeHeaderForCompiledMethod(fn->dbg_name_.c_str());
          header = _loadStoreDriver->getRegisteredAOTMethodHeader(fn->dbg_name_.c_str());
          }
-
-      if (header->getMethodChainCost() == 0)
+      visited_this_traversal.clear();
+      if (header->getMethodChainCost() == -1)
          {
-         visited_this_traversal.clear();
          int computedChainsCost = wabt::aot::StaticAnalyzer::ComputeChainsCosts(this, env, ind, t);
-         _tokensLeft = env->aot_pressure * computedChainsCost; // Parameterized, 1 will lead to full aot
-         if (minCost > _tokensLeft)
+         if (_setCostOnce == false)
             {
-            _tokensLeft = minCost;
+            _tokensLeft = env->aot_pressure * computedChainsCost; // Parameterized, 1 will lead to full aot
+            if (minCost > _tokensLeft)
+               {
+               _tokensLeft = minCost;
+               }
+            _setCostOnce = true;
             }
-         visited_this_traversal.clear();
          }
-      bool loadingResult = AOTGetCompiledFunction(env, ind);
-      if (header->getMethodCost() <= _tokensLeft)
+      visited_this_traversal.clear();
+      AOTCompileFunctionsUsingTokens(env, ind, fn, t);
+      Func *func = (env->GetFunc(ind));
+      if (func->is_compiled == true)
          {
+         /** If function is compiled (either before or just now)*/
+         visited_this_traversal.clear();
+         /* try loading the function */
+         bool loadingResult = AOTLoadAFunction(env, ind, t);
 
-         if (header->isCompilationSupported() == false)
+         fn->entry_fn_ = reinterpret_cast<wabt::interp::AOTedFunction>(fn);
+         if (this->needsEntryPointGeneration == true)
             {
-            return NULL;
+            // FOR AOT-ENTRY and JIT compatibility
+            if (fn->tried_jit_ == true)
+               {
+               return NULL;
+               }
+            char *entryPointName = WABTAOTCompilerLib::generateEntryPointName(fn);
+            void *entryFunction = getCodeEntry(entryPointName);
+            bool loadingResult = AOTGetCompiledFunction(env, ind);
+            _loadStoreDriver->relocateRegisteredMethod(entryPointName);
+            /** Created a separate entry for entry function */
+            fn->entry_fn_ = reinterpret_cast<wabt::interp::AOTedFunction>(entryFunction);
             }
+         }
+      }
+   }
 
-         if (func->is_compiled == false && func->is_host == false)
+int wabt::aot::AOTManager::_tokensLeft = -1;
+void *wabt::aot::AOTManager::AOTCompileFunctionsUsingTokens(wabt::interp::Environment *env, wabt::Index ind, wabt::interp::DefinedFunc *fn, wabt::interp::Thread *t)
+   {
+   if (std::find(visited_this_traversal.begin(), visited_this_traversal.end(), ind) != visited_this_traversal.end())
+      return NULL;
+   visited_this_traversal.emplace_back(ind);
+   Func *func = (env->GetFunc(ind));
+
+   if (!func->is_loaded && !func->is_host)
+      {
+      /** First, try loading a function, the result of the function is ignored **/
+      TR::AOTMethodHeader *header = _loadStoreDriver->getRegisteredAOTMethodHeader(fn->dbg_name_.c_str());
+      bool loadingResult = AOTGetCompiledFunction(env, ind);
+
+      if (header->isCompilationSupported() == false)
+         {
+         return NULL;
+         }
+
+      if (func->is_compiled == false && func->is_host == false)
+         {
+         if (header->getMethodCost() <= _tokensLeft)
             {
-            /**Have to call this because it creates function builders
-             * within aot manager at appropriate offset
-             * Some things may be cached by not recreating AOTManagers, huh?
-             */
-            visited_this_traversal.clear();
-
             PrepareMethodForCompilation(env, ind, fn, t, header);
             /** If the function was not compiled, then try compiling it*/
             auto &builder = this->getFB(fn->offset);
             void *function = nullptr;
             internal_compileMethodBuilder(&builder, &function);
             _tokensLeft -= header->getMethodCost();
+
 #ifndef WASM_SHARED_CACHE // This is an ELF-enabled runtime
             // TODO verify if should set it here and or somewhere else?
             WABTAOTCompilerLib::shouldReEmitELF = 1;
@@ -361,35 +390,12 @@ void *wabt::aot::AOTManager::AOTCompileFunctionsUsingTokens(wabt::interp::Enviro
                   }
                }
             }
-         unsigned int *dependenciesArray = header->getDependenciesArray();
-         for (int i = 0; i < header->getDependenciesArraySize(); i++)
-            {
-            DefinedFunc *callFunc = reinterpret_cast<DefinedFunc *>(env->GetFunc(dependenciesArray[i]));
-            AOTCompileFunctionsUsingTokens(env, dependenciesArray[i], callFunc, t);
-            }
          }
-      if (func->is_compiled == true)
+      unsigned int *dependenciesArray = header->getDependenciesArray();
+      for (int i = 0; i < header->getDependenciesArraySize(); i++)
          {
-         /** If function is compiled (either before or just now)*/
-         visited_this_traversal.clear();
-         /* try loading the function */
-         bool loadingResult = AOTLoadAFunction(env, ind, t);
-
-         fn->entry_fn_ = reinterpret_cast<wabt::interp::AOTedFunction>(fn);
-         if (this->needsEntryPointGeneration == true)
-            {
-            // FOR AOT-ENTRY and JIT compatibility
-            if (fn->tried_jit_ == true)
-               {
-               return NULL;
-               }
-            char *entryPointName = WABTAOTCompilerLib::generateEntryPointName(fn);
-            void *entryFunction = getCodeEntry(entryPointName);
-            bool loadingResult = AOTGetCompiledFunction(env, ind);
-            _loadStoreDriver->relocateRegisteredMethod(entryPointName);
-            /** Created a separate entry for entry function */
-            fn->entry_fn_ = reinterpret_cast<wabt::interp::AOTedFunction>(entryFunction);
-            }
+         DefinedFunc *callFunc = reinterpret_cast<DefinedFunc *>(env->GetFunc(dependenciesArray[i]));
+         AOTCompileFunctionsUsingTokens(env, dependenciesArray[i], callFunc, t);
          }
       }
    else
@@ -530,8 +536,14 @@ void wabt::aot::AOTManager::PrepareMethodForCompilation(wabt::interp::Environmen
          CreateAndDefineBuilder(env, dependenciesArray[i], depFn, t);
          Func *fn = envPointer->GetFunc(dependenciesArray[i]);
          char *fn_name2;
-
-         fn_name2 = strdup(depFn->dbg_name_.c_str());
+         if (!fn->is_host)
+            {
+            fn_name2 = strdup(depFn->dbg_name_.c_str());
+            }
+         else
+            {
+            fn_name2 = strdup(fn->dbg_name_.c_str());
+            }
          defineExternalFunctionToJit(fn_name2, dependenciesArray[i]);
          }
       }

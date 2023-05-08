@@ -273,11 +273,13 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread *thread, interp::DefinedFu
                   NoType,
                   1,
                   Int32);
+   defined_names_.push_back("emscripten_notify_memory_growth");
    DefineFunction("fd_close", __FILE__, "34",
                   reinterpret_cast<void *>(closs),
                   Int32,
                   1,
                   Int32);
+   defined_names_.push_back("fd_close");
    DefineFunction("PrintSt", __FILE__, "34",
                   reinterpret_cast<void *>(PrintSomething),
                   Int32,
@@ -296,7 +298,6 @@ AOTFunctionBuilder::AOTFunctionBuilder(interp::Thread *thread, interp::DefinedFu
 
    envPointer = &env_;
    returnType_ = functionReturnType(fn_);
-
    auto memories_size = env_.GetMemoryCount();
    auto globals_size = env_.GetGlobalCount();
    auto param_count = env_.GetFuncSignature(fn_->sig_index)->param_types.size();
@@ -1529,7 +1530,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder *b,
              * and return false if they are not. Dependencies are also added here  **/
             // if ((strcmp(fn->dbg_name_.c_str(), "???") == 0  && fn->is_host == false))
             //    {
-            int callingFunction =  this->fn_->ind;
+            int callingFunction = this->fn_->ind;
             /**
              * @brief  Probably need to do an async compilation? Or define functions?
              *
@@ -1619,7 +1620,7 @@ bool AOTFunctionBuilder::Emit(TR::BytecodeBuilder *b,
 
    case Opcode::CallIndirect:
       {
-      int callingFunction =  this->fn_->ind;
+      int callingFunction = this->fn_->ind;
       auto callingAOTMeta = env_.aot_meta_.find(callingFunction);
       if (callingAOTMeta != env_.aot_meta_.end())
          {

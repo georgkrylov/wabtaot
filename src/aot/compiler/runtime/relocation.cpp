@@ -39,7 +39,7 @@ TR::RelocationRecord* WASM::RelocationRecord::create(TR::RelocationRecord *stora
 	  break;
         break;
         default:
-            std::cout<<"CANNOT CREATE WASM RELOCATION RECORD WITH KIND"<<std::endl;
+            std::cout<<"CANNOT CREATE WASM RELOCATION RECORD WITH KIND"<<record->type(reloTarget)<<std::endl;
             reloRecord = nullptr;
     }
     return reloRecord;

@@ -67,7 +67,7 @@ public:
       compilationIsSupported = true;
       methodName[0]=0;
       methodCost = 0; 
-      chainCost = 0;
+      chainCost = -1;
       };
 
    AOTMethodHeader(uint8_t *serializedMethodData);

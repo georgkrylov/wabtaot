@@ -44,56 +44,61 @@ int wabt::aot::StaticAnalyzer::ComputeChainsCosts(wabt::aot::AOTManager *manager
 
    manager->visited_this_traversal.emplace_back(ind);
    wabt::interp::Func *fn = env->GetFunc(ind);
-   wabt::interp::DefinedFunc *func = cast<wabt::interp::DefinedFunc>(fn);
-   if (strcmp(func->dbg_name_.c_str(), "???") == 0 || strcmp(fn->dbg_name_.c_str(), "???") == 0 || strcmp(func->dbg_name_.c_str(), fn->dbg_name_.c_str()) != 0)
+   if (fn->is_host == false)
       {
+      wabt::interp::DefinedFunc *func = cast<wabt::interp::DefinedFunc>(fn);
+      if (strcmp(func->dbg_name_.c_str(), "???") == 0 || strcmp(fn->dbg_name_.c_str(), "???") == 0 || strcmp(func->dbg_name_.c_str(), fn->dbg_name_.c_str()) != 0)
+         {
 
-      Index moduleIndex = WABTAOTCompilerLib::getModuleIndexByFunctionIndex(*env, ind);
-      auto modulee = reinterpret_cast<DefinedModule *>(env->GetModule(moduleIndex));
-      std::string name;
-      WABTAOTCompilerLib::generateFunctionName(env, ind, name);
-      func->dbg_name_ = name;
-      reinterpret_cast<DefinedModule *>(env->GetModule(moduleIndex))->funcs.emplace_back(fn);
-      }
-   TR::AOTMethodHeader *hdr;
-   auto callingAOTMeta = env->aot_meta_.find(ind);
-   if (callingAOTMeta != env->aot_meta_.end())
-      {
-      wabt::interp::DefinedFunc *callingFunc = cast<wabt::interp::DefinedFunc>(callingAOTMeta->second.wasm_fn);
-      hdr = WABTAOTCompilerLib::getLoadStoreDriver()->getRegisteredAOTMethodHeader(callingFunc->dbg_name_.c_str());
-      if (hdr == NULL)
+         Index moduleIndex = WABTAOTCompilerLib::getModuleIndexByFunctionIndex(*env, ind);
+         auto modulee = reinterpret_cast<DefinedModule *>(env->GetModule(moduleIndex));
+         std::string name;
+         WABTAOTCompilerLib::generateFunctionName(env, ind, name);
+         func->dbg_name_ = name;
+         reinterpret_cast<DefinedModule *>(env->GetModule(moduleIndex))->funcs.emplace_back(fn);
+         }
+
+      TR::AOTMethodHeader *hdr;
+      auto callingAOTMeta = env->aot_meta_.find(ind);
+      if (callingAOTMeta != env->aot_meta_.end())
          {
-         WABTAOTCompilerLib::getLoadStoreDriver()->createAndRegisterAOTMethodHeader(callingFunc->dbg_name_.c_str(), NULL, 0, NULL, 0);
-         WABTAOTCompilerLib::getLoadStoreDriver()->storeHeaderForCompiledMethod(callingFunc->dbg_name_.c_str());
+         wabt::interp::DefinedFunc *callingFunc = cast<wabt::interp::DefinedFunc>(callingAOTMeta->second.wasm_fn);
          hdr = WABTAOTCompilerLib::getLoadStoreDriver()->getRegisteredAOTMethodHeader(callingFunc->dbg_name_.c_str());
+         if (hdr == NULL)
+            {
+            WABTAOTCompilerLib::getLoadStoreDriver()->createAndRegisterAOTMethodHeader(callingFunc->dbg_name_.c_str(), NULL, 0, NULL, 0);
+            WABTAOTCompilerLib::getLoadStoreDriver()->storeHeaderForCompiledMethod(callingFunc->dbg_name_.c_str());
+            hdr = WABTAOTCompilerLib::getLoadStoreDriver()->getRegisteredAOTMethodHeader(callingFunc->dbg_name_.c_str());
+            }
          }
-      }
-   if (hdr->getMethodCost() == 0)
-      {
-      ForwardPassForCalls(manager, env, ind, _thread);
-      }
-   if (hdr->getCompiledCodeSize() == 0)
-      {
-      accummulatedMethodsCost = hdr->getMethodCost();
-      if (manager->minCost > accummulatedMethodsCost || manager->minCost == -1)
+      if (hdr->getMethodCost() == 0)
          {
-         manager->minCost = accummulatedMethodsCost;
+         ForwardPassForCalls(manager, env, ind, _thread);
          }
-      }
-   if (manager->_tokensLeft == -1)
-      {
-      manager->_tokensLeft = accummulatedMethodsCost;
-      }
-   unsigned int dependenciesMaxSize = hdr->getDependenciesArraySize();
-   unsigned int *dependenciesArray = hdr->getDependenciesArray();
-   for (unsigned int i = 0; i < dependenciesMaxSize; i++)
-      {
-      accummulatedMethodsCost += ComputeChainsCosts(manager, env, dependenciesArray[i], _thread);
-      }
-   /** Needs to store each headers cost*/
-   if (hdr->getMethodChainCost() == 0)
-      {
-      hdr->setMethodChainCost(accummulatedMethodsCost);
+      if (hdr->getCompiledCodeSize() == 0)
+         {
+         accummulatedMethodsCost = hdr->getMethodCost();
+         if (manager->minCost > accummulatedMethodsCost || manager->minCost == -1)
+            {
+            manager->minCost = accummulatedMethodsCost;
+            }
+         }
+
+      if (manager->_tokensLeft == -1)
+         {
+         manager->_tokensLeft = accummulatedMethodsCost;
+         }
+      unsigned int dependenciesMaxSize = hdr->getDependenciesArraySize();
+      unsigned int *dependenciesArray = hdr->getDependenciesArray();
+      for (unsigned int i = 0; i < dependenciesMaxSize; i++)
+         {
+         accummulatedMethodsCost += ComputeChainsCosts(manager, env, dependenciesArray[i], _thread);
+         }
+      /** Needs to store each headers cost*/
+      if (hdr->getMethodChainCost() == -1)
+         {
+         hdr->setMethodChainCost(accummulatedMethodsCost);
+         }
       }
    return accummulatedMethodsCost;
    }

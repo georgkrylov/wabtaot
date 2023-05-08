@@ -27,7 +27,7 @@ void WABTAOTCompilerLib::registerModuleNameForAOT(const char *module_filename, D
    std::string module_name(module_filename);
    module->name = module_name.substr(module_name.find_last_of('/') + 1, module_name.find_last_of('.') - module_name.find_last_of('/') - 1);
    }
-
+void clus(int32_t a) { std::cout << a; };
 int WABTAOTCompilerLib::approximateFirstFunctionInAModule(interp::Environment &env, unsigned int Index)
    {
    unsigned int moduleIndex = 0;
@@ -51,6 +51,50 @@ int WABTAOTCompilerLib::approximateFirstFunctionInAModule(interp::Environment &e
    }
 uint32_t printaa(int32_t a, int32_t b, int32_t c, int32_t d);
 
+int32_t args_get(int32_t argv, int32_t argv_buf)
+   {
+   int numOfArgs = 1;
+   char args_arr[1][2] = {"."};
+   
+   uint32_t *bufferLoc = (uint32_t *)(WABTAOTCompilerLib::envPointer->GetMems()[0] + argv);
+   uint8_t *bufferLocsize = (uint8_t *)(WABTAOTCompilerLib::envPointer->GetMems()[0] + argv_buf);
+   *bufferLoc = argv_buf;
+   if (numOfArgs > 1)
+      *(bufferLoc + 1) = argv_buf + strlen(args_arr[1]);
+   memcpy(bufferLocsize, args_arr[1], strlen(args_arr[1]) + 1);
+   if (numOfArgs > 1)
+      memcpy(bufferLocsize + strlen(args_arr[1]), args_arr[2], strlen(args_arr[2]) + 1);
+   return 0;
+   }
+
+int32_t args_size_get(int32_t numOfArgs1, int32_t sizeOfArgs1)
+   {
+   int numOfArgs = 1;
+   char args_arr[1][2] = {"."};
+   uint32_t *bufferLoc = (uint32_t *)(WABTAOTCompilerLib::envPointer->GetMems()[0] + numOfArgs1);
+   uint32_t *bufferLocsize = (uint32_t *)(WABTAOTCompilerLib::envPointer->GetMems()[0] + sizeOfArgs1);
+   *bufferLoc = numOfArgs;
+   if (numOfArgs > 1)
+      *bufferLocsize = strlen(args_arr[2]) + strlen(args_arr[1]) + 2;
+   else
+      *bufferLocsize = 0;
+   return 0;
+   }
+
+int32_t clos(int32_t a)
+   {
+   std::cout << a;
+   return 0;
+   };
+
+int32_t seek(int32_t a, int64_t b, int32_t c, int32_t d)
+   {
+   std::cout << a << b << c << d << "\n";
+   return 0;
+   }
+
+
+
 void WABTAOTCompilerLib::preSetCodeEntries(wabt::interp::Executor *executor, wabt::interp::Thread *thread)
    {
 
@@ -67,6 +111,8 @@ void WABTAOTCompilerLib::preSetCodeEntries(wabt::interp::Executor *executor, wab
          }
       }
    wabt::interp::Environment &env(*thread->env_);
+   AOTFunctionBuilder::envPointer = thread->env_;  
+
    /** Setting utility functions */
    setCodeEntry("trapWit", reinterpret_cast<void *>(trapWith));
    setCodeEntry("fd_writ",reinterpret_cast<void*>(printaa));
@@ -75,7 +121,13 @@ void WABTAOTCompilerLib::preSetCodeEntries(wabt::interp::Executor *executor, wab
    setCodeEntry("sqrtf", reinterpret_cast<void *>(sqrtf));
    double (*cpsign)(double, double) = copysign;
    setCodeEntry("cpsign", reinterpret_cast<void *>(cpsign));
+   setCodeEntry("emscrip", reinterpret_cast<void *>(clus));
    setCodeEntry("cpsignf", reinterpret_cast<void *>(copysignf));
+   setCodeEntry("args_ge", reinterpret_cast<void *>(args_get));
+   setCodeEntry("proc_ex", reinterpret_cast<void *>(clus));
+   setCodeEntry("fd_seek", reinterpret_cast<void *>(seek));
+   setCodeEntry("args_si", reinterpret_cast<void *>(args_size_get));
+   setCodeEntry("fd_clos", reinterpret_cast<void *>(clos));
    setCodeEntry("GrowMem", reinterpret_cast<void *>(wabt::aot::AOTFunctionBuilder::GrowMemory));
    setCodeEntry("MemSize", reinterpret_cast<void *>(wabt::aot::AOTFunctionBuilder::CalculateMemorySize));
    setCodeEntry("CallInd", reinterpret_cast<void *>(wabt::aot::AOTFunctionBuilder::AOTCallIndirectHelper));
@@ -211,45 +263,7 @@ int32_t print1(int32_t a, int32_t b)
    return 0;
    }
 void print2(int32_t a, int32_t b) { std::cout << a + b << "\n"; }
-int32_t seek(int32_t a, int64_t b, int32_t c, int32_t d)
-   {
-   std::cout << a << b << c << d << "\n";
-   return 0;
-   }
-int32_t clos(int32_t a)
-   {
-   std::cout << a;
-   return 0;
-   };
-void clus(int32_t a) { std::cout << a; };
 
-int32_t args_get(int32_t argv, int32_t argv_buf)
-   {
-   int numOfArgs = 1;
-   char args_arr[1][2] = {"."};
-   uint32_t *bufferLoc = (uint32_t *)(envPointer->GetMems()[0] + argv);
-   uint8_t *bufferLocsize = (uint8_t *)(envPointer->GetMems()[0] + argv_buf);
-   *bufferLoc = argv_buf;
-   if (numOfArgs > 1)
-      *(bufferLoc + 1) = argv_buf + strlen(args_arr[1]);
-   memcpy(bufferLocsize, args_arr[1], strlen(args_arr[1]) + 1);
-   if (numOfArgs > 1)
-      memcpy(bufferLocsize + strlen(args_arr[1]), args_arr[2], strlen(args_arr[2]) + 1);
-   return 0;
-   }
-int32_t args_size_get(int32_t numOfArgs1, int32_t sizeOfArgs1)
-   {
-   int numOfArgs = 1;
-   char args_arr[1][2] = {"."};
-   uint32_t *bufferLoc = (uint32_t *)(envPointer->GetMems()[0] + numOfArgs1);
-   uint32_t *bufferLocsize = (uint32_t *)(envPointer->GetMems()[0] + sizeOfArgs1);
-   *bufferLoc = numOfArgs;
-   if (numOfArgs > 1)
-      *bufferLocsize = strlen(args_arr[2]) + strlen(args_arr[1]) + 2;
-   else
-      *bufferLocsize = 0;
-   return 0;
-   }
 
 // void funpr(uint64_t a) { std::cout << ((char *)(&a)); }
 
@@ -268,14 +282,12 @@ void WABTAOTCompilerLib::relocateAOT(interp::Environment &env, DefinedModule *mo
    setCodeEntry("setTempRet0", reinterpret_cast<void *>(1));
    setCodeEntry("memory", reinterpret_cast<void *>(1));
    setCodeEntry("table", reinterpret_cast<void *>(1));
-   setCodeEntry("emscript", reinterpret_cast<void *>(clus));
+   setCodeEntry("emscrip", reinterpret_cast<void *>(clus));
    setCodeEntry("setTempR", reinterpret_cast<void *>(1));
    setCodeEntry("Popcountll", reinterpret_cast<void *>(static_cast<int (*)(unsigned long long)>(wabt::Popcount)));
-   setCodeEntry("args_siz", reinterpret_cast<void *>(args_size_get));
+
    setCodeEntry("args_get", reinterpret_cast<void *>(args_get));
-   setCodeEntry("proc_exi", reinterpret_cast<void *>(clus));
-   setCodeEntry("fd_seek", reinterpret_cast<void *>(seek));
-   setCodeEntry("fd_close", reinterpret_cast<void *>(clos));
+
    // setCodeEntry("funpr",reinterpret_cast<void*>(funpr));
    setCodeEntry("gettimeo", reinterpret_cast<void *>(gettimeod));
    // for(Index i = 0; i < func_count; ++i) {
