@@ -4,6 +4,7 @@
 #include "env/AOTLoadStoreDriver.hpp"
 #include "src/interp/interp.h"
 #include <iostream>
+#include <chrono>
 #include <tgmath.h> // for relocating math functions
 #include <unistd.h> // F_OK, access
 
@@ -93,7 +94,12 @@ int32_t seek(int32_t a, int64_t b, int32_t c, int32_t d)
    return 0;
    }
 
-
+uint64_t clock_ms()
+   {
+   uint64_t result =  static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count());
+   std::cout<<result << std::endl;
+   return result;
+   }
 
 void WABTAOTCompilerLib::preSetCodeEntries(wabt::interp::Executor *executor, wabt::interp::Thread *thread)
    {
@@ -124,6 +130,7 @@ void WABTAOTCompilerLib::preSetCodeEntries(wabt::interp::Executor *executor, wab
    setCodeEntry("emscrip", reinterpret_cast<void *>(clus));
    setCodeEntry("cpsignf", reinterpret_cast<void *>(copysignf));
    setCodeEntry("args_ge", reinterpret_cast<void *>(args_get));
+   setCodeEntry("clock_m", reinterpret_cast<void *>(clock_ms));
    setCodeEntry("proc_ex", reinterpret_cast<void *>(clus));
    setCodeEntry("fd_seek", reinterpret_cast<void *>(seek));
    setCodeEntry("args_si", reinterpret_cast<void *>(args_size_get));
