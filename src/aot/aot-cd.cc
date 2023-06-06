@@ -19,7 +19,7 @@
 #include "trap-with.h"
 
 #include "JitBuilder.hpp"
-
+#include <chrono>
 #include <algorithm>
 #include <iostream>
 #include <memory>
@@ -31,6 +31,7 @@
 
 using namespace wabt;
 using namespace wabt::interp;
+using namespace std::chrono;
 /*
 class WasmInterpHostImportDelegate : public HostImportDelegate {
  public:
@@ -487,14 +488,20 @@ int main(int argc, char** argv) {
   }
   //TODO rewrite using the infrastructure
   int run_all_exports = 0;
-
+  int timer = 0;
+  auto start = high_resolution_clock::now();
   if (argc == 3) {
     for (int i = 0 ; i < argc; i++){
       std::string third_argument(argv[i]);
       if (third_argument.compare("--run-all-exports")==0)
         run_all_exports = 1;
+      if (third_argument.compare("--measure-time") == 0)
+        {
+        timer = 1;
+        }
     }
   }
+
   numOfArgs = argc-1;
   args_arr = argv;
   
@@ -502,10 +509,10 @@ int main(int argc, char** argv) {
   s_stdout_stream = FileStream::CreateStdout();
   s_log_stream = FileStream::CreateStdout();
 //  for(uint32_t i = 1;i<argc;i++) {
-    registerModules(argv[1],&env);
+    registerModules(argv[2],&env);
 //  }
   envPointer = &env;
-  for(uint32_t i = 1;i<2;i++) {
+  for(uint32_t i = 2;i<3;i++) {
     // const char* ffi = strrchr(argv[i],'/');
     // printf("%s\n",ffi);
     // char* src_filename;
@@ -519,7 +526,7 @@ int main(int argc, char** argv) {
     DefinedModule* module = nullptr; //new DefinedModule();
     //ErrorHandlerFile error_handler(Location::Type::Binary);
     Errors errors;
-    module = dynamic_cast<DefinedModule*>(env.GetModule(i-1));
+    module = dynamic_cast<DefinedModule*>(env.GetModule(i-2));
     wabt::Result result = ReadModule(src_filename, &env, &errors, &module);
 
     if(Succeeded(result)) {
@@ -535,5 +542,11 @@ int main(int argc, char** argv) {
   for(uint32_t i = 1;i<2;i++) {
     runExports(env,dynamic_cast<DefinedModule*>(env.GetModule(i-1)),run_all_exports);
   }
+   auto stop = high_resolution_clock::now();
+   auto duration = duration_cast<nanoseconds>(stop - start);
+   if (timer == 1)
+      {
+      std::cerr << duration.count() << ",";
+      }
   //runExports(env, module);
 }
