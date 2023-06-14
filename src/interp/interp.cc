@@ -1818,6 +1818,17 @@ Result Environment::TryAOT(Thread* t,  DefinedFunc* func, Index ind){
       //   modulee->aot_compiled_functions.push_back(function);
       //   }
    }
+   else {
+    if (!fn->is_loaded && !fn->is_host){
+        wabt::aot::AOTManager* aotManager=aotManagers[ind];
+      if (aotManager == NULL){
+        aotManager = new AOTManager();
+        aotManagers[ind]=aotManager;
+        }
+      aotManager->setFunctionThatManagerWasCreatedFor(ind);
+      aotManager->AOTLoadAFunction(this, ind, t);
+    }
+   }
      return Result::Ok;
    }
 
