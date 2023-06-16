@@ -142,8 +142,8 @@ int wabt::aot::AOTManager::CheckDependenciesCompiled(wabt::interp::Environment *
                   {
                   /* dependencies were not compiled */
                   /* is this store operation necessary tho */
-                  char *fn_name = strdup(func->dbg_name_.c_str());
-                  _loadStoreDriver->storeHeaderForCompiledMethod(fn_name);
+                  // char *fn_name = strdup(func->dbg_name_.c_str());
+                  // _loadStoreDriver->storeHeaderForCompiledMethod(fn_name);
                   // /* to prevent further traversal from this thing*/
                   header->dependenciesCompiled = 1;
                   return 0;
