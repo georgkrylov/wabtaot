@@ -39,7 +39,7 @@
 #include "src/stream.h"
 #include <array>
 #include "../aot/compiler/env/aot-meta.hpp"
-
+#include <chrono>
 namespace wabt {
 
 namespace jit {
@@ -794,7 +794,10 @@ class Thread {
     uint32_t value_stack_size;
     uint32_t call_stack_size;
   };
-
+  // Needed for time verification only, can be deleted later
+  std::chrono::_V2::system_clock::time_point interp_start ;
+  int indent;
+  
   explicit Thread(Environment*, const Options& = Options());
 
   Environment* env() { return env_; }

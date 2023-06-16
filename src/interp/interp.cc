@@ -44,6 +44,8 @@
 #include "../aot/aot-manager.h"
 #include "../aot/aot-compiler-lib.hpp"
 #include "JitBuilder.hpp"
+#include <chrono>
+using namespace std::chrono;
 namespace wabt {
 namespace interp {
 
@@ -2063,6 +2065,10 @@ Result Thread::Run(int num_instructions) {
   const uint8_t*& istream = tpc.istream;
   const uint8_t*& pc = tpc.pc;
   int throroro = 0;
+  
+  auto interp_end =high_resolution_clock::now();
+  auto duration = duration_cast<nanoseconds>(interp_end-this->interp_start).count();
+  auto duration_sec = duration_cast<seconds>(interp_end-this->interp_start);
   for (int i = 0; i < num_instructions; ++i) {
     Opcode opcode = ReadOpcode(&pc);
     throroro = throroro + 1;
@@ -2110,6 +2116,14 @@ Result Thread::Run(int num_instructions) {
           result = Result::Returned;
           goto exit_loop;
         }
+        interp_end= high_resolution_clock::now();
+        duration=duration_cast<nanoseconds>(interp_end-this->interp_start).count();
+        duration_sec = duration_cast<seconds>(interp_end-this->interp_start);
+
+        for(int i = 0; i < indent; i++)
+          printf("\t");
+        printf("Log: interpreter returns, at mark %is %llins\n",duration_sec.count(),duration);
+                indent=indent-1;
         GOTO(PopCall());
         break;
 
@@ -2187,6 +2201,13 @@ Result Thread::Run(int num_instructions) {
           // for (int i = 0; i < numberOfParameters; i++){
           //   params_array[i] = Pop().i32;
           // }
+          interp_end= high_resolution_clock::now();
+          duration=duration_cast<nanoseconds>(interp_end-this->interp_start).count();
+          duration_sec = duration_cast<seconds>(interp_end-this->interp_start);
+          indent=indent+1;
+        for(int i = 0; i < indent; i++)
+          printf("\t");
+          printf("Log: running the compiled function %s, at mark %is %llins\n",fn->dbg_name_.c_str(),duration_sec.count(),duration);
           void (*p) (...) = fn->aot_fn_;
           if (env_->enable_aot_entry)
             {
@@ -3435,8 +3456,24 @@ Result Thread::Run(int num_instructions) {
 
 
           GOTO(PopCall());
+                  interp_end= high_resolution_clock::now();
+        duration=duration_cast<nanoseconds>(interp_end-this->interp_start).count();
+        duration_sec = duration_cast<seconds>(interp_end-this->interp_start);
+
+        for(int i = 0; i < indent; i++)
+          printf("\t");
+        printf("Log: the compiled function returns at mark %is %llins\n",duration_sec.count(),duration);
+                indent=indent-1;
           break;
         } else {
+          indent=indent+1;
+        for(int i = 0; i < indent; i++)
+          printf("\t");
+                interp_end= high_resolution_clock::now();
+        duration=duration_cast<nanoseconds>(interp_end-this->interp_start).count();
+                        interp_end= high_resolution_clock::now();
+        duration_sec = duration_cast<seconds>(interp_end-this->interp_start);
+        printf("Log: interpreting function %s, at mark %is %llins\n",fn->dbg_name_.c_str(),duration_sec.count(),duration);
         CHECK_TRAP(env_->TryJit(this, fn, func_index));
 
         if (fn->jit_fn_) {
@@ -5709,6 +5746,8 @@ Result Executor::RunDefinedFunction(IstreamOffset function_offset) {
     }
   } else {
     const int kNumInstructions = 1000;
+    thread_.interp_start =high_resolution_clock::now();
+    thread_.indent = 0;
     while (result == Result::Ok) {
       result = thread_.Run(kNumInstructions);
     }
