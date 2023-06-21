@@ -155,8 +155,10 @@ int wabt::aot::AOTManager::CheckDependenciesCompiled(wabt::interp::Environment *
                else if (func->is_loaded == false && func->is_compiled == true)
                   {
                   DefinedFunc *funcc = reinterpret_cast<DefinedFunc *>(env->GetFunc(dependenciesArray[i]));
-                  if (CheckDependenciesCompiled(env, dependenciesArray[i], funcc, t) == 0)
+                  if (CheckDependenciesCompiled(env, dependenciesArray[i], funcc, t) == 0){
+                     header->dependenciesCompiled=1;
                      return 0;
+                  }
                   shouldFailCheck &= 1;
                   }
                }
@@ -167,8 +169,10 @@ int wabt::aot::AOTManager::CheckDependenciesCompiled(wabt::interp::Environment *
                   /** When a method is compiled we know its dependencies */
                   /** Idea here is to add for loading only if the dependencies are not compiled */
                   DefinedFunc *funcc = reinterpret_cast<DefinedFunc *>(env->GetFunc(dependenciesArray[i]));
-                  if (CheckDependenciesCompiled(env, dependenciesArray[i], funcc, t) == 0)
+                  if (CheckDependenciesCompiled(env, dependenciesArray[i], funcc, t) == 0){
+                     header->dependenciesCompiled=1;
                      return 0;
+                  }
                   shouldFailCheck &= 1;
                   }
                }

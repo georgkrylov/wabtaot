@@ -1826,6 +1826,7 @@ Result Environment::TryAOT(Thread* t,  DefinedFunc* func, Index ind){
         aotManagers[ind]=aotManager;
         }
       aotManager->setFunctionThatManagerWasCreatedFor(ind);
+      aotManager->visited_this_traversal.clear();
       aotManager->AOTLoadAFunction(this, ind, t);
     }
    }
