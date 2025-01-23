@@ -1,3 +1,50 @@
+# Ahead-of-time compilation in a language-independent environment: Artifacts
+
+## Overview
+
+This research proposes an infrastructure that can be used for creating AOT compilers as an extension of the Eclipse OMR runtime development toolkit. This infrastructure is used to construct a WebAssembly compiler to evaluate its performance. Another contribution of this research is an algorithm that drives the procedure of making compilation and loading decisions by conducting a run-time program analysis based on the program structure. The proposed compilation strategies also allow combining AOT and JIT compilers for program execution optimization. The results of this work might come to benefit users on the cloud, where being able to conduct partial program compilations would potentially allow achieving the target goal the next time the VM is launched.
+
+## System Requirements
+
+The experiments were performed on a machine with:
+
+- **CPU:** Intel® Core™ i7-8700  
+- **Memory:** 32 GB (2 × 16 GB @ 2666 MHz)  
+- **Operating System:** Ubuntu 20.04.5 LTS (server version)  
+  - **Kernel Version:** 5.4.0-131-generic (x86_64)  
+- **Compiler:** g++ 9.4.0  
+
+A batch scheduler was used on this server to manage and queue experimental runs.
+
+## Project Architecture
+
+Here is a layout that includes main parts for the experiment.
+
+```bash
+├── wasmjitwithomr              #Line 
+|    ├──    em-interp/            #Line
+|    ├──    polybench/            #Line
+|    |  ├── polybench-c-4.2/      #Line
+|    wabtaot-private-additions/   #Line
+|    |  ├── experiment-scripts/   #Line
+|    |  |    ├── experiment_chapter_4.sh   #Line
+|    |  |    ├── compile_all_experiment.sh   #Line
+```
+
+
+## Installation & Setup 
+
+## Experimental Results
+
+    
+## Citation
+
+The main link for dissertation is available [here](https://unbscholar.lib.unb.ca/handle/1882/37807).
+
+## Contact Information
+
+
+
 [![Build Status](https://travis-ci.org/wasmjit-omr/wasmjit-omr.svg?branch=master)](https://travis-ci.org/wasmjit-omr/wasmjit-omr) [![Windows status](https://ci.appveyor.com/api/projects/status/79hqj5l0qggw645d/branch/master?svg=true)](https://ci.appveyor.com/project/WebAssembly/wabt/branch/master)
 
 # WABT: The WebAssembly Binary Toolkit
