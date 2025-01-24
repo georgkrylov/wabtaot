@@ -164,10 +164,9 @@ int wabt::aot::AOTManager::CheckDependenciesCompiled(wabt::interp::Environment *
                }
             else
                {
-               DefinedFunc* fn = reinterpret_cast<DefinedFunc*>(func);
-               if (func->is_loaded == false && func->is_compiled == true && fn->tried_jit_ == false)
+               if (func->is_loaded == false && func->is_compiled == true)
                   {
-                  /** When a method is compiled we know its dependencies, unless it was jit compiled */
+                  /** When a method is compiled we know its dependencies */
                   /** Idea here is to add for loading only if the dependencies are not compiled */
                   DefinedFunc *funcc = reinterpret_cast<DefinedFunc *>(env->GetFunc(dependenciesArray[i]));
                   if (CheckDependenciesCompiled(env, dependenciesArray[i], funcc, t) == 0){
@@ -175,11 +174,6 @@ int wabt::aot::AOTManager::CheckDependenciesCompiled(wabt::interp::Environment *
                      return 0;
                   }
                   shouldFailCheck &= 1;
-                  }
-               if (func->is_loaded == false && func->is_compiled == true && fn->tried_jit_ == true)
-                  {
-                     header->dependenciesCompiled=1;
-                     return 0;
                   }
                }
             }
@@ -212,7 +206,7 @@ bool wabt::aot::AOTManager::AOTLoadAFunction(wabt::interp::Environment *env, wab
       {
       /** General Idea Maybe should cache values of the function previously being compiled or previously
        * being loaded in the AOTMethodHeader? */
-      if (func->is_compiled && fn->tried_jit_ == false) /* was able to find a compiled code for the function */
+      if (func->is_compiled) /* was able to find a compiled code for the function */
          {
          // if (std::find(visited_this_traversal.begin(),visited_this_traversal.end(),ind) == visited_this_traversal.end())
 
