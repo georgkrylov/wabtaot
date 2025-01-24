@@ -34,15 +34,37 @@ Here is a layout that includes main parts for the experiment.
 
 ## Installation & Setup 
 
+To run the experiment for chapter 4 and 5, run the command below:
+
+```bash
+bash wabtaot-private-additions/experiment-scripts experiment_chapter_4.sh 
+```
+
+For chapter 6 run command:
+
+```bash
+bash wabtaot-private-additions/experiment-scripts compile_all_experiments.sh 
+```
+
+To avoid creating a build, add this before the command such as:
+```bash
+env NO_BUILD='<enter-anything>' bash wabtaot-private-additions...
+```
+
+To avoid checking correctness, add this before the command such as:
+```bash
+env NO_CHECK='<enter-anything>' bash wabtaot-private-additions...
+```
+
+You can also do both of it.
+
 ## Experimental Results
 
+The Results are available in [this](https://unbcloud-my.sharepoint.com/personal/gkrylov_unb_ca/_layouts/15/onedrive.aspx?id=%2Fpersonal%2Fgkrylov%5Funb%5Fca%2FDocuments%2FPhD%2FPhD%20research%20Results%2Dpublic&FolderCTID=0x0120000AFF49CD084CC04DBCCD8616B5441608&view=0) link which contains relevant files, excel sheets and data connections. The password for accessing the folders is 506PhDResults@$.
     
 ## Citation
 
 The main link for dissertation is available [here](https://unbscholar.lib.unb.ca/handle/1882/37807).
-
-## Contact Information
-
 
 
 [![Build Status](https://travis-ci.org/wasmjit-omr/wasmjit-omr.svg?branch=master)](https://travis-ci.org/wasmjit-omr/wasmjit-omr) [![Windows status](https://ci.appveyor.com/api/projects/status/79hqj5l0qggw645d/branch/master?svg=true)](https://ci.appveyor.com/project/WebAssembly/wabt/branch/master)
